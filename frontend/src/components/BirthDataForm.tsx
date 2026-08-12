@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BirthData } from "@/lib/api";
+import { searchPlace, type GeocodeResult } from "@/lib/geocode";
 
 type CityPreset = {
   label: string;
@@ -31,11 +32,68 @@ export default function BirthDataForm({ onSubmit }: Props) {
   const [longitude, setLongitude] = useState(CITY_PRESETS[0].longitude);
   const [timezone, setTimezone] = useState(CITY_PRESETS[0].timezone);
 
+  const [searchResults, setSearchResults] = useState<GeocodeResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const skipNextSearchRef = useRef(false);
+
+  useEffect(() => {
+    if (skipNextSearchRef.current) {
+      skipNextSearchRef.current = false;
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      if (place.trim().length < 2) {
+        setSearchResults([]);
+        setSearchError(null);
+        return;
+      }
+
+      setIsSearching(true);
+      setSearchError(null);
+      try {
+        const results = await searchPlace(place, controller.signal);
+        setSearchResults(results);
+        setShowResults(true);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          setSearchResults([]);
+          setSearchError("ค้นหาสถานที่ไม่สำเร็จ กรุณาลองใหม่ หรือกรอกพิกัดด้านล่างด้วยตนเอง");
+        }
+      } finally {
+        setIsSearching(false);
+      }
+    }, 600);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [place]);
+
   function applyPreset(preset: CityPreset) {
+    skipNextSearchRef.current = true;
     setPlace(preset.place);
     setLatitude(preset.latitude);
     setLongitude(preset.longitude);
     setTimezone(preset.timezone);
+    setShowResults(false);
+    setSearchResults([]);
+  }
+
+  function applySearchResult(result: GeocodeResult) {
+    skipNextSearchRef.current = true;
+    setPlace(result.displayName);
+    setLatitude(result.latitude);
+    setLongitude(result.longitude);
+    if (result.countryCode === "th") {
+      setTimezone("Asia/Bangkok");
+    }
+    setShowResults(false);
+    setSearchResults([]);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -111,13 +169,42 @@ export default function BirthDataForm({ onSubmit }: Props) {
             </button>
           ))}
         </div>
-        <input
-          type="text"
-          value={place}
-          onChange={(e) => setPlace(e.target.value)}
-          placeholder="ชื่อจังหวัด/เมือง"
-          className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-        />
+        <div className="relative">
+          <input
+            type="text"
+            value={place}
+            onChange={(e) => setPlace(e.target.value)}
+            onFocus={() => searchResults.length > 0 && setShowResults(true)}
+            onBlur={() => setTimeout(() => setShowResults(false), 150)}
+            placeholder="พิมพ์ชื่อจังหวัด/เมือง เพื่อค้นหาพิกัดอัตโนมัติ"
+            autoComplete="off"
+            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          />
+          {isSearching && (
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">กำลังค้นหา...</p>
+          )}
+          {searchError && (
+            <p className="mt-1 text-xs text-red-600 dark:text-red-400">{searchError}</p>
+          )}
+          {showResults && searchResults.length > 0 && (
+            <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-zinc-300 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+              {searchResults.map((result, index) => (
+                <button
+                  key={`${result.latitude}-${result.longitude}-${index}`}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => applySearchResult(result)}
+                  className="block w-full border-b border-zinc-100 px-3 py-2 text-left text-xs text-zinc-700 last:border-b-0 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  {result.displayName}
+                </button>
+              ))}
+              <p className="bg-zinc-50 px-3 py-1 text-[10px] text-zinc-400 dark:bg-zinc-950 dark:text-zinc-500">
+                ค้นหาสถานที่โดย OpenStreetMap
+              </p>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <input
             type="number"
