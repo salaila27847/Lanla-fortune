@@ -24,7 +24,9 @@
 - [x] Tarot: ตรวจสอบแล้ว ไม่พบไฟล์จากโปรเจกต์ Destiny Matrix ในบัญชี GitHub — เขียนความหมายทั้ง 78 ใบ
       ขึ้นใหม่ (ตั้งตรง+กลับหัว) อิงฐานสากล Rider-Waite-Smith สร้าง knowledge base จริงและสลับ engine
       จาก mock แล้ว (ดู `backend/app/knowledge_base/tarot/`)
-- [ ] Uranian: สร้างฐานความหมาย configuration พื้นฐาน (8 ดาวเสริม + midpoint หลัก)
+- [x] Uranian: สร้างฐานความหมาย configuration พื้นฐาน (8 ดาวเสริม + midpoint หลัก) แล้ว —
+      คำนวณจริงด้วย `pyswisseph` (Moshier ephemeris ในตัว) สลับ engine จาก mock แล้ว
+      (ดู `backend/app/knowledge_base/uranian/`)
 - [x] Oracle: ตัดสินใจแล้ว — deck หลัก `lanla_original` (เทวดา/นางฟ้า + สัตว์นำทางไทย + ดอกไม้ 60 ใบ)
       สร้าง knowledge base จริงและสลับ engine จาก mock แล้ว (ดู `backend/app/knowledge_base/oracle/`)
 
@@ -40,9 +42,11 @@
 นี้ไม่มี `ANTHROPIC_API_KEY`
 
 ## Phase 5 — ต่อของจริงแทน mock ทีละ engine
-- [ ] สลับ Tarot engine เป็นของจริง → ทดสอบ end-to-end
-- [ ] สลับ Uranian engine เป็นของจริง → ทดสอบ end-to-end
-- [ ] สลับ Oracle engine เป็นของจริง → ทดสอบ end-to-end
+- [x] สลับ Tarot engine เป็นของจริงแล้ว — ทดสอบ unit + ทดสอบเรียกพร้อมกับอีก 2 engine ผ่าน
+      `asyncio.gather` แบบเดียวกับที่ `/api/reading` ทำจริงแล้ว (ยังไม่ได้ทดสอบผ่าน HTTP จริงที่มี
+      `ANTHROPIC_API_KEY` เพราะ sandbox นี้ไม่มี key)
+- [x] สลับ Uranian engine เป็นของจริงแล้ว (คำนวณด้วย `pyswisseph`) — ทดสอบแบบเดียวกับ Tarot ข้างต้น
+- [x] สลับ Oracle engine เป็นของจริงแล้ว — ทดสอบแบบเดียวกับ Tarot ข้างต้น
 
 ## Phase 6 — QA
 - [ ] ทดสอบกรณี 3 ศาสตร์ขัดแย้งกัน ว่า Master Interpreter อธิบายได้สมเหตุสมผล
