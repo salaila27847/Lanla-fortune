@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import os
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.schema import BirthData, SynthesisOutput
 from app.modules.oracle.engine import draw as oracle_draw
@@ -14,6 +16,14 @@ from app.synthesis.master_interpreter import synthesize
 load_dotenv()
 
 app = FastAPI(title="Fortune App API")
+
+_frontend_origins = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_frontend_origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")

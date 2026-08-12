@@ -27,10 +27,15 @@
       สร้าง knowledge base จริงและสลับ engine จาก mock แล้ว (ดู `backend/app/knowledge_base/oracle/`)
 
 ## Phase 4 — Frontend (คู่ขนานกับ Phase 1-2 โดยเรียก mock API)
-- [ ] หน้ากรอกข้อมูลเกิด + เลือกคำถาม
-- [ ] หน้าจั่วไพ่ทาโรต์แบบ interactive (animation)
-- [ ] หน้าจั่วไพ่ออราเคิล
-- [ ] หน้าแสดงผลคำทำนายฉบับสมบูรณ์ + tab ดูรายละเอียดแยกศาสตร์
+- [x] หน้ากรอกข้อมูลเกิด (`/reading`, `BirthDataForm.tsx`) — ยังไม่มี "เลือกคำถาม" เพราะ `BirthData`
+      schema (`docs/data-schema.md`) ไม่มี field คำถามอยู่ตอนนี้ ต้องตัดสินใจ/เพิ่ม schema ก่อนถ้าต้องการ
+- [x] หน้าจั่วไพ่ทาโรต์แบบ interactive (animation) — `CardDrawStep.tsx` (Framer Motion flip)
+- [x] หน้าจั่วไพ่ออราเคิล — ใช้ component เดียวกับทาโรต์ (`cardCount={1}`)
+- [x] หน้าแสดงผลคำทำนายฉบับสมบูรณ์ + tab ดูรายละเอียดแยกศาสตร์ — `ReadingResult.tsx`
+
+หมายเหตุ: เรียก `/api/reading` ของจริงแล้ว (ไม่ใช่ mock endpoint) ทดสอบ end-to-end ผ่าน browser
+(Playwright) แล้วว่า flow ทำงานถูกต้องจนถึงจุดเรียก Claude API — ผลจริงยังทดสอบไม่ได้เพราะ sandbox
+นี้ไม่มี `ANTHROPIC_API_KEY`
 
 ## Phase 5 — ต่อของจริงแทน mock ทีละ engine
 - [ ] สลับ Tarot engine เป็นของจริง → ทดสอบ end-to-end
