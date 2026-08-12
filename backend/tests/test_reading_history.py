@@ -34,8 +34,8 @@ async def _fake_synthesize(uranian: EngineResult, tarot: EngineResult, oracle: E
 
 @pytest.fixture(autouse=True)
 def _mock_synthesize(monkeypatch):
-    # Tests shouldn't hit the real Claude API — same spirit as
-    # test_master_interpreter_fallback.py's monkeypatching of AsyncAnthropic.
+    # Tests shouldn't hit the real Gemini API — same spirit as
+    # test_master_interpreter_fallback.py's monkeypatching of genai.Client.
     monkeypatch.setattr(main_module, "synthesize", _fake_synthesize)
 
 

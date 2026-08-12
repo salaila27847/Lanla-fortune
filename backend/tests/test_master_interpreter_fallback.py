@@ -1,4 +1,4 @@
-"""Tests for the Phase 6 QA requirement: Claude API timeout/failure must
+"""Tests for the Phase 6 QA requirement: Gemini API timeout/failure must
 have a fallback instead of surfacing a raw 500 to the user.
 """
 
@@ -48,19 +48,24 @@ def test_fallback_never_invents_meaning_beyond_engine_summaries():
     assert result.divergent_notes == []
 
 
-class _FakeMessages:
-    async def create(self, *args, **kwargs):
+class _FakeModels:
+    async def generate_content(self, *args, **kwargs):
         raise TypeError("simulated missing/invalid API key")
 
 
-class _FakeAsyncAnthropic:
+class _FakeAio:
+    def __init__(self):
+        self.models = _FakeModels()
+
+
+class _FakeGenAIClient:
     def __init__(self, *args, **kwargs):
-        self.messages = _FakeMessages()
+        self.aio = _FakeAio()
 
 
 @pytest.mark.asyncio
-async def test_synthesize_falls_back_when_claude_call_fails(monkeypatch):
-    monkeypatch.setattr(master_interpreter, "AsyncAnthropic", _FakeAsyncAnthropic)
+async def test_synthesize_falls_back_when_gemini_call_fails(monkeypatch):
+    monkeypatch.setattr(master_interpreter.genai, "Client", _FakeGenAIClient)
 
     uranian = _make_result("uranian", ["ก"])
     tarot = _make_result("tarot", ["ก"])

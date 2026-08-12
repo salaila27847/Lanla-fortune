@@ -115,3 +115,27 @@
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: sandbox นี้ทำ Google OAuth login จริงไม่ได้ (ไม่มี credentials
       จริง) — ต้องทดสอบ full flow (login → กรอกข้อมูล → จั่วไพ่ → เห็นคำทำนายใน `/history`) บนเครื่อง
       ผู้ใช้เอง เหมือนตอนทดสอบ Google Sign-In ครั้งแรก
+
+## Phase 10 — สลับ synthesis layer จาก Claude API เป็น Gemini API
+- [x] ตัดสินใจแล้ว (2026-08-12): ผู้ใช้ขอเปลี่ยนจาก Anthropic Claude เป็น Google Gemini เพราะ Gemini
+      มี free tier จริง (ไม่ต้องผูกบัตรเครดิต) — ตรวจสอบ SDK ปัจจุบันจริงจากแหล่งต้นทาง
+      (`github.com/googleapis/python-genai` README + ติดตั้งแพ็กเกจจริงในนี้เพื่อตรวจ field name
+      ของ `types.HttpOptions`/`GenerateContentConfig` แทนการเดา) แทนที่ `anthropic` SDK ด้วย
+      `google-genai` ใน `backend/app/synthesis/master_interpreter.py` — interface ของ
+      `synthesize()` ไม่เปลี่ยน (รับ 3 `EngineResult` คืน `SynthesisOutput` เหมือนเดิม),
+      `_fallback_synthesis()` (Phase 6 QA) เป็น provider-agnostic อยู่แล้วไม่ต้องแก้
+- [x] Env var: `ANTHROPIC_API_KEY` → `GEMINI_API_KEY` (จาก aistudio.google.com ฟรี), default
+      `SYNTHESIS_MODEL` เปลี่ยนจาก `claude-sonnet-5` เป็น `gemini-3.5-flash` (flash tier ที่ยัง
+      อยู่ใน free tier ตอนตรวจสอบ ไม่ใช่ preview/lite)
+- [x] อัปเดต `render.yaml`, `docs/deployment.md` (ขั้นตอนขอ key จาก Google AI Studio แทน Anthropic
+      Console), `CLAUDE.md` (architecture diagram + tech stack table + decided-items note),
+      `docs/PRD.md` §4.4, root `README.md` — ไม่แก้ entry เก่าใน task-breakdown.md นี้ที่พูดถึง
+      Claude API เพราะเป็น log ประวัติศาสตร์ว่าตอนนั้นสร้างด้วยอะไรจริง (เหมือนตอนแก้ Railway→Render
+      ที่เพิ่ม correction note แทนการเขียนประวัติทับ)
+- [x] อัปเดต test double ใน `test_master_interpreter_fallback.py` (`_FakeAsyncAnthropic` →
+      `_FakeGenAIClient`), `conftest.py` env var, comment ใน `test_reading_history.py`,
+      docstring ใน `backend/scripts/qa_conflict_reading.py` — ทดสอบแล้ว: 36 tests ผ่าน,
+      `ruff check`/`ruff format --check` สะอาด
+- [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ไม่มี `GEMINI_API_KEY` จริงใน sandbox นี้ — ทดสอบได้แค่ path
+      fallback (key ปลอม/ไม่มี → `_fallback_synthesis()` ทำงานถูกต้อง ไม่ crash) ต้องทดสอบคุณภาพ
+      การตีความจริงด้วย key จริงบนเครื่องผู้ใช้ (`backend/scripts/qa_conflict_reading.py` ใช้ทดสอบได้)

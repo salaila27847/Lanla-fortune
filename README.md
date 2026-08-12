@@ -25,7 +25,7 @@ fortune-app/
 │   │   ├── main.py
 │   │   ├── core/schema.py         ← EngineResult contract กลาง
 │   │   ├── modules/{uranian,tarot,oracle}/engine.py   ← 3 engine (ตอนนี้เป็น mock)
-│   │   ├── synthesis/master_interpreter.py            ← เรียก Claude API สังเคราะห์ผล
+│   │   ├── synthesis/master_interpreter.py            ← เรียก Gemini API สังเคราะห์ผล
 │   │   └── knowledge_base/{uranian,tarot,oracle}/     ← ข้อมูลอ้างอิงแต่ละศาสตร์
 │   └── tests/
 └── frontend/                ← Next.js (ยังไม่ scaffold — ดู frontend/README.md)
@@ -47,7 +47,7 @@ fortune-app/
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env   # แล้วใส่ ANTHROPIC_API_KEY จริง
+cp .env.example .env   # แล้วใส่ GEMINI_API_KEY จริง (ฟรีจาก aistudio.google.com)
 pytest
 uvicorn app.main:app --reload
 ```
