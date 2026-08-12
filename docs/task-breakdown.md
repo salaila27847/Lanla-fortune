@@ -49,5 +49,10 @@
 - [x] สลับ Oracle engine เป็นของจริงแล้ว — ทดสอบแบบเดียวกับ Tarot ข้างต้น
 
 ## Phase 6 — QA
-- [ ] ทดสอบกรณี 3 ศาสตร์ขัดแย้งกัน ว่า Master Interpreter อธิบายได้สมเหตุสมผล
-- [ ] ทดสอบ edge case: ไม่ทราบเวลาเกิด, จั่วไพ่ซ้ำ, Claude API timeout/fail (ต้องมี fallback)
+- [ ] ทดสอบกรณี 3 ศาสตร์ขัดแย้งกัน ว่า Master Interpreter อธิบายได้สมเหตุสมผล — ต้องมี
+      `ANTHROPIC_API_KEY` จริงถึงจะทดสอบคุณภาพการให้เหตุผลของโมเดลได้ ยังไม่ได้ทดสอบ
+- [x] ทดสอบ edge case แล้ว:
+  - ไม่ทราบเวลาเกิด — `uranian/engine.py` ใช้เที่ยงวันเป็นค่าประมาณ ลด confidence และแจ้งข้อจำกัด
+  - จั่วไพ่ซ้ำ — ป้องกันโดยโครงสร้าง (`random.sample` ไม่คืนใบซ้ำ) ทั้ง tarot และ oracle engine
+  - Claude API timeout/fail — `master_interpreter.py` มี fallback แล้ว (ตัดกลับไปสรุปผลดิบจาก
+    3 engine ตรงๆ แทนการ error 500) ทดสอบจริงผ่าน HTTP แล้วว่าไม่ crash แม้ไม่มี API key
