@@ -84,7 +84,12 @@ async def synthesize(
                 http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
             ),
         )
-        parsed = json.loads(response.text)
+        # json.loads() demands the *entire* string be one JSON value; Gemini
+        # sometimes appends stray trailing content (e.g. whitespace or extra
+        # text) after a perfectly valid JSON object, which raises "Extra
+        # data" from loads() alone. raw_decode() parses just the first JSON
+        # value and ignores whatever follows it.
+        parsed, _ = json.JSONDecoder().raw_decode(response.text.strip())
 
         return SynthesisOutput(
             final_reading=parsed["final_reading"],

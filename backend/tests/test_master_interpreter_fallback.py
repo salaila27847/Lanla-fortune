@@ -75,3 +75,45 @@ async def test_synthesize_falls_back_when_gemini_call_fails(monkeypatch):
 
     assert "ไม่พร้อมใช้งานชั่วคราว" in result.final_reading
     assert result.convergent_themes == ["ก"]
+
+
+class _FakeResponse:
+    def __init__(self, text: str):
+        self.text = text
+
+
+class _FakeModelsWithTrailingGarbage:
+    async def generate_content(self, *args, **kwargs):
+        # Regression test: Gemini has been observed appending stray content
+        # after an otherwise-valid JSON object, which plain json.loads()
+        # rejects with "Extra data" even though the JSON itself is fine.
+        body = (
+            '{"final_reading": "ok", "convergent_themes": ["ก"], "divergent_notes": []}'
+            "\nextra trailing content that isn't part of the JSON"
+        )
+        return _FakeResponse(body)
+
+
+class _FakeAioWithTrailingGarbage:
+    def __init__(self):
+        self.models = _FakeModelsWithTrailingGarbage()
+
+
+class _FakeGenAIClientWithTrailingGarbage:
+    def __init__(self, *args, **kwargs):
+        self.aio = _FakeAioWithTrailingGarbage()
+
+
+@pytest.mark.asyncio
+async def test_synthesize_tolerates_trailing_content_after_valid_json(monkeypatch):
+    monkeypatch.setattr(master_interpreter.genai, "Client", _FakeGenAIClientWithTrailingGarbage)
+
+    uranian = _make_result("uranian", ["ก"])
+    tarot = _make_result("tarot", ["ก"])
+    oracle = _make_result("oracle", ["ข"])
+
+    result = await synthesize(uranian, tarot, oracle)
+
+    assert result.final_reading == "ok"
+    assert result.convergent_themes == ["ก"]
+    assert "ไม่พร้อมใช้งานชั่วคราว" not in result.final_reading
