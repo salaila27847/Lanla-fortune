@@ -24,6 +24,7 @@ import os
 
 from google import genai
 from google.genai import errors, types
+from pydantic import BaseModel
 
 from app.core.schema import EngineResult, SynthesisOutput
 
@@ -56,6 +57,18 @@ _ENGINE_LABELS_TH = {
 SYNTHESIS_TIMEOUT_SECONDS = 20.0
 
 
+class _LLMSynthesis(BaseModel):
+    """Shape Gemini must produce — passed as response_schema so the SDK
+    constrains generation to valid JSON matching this exactly, instead of
+    us hand-parsing response.text (which drifted through three different
+    malformed-JSON failure modes: truncation, trailing content, then
+    plain syntax errors — a hand-rolled parser kept chasing symptoms)."""
+
+    final_reading: str
+    convergent_themes: list[str]
+    divergent_notes: list[str]
+
+
 async def synthesize(
     uranian: EngineResult, tarot: EngineResult, oracle: EngineResult
 ) -> SynthesisOutput:
@@ -81,25 +94,23 @@ async def synthesize(
                 # the JSON, truncating it mid-string.
                 thinking_config=types.ThinkingConfig(thinking_budget=0),
                 response_mime_type="application/json",
+                response_schema=_LLMSynthesis,
                 http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
             ),
         )
-        # json.loads() demands the *entire* string be one JSON value; Gemini
-        # sometimes appends stray trailing content (e.g. whitespace or extra
-        # text) after a perfectly valid JSON object, which raises "Extra
-        # data" from loads() alone. raw_decode() parses just the first JSON
-        # value and ignores whatever follows it.
-        parsed, _ = json.JSONDecoder().raw_decode(response.text.strip())
+        parsed = response.parsed
+        if not isinstance(parsed, _LLMSynthesis):
+            raise TypeError(f"Gemini returned no valid parsed output (got {parsed!r})")
 
         return SynthesisOutput(
-            final_reading=parsed["final_reading"],
-            convergent_themes=parsed["convergent_themes"],
-            divergent_notes=parsed["divergent_notes"],
+            final_reading=parsed.final_reading,
+            convergent_themes=parsed.convergent_themes,
+            divergent_notes=parsed.divergent_notes,
             per_engine_breakdown={"uranian": uranian, "tarot": tarot, "oracle": oracle},
         )
-    except (errors.APIError, TypeError, KeyError, ValueError) as exc:
-        # TypeError/ValueError cover the genai SDK's own "missing/invalid API
-        # key" failure and a malformed or non-JSON model response alike.
+    except (errors.APIError, TypeError, ValueError) as exc:
+        # TypeError covers the genai SDK's own "missing/invalid API key"
+        # failure, which it raises before ever making a request.
         logger.warning("Synthesis via Gemini failed, falling back to raw engine summary: %s", exc)
         return _fallback_synthesis(uranian, tarot, oracle)
 

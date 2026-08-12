@@ -78,35 +78,36 @@ async def test_synthesize_falls_back_when_gemini_call_fails(monkeypatch):
 
 
 class _FakeResponse:
-    def __init__(self, text: str):
-        self.text = text
+    def __init__(self, parsed):
+        self.parsed = parsed
 
 
-class _FakeModelsWithTrailingGarbage:
-    async def generate_content(self, *args, **kwargs):
-        # Regression test: Gemini has been observed appending stray content
-        # after an otherwise-valid JSON object, which plain json.loads()
-        # rejects with "Extra data" even though the JSON itself is fine.
-        body = (
-            '{"final_reading": "ok", "convergent_themes": ["ก"], "divergent_notes": []}'
-            "\nextra trailing content that isn't part of the JSON"
-        )
-        return _FakeResponse(body)
+def _make_fake_client(parsed):
+    class _FakeModelsWithParsed:
+        async def generate_content(self, *args, **kwargs):
+            return _FakeResponse(parsed)
 
+    class _FakeAioWithParsed:
+        def __init__(self):
+            self.models = _FakeModelsWithParsed()
 
-class _FakeAioWithTrailingGarbage:
-    def __init__(self):
-        self.models = _FakeModelsWithTrailingGarbage()
+    class _FakeGenAIClientWithParsed:
+        def __init__(self, *args, **kwargs):
+            self.aio = _FakeAioWithParsed()
 
-
-class _FakeGenAIClientWithTrailingGarbage:
-    def __init__(self, *args, **kwargs):
-        self.aio = _FakeAioWithTrailingGarbage()
+    return _FakeGenAIClientWithParsed
 
 
 @pytest.mark.asyncio
-async def test_synthesize_tolerates_trailing_content_after_valid_json(monkeypatch):
-    monkeypatch.setattr(master_interpreter.genai, "Client", _FakeGenAIClientWithTrailingGarbage)
+async def test_synthesize_uses_gemini_structured_output(monkeypatch):
+    # response_schema makes the SDK itself validate/parse the response
+    # (response.parsed) instead of us hand-parsing response.text — this
+    # replaced three rounds of chasing individual malformed-JSON symptoms
+    # (truncation, trailing content, syntax errors) with one systemic fix.
+    fake_parsed = master_interpreter._LLMSynthesis(
+        final_reading="ok", convergent_themes=["ก"], divergent_notes=[]
+    )
+    monkeypatch.setattr(master_interpreter.genai, "Client", _make_fake_client(fake_parsed))
 
     uranian = _make_result("uranian", ["ก"])
     tarot = _make_result("tarot", ["ก"])
@@ -117,3 +118,17 @@ async def test_synthesize_tolerates_trailing_content_after_valid_json(monkeypatc
     assert result.final_reading == "ok"
     assert result.convergent_themes == ["ก"]
     assert "ไม่พร้อมใช้งานชั่วคราว" not in result.final_reading
+
+
+@pytest.mark.asyncio
+async def test_synthesize_falls_back_when_gemini_returns_no_parsed_output(monkeypatch):
+    monkeypatch.setattr(master_interpreter.genai, "Client", _make_fake_client(None))
+
+    uranian = _make_result("uranian", ["ก"])
+    tarot = _make_result("tarot", ["ก"])
+    oracle = _make_result("oracle", ["ข"])
+
+    result = await synthesize(uranian, tarot, oracle)
+
+    assert "ไม่พร้อมใช้งานชั่วคราว" in result.final_reading
+    assert result.convergent_themes == ["ก"]
