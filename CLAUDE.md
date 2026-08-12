@@ -38,7 +38,8 @@
 | Knowledge base | ไฟล์ YAML/JSON versioned ใน `backend/app/knowledge_base/` | ให้ "เจ้าหน้าที่ค้นคว้า" (คนจริง) แก้ไขได้โดยไม่แตะโค้ด, track ผ่าน git |
 | Frontend | Next.js 14+ (App Router), TypeScript, TailwindCSS | SSR ดี, ทำ 90° dial แบบ interactive และ animation จั่วไพ่ได้ลื่นด้วย Framer Motion |
 | Synthesis layer | Anthropic Python SDK เรียก `claude-sonnet-5` | ตามที่ผู้ใช้ตัดสินใจ — ใช้ LLM ช่วยตีความไขว้ 3 ศาสตร์ |
-| Auth/session | เริ่มจากไม่มี auth ก่อน (guest session), เพิ่มทีหลังได้ | ลดความซับซ้อนใน MVP |
+| Auth/session | Google Sign-In (OAuth) ผ่าน NextAuth.js (Auth.js) ฝั่ง frontend | ผู้ใช้ตัดสินใจแล้ว (2026-08-12) — สมัคร/ล็อกอินง่าย ไม่ต้องจัดการรหัสผ่านเอง |
+| Deployment | Vercel (frontend) + Railway (backend + managed Postgres) | ผู้ใช้ตัดสินใจแล้ว (2026-08-12) ตามคำแนะนำ — ต้นทุนต่ำ, DevOps น้อย, เหมาะกับ MVP |
 
 **อย่าเปลี่ยน stack นี้โดยไม่ถามผู้ใช้ก่อน** — เป็นการตัดสินใจที่ยืนยันแล้ว
 
@@ -66,10 +67,14 @@
 
 ## 6. คำถามที่ยังไม่ตัดสินใจ (ให้ถามผู้ใช้ก่อนลงมือ ถ้าเจอ)
 
-- Deployment target (Vercel/VPS/Docker self-host) — ยังไม่ระบุ
-- ต้องการระบบสมาชิก/ล็อกอินหรือไม่ในเฟสถัดไป — ยังไม่ระบุ
+(ไม่มีในตอนนี้ — คำถามที่เคยค้างไว้ทั้งหมดตัดสินใจแล้ว ดูหัวข้อด้านล่าง)
 
 ### ตัดสินใจแล้ว
 - **ชุดไพ่ออราเคิลหลัก**: สร้างขึ้นเอง (ไม่ใช้สำนักสำเร็จรูป) ผสาน 3 ธีม — เทวดา & นางฟ้าผู้พิทักษ์,
   สัตว์นำทางแบบไทย, ดอกไม้แห่งจิตวิญญาณ — รวม 60 ใบ ชื่อ deck: "ลานลาออราเคิล" (`lanla_original`)
   ผู้ใช้เลือกสลับไปใช้ deck อื่นได้ในแอป — ดู `backend/app/knowledge_base/oracle/README.md`
+- **Deployment target**: Vercel (frontend, Next.js) + Railway (backend FastAPI + managed Postgres)
+  ตามคำแนะนำ — เหตุผลและ checklist ดูข้อความในเซสชันนี้/README การ deploy (ยังไม่ได้สร้างไฟล์
+  แยกต่างหาก)
+- **ระบบสมาชิก**: ใช้ Google Sign-In (OAuth) เป็นวิธีสมัคร/ล็อกอินหลัก — ยกเลิกโมเดล guest-only
+  ตาม MVP เดิม, จะ implement ด้วย NextAuth.js (Auth.js) ฝั่ง frontend
