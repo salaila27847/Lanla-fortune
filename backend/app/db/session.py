@@ -23,7 +23,7 @@ def _normalize_async_url(url: str) -> str:
     return url
 
 
-DATABASE_URL = _normalize_async_url(os.environ.get("DATABASE_URL", "sqlite:///./dev.db"))
+DATABASE_URL = _normalize_async_url(os.environ.get("DATABASE_URL") or "sqlite:///./dev.db")
 
 engine = create_async_engine(DATABASE_URL)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
