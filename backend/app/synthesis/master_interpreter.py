@@ -9,16 +9,24 @@ do not soften or remove them when editing the prompt:
      input (see CLAUDE.md, PRD.md section 4.4).
   3. Three-step method — convergence, then divergence, then
      complementary framing (see PRD.md section 4.4).
+
+If the Claude call fails or times out (Phase 6 QA requirement), synthesize()
+falls back to _fallback_synthesis(), which builds a SynthesisOutput directly
+from the engines' own themes/summaries — plain set overlap for convergence,
+no invented interpretation, so it never violates rule 1 above either.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import os
 
-from anthropic import AsyncAnthropic
+from anthropic import APIError, AsyncAnthropic
 
 from app.core.schema import EngineResult, SynthesisOutput
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
 คุณคือหัวหน้าทีมนักพยากรณ์มืออาชีพ เชี่ยวชาญทั้งโหราศาสตร์ยูเรเนียน ไพ่ทาโรต์ และไพ่ออราเคิล
@@ -38,6 +46,14 @@ SYSTEM_PROMPT = """\
 }
 ห้ามมีข้อความอื่นนอกเหนือจาก JSON"""
 
+_ENGINE_LABELS_TH = {
+    "uranian": "โหราศาสตร์ยูเรเนียน",
+    "tarot": "ไพ่ทาโรต์",
+    "oracle": "ไพ่ออราเคิล",
+}
+
+SYNTHESIS_TIMEOUT_SECONDS = 20.0
+
 
 async def synthesize(
     uranian: EngineResult, tarot: EngineResult, oracle: EngineResult
@@ -51,23 +67,59 @@ async def synthesize(
         "oracle": oracle.model_dump(),
     }
 
-    response = await client.messages.create(
-        model=model,
-        max_tokens=1500,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
+    try:
+        response = await client.messages.create(
+            model=model,
+            max_tokens=1500,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
+            timeout=SYNTHESIS_TIMEOUT_SECONDS,
+        )
+        text_block = next(b for b in response.content if b.type == "text")
+        parsed = json.loads(text_block.text)
+
+        return SynthesisOutput(
+            final_reading=parsed["final_reading"],
+            convergent_themes=parsed["convergent_themes"],
+            divergent_notes=parsed["divergent_notes"],
+            per_engine_breakdown={"uranian": uranian, "tarot": tarot, "oracle": oracle},
+        )
+    except (APIError, TypeError, KeyError, ValueError, StopIteration) as exc:
+        # TypeError covers the anthropic SDK's own "missing/invalid API key"
+        # failure, which it raises before ever making a request rather than
+        # as an APIError. KeyError/ValueError/StopIteration cover a malformed
+        # or non-JSON model response.
+        logger.warning("Synthesis via Claude failed, falling back to raw engine summary: %s", exc)
+        return _fallback_synthesis(uranian, tarot, oracle)
+
+
+def _fallback_synthesis(
+    uranian: EngineResult, tarot: EngineResult, oracle: EngineResult
+) -> SynthesisOutput:
+    engines = {"uranian": uranian, "tarot": tarot, "oracle": oracle}
+
+    theme_counts: dict[str, int] = {}
+    for result in engines.values():
+        for theme in result.themes:
+            theme_counts[theme] = theme_counts.get(theme, 0) + 1
+    convergent_themes = [theme for theme, count in theme_counts.items() if count >= 2]
+
+    divergent_notes = [
+        f"{_ENGINE_LABELS_TH[name]}: {', '.join(result.themes)}"
+        for name, result in engines.items()
+        if result.themes
+    ]
+
+    final_reading = (
+        "ระบบสังเคราะห์คำทำนายอัตโนมัติไม่พร้อมใช้งานชั่วคราว นี่คือสรุปผลดิบจากทั้ง 3 ศาสตร์แทน:\n\n"
+        + "\n\n".join(
+            f"{_ENGINE_LABELS_TH[name]}: {result.summary}" for name, result in engines.items()
+        )
     )
 
-    text_block = next(b for b in response.content if b.type == "text")
-    parsed = json.loads(text_block.text)
-
     return SynthesisOutput(
-        final_reading=parsed["final_reading"],
-        convergent_themes=parsed["convergent_themes"],
-        divergent_notes=parsed["divergent_notes"],
-        per_engine_breakdown={
-            "uranian": uranian,
-            "tarot": tarot,
-            "oracle": oracle,
-        },
+        final_reading=final_reading,
+        convergent_themes=convergent_themes,
+        divergent_notes=divergent_notes,
+        per_engine_breakdown=engines,
     )

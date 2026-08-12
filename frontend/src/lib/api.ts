@@ -30,6 +30,35 @@ export type SynthesisOutput = {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
+export class ReadingRequestError extends Error {
+  status: number;
+  detail?: string;
+
+  constructor(status: number, detail?: string) {
+    super(detail ?? `Reading request failed: ${status}`);
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+async function extractErrorDetail(res: Response): Promise<string | undefined> {
+  try {
+    const body = await res.json();
+    if (Array.isArray(body?.detail)) {
+      return body.detail
+        .map((item: { msg?: string }) => item.msg)
+        .filter(Boolean)
+        .join(", ");
+    }
+    if (typeof body?.detail === "string") {
+      return body.detail;
+    }
+  } catch {
+    // response body wasn't JSON — fall back to a generic message
+  }
+  return undefined;
+}
+
 export async function getReading(birthData: BirthData): Promise<SynthesisOutput> {
   const res = await fetch(`${API_BASE_URL}/api/reading`, {
     method: "POST",
@@ -38,7 +67,7 @@ export async function getReading(birthData: BirthData): Promise<SynthesisOutput>
   });
 
   if (!res.ok) {
-    throw new Error(`Reading request failed: ${res.status}`);
+    throw new ReadingRequestError(res.status, await extractErrorDetail(res));
   }
 
   return res.json();
