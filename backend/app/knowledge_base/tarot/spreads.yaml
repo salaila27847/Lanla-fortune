@@ -1,0 +1,16 @@
+spreads:
+  - id: single_card
+    name_th: "ไพ่ใบเดียว"
+    positions:
+      - id: focus
+        label_th: "คำตอบ"
+
+  - id: three_card
+    name_th: "อดีต-ปัจจุบัน-อนาคต"
+    positions:
+      - id: past
+        label_th: "อดีต"
+      - id: present
+        label_th: "ปัจจุบัน"
+      - id: future
+        label_th: "อนาคต"

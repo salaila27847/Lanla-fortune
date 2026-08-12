@@ -21,7 +21,9 @@
 - [x] Endpoint `/api/reading` ที่ orchestrate เรียก 3 engine แบบ concurrent (`asyncio.gather`) แล้วส่งต่อให้ synthesis
 
 ## Phase 3 — Knowledge base ของจริง (ทีละศาสตร์ แทนที่ mock)
-- [ ] Tarot: ตรวจสอบและ reuse ไฟล์ความหมายจากโปรเจกต์ Destiny Matrix ก่อนสร้างใหม่
+- [x] Tarot: ตรวจสอบแล้ว ไม่พบไฟล์จากโปรเจกต์ Destiny Matrix ในบัญชี GitHub — เขียนความหมายทั้ง 78 ใบ
+      ขึ้นใหม่ (ตั้งตรง+กลับหัว) อิงฐานสากล Rider-Waite-Smith สร้าง knowledge base จริงและสลับ engine
+      จาก mock แล้ว (ดู `backend/app/knowledge_base/tarot/`)
 - [ ] Uranian: สร้างฐานความหมาย configuration พื้นฐาน (8 ดาวเสริม + midpoint หลัก)
 - [x] Oracle: ตัดสินใจแล้ว — deck หลัก `lanla_original` (เทวดา/นางฟ้า + สัตว์นำทางไทย + ดอกไม้ 60 ใบ)
       สร้าง knowledge base จริงและสลับ engine จาก mock แล้ว (ดู `backend/app/knowledge_base/oracle/`)
