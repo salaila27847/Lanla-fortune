@@ -74,3 +74,12 @@
       ล็อกอินจริงบนเครื่องผู้ใช้แล้ว เข้าสู่ระบบด้วย Google สำเร็จ (ยืนยันด้วย screenshot)
 - [ ] ยังไม่ตัดสินใจ: จะบังคับล็อกอินก่อนใช้ `/reading` หรือไม่, จะเก็บประวัติคำทำนายผูกกับ user
       หรือไม่ (ถ้าต้องการต้องเพิ่มตาราง users ใน Postgres/Neon และ backend ต้อง verify token)
+
+## Phase 8 — Deployment (Vercel + Render + Neon)
+- [x] `render.yaml` (Blueprint) สำหรับ backend — เชื่อม repo แล้ว Render สร้าง web service ให้อัตโนมัติ
+- [x] `docs/deployment.md` — ขั้นตอนละเอียดทีละ dashboard (Render, Vercel, Neon, Google OAuth
+      redirect URI สำหรับ production)
+- [ ] ผู้ใช้ต้อง deploy จริงผ่านบัญชีของตัวเอง (Claude ไม่มีสิทธิ์เข้าถึงบัญชี Render/Vercel/Neon) —
+      ทำตาม `docs/deployment.md` ข้อ 1-2 และ 4-5 ก่อน (ข้อ 3 เชื่อม Neon ข้ามได้จนกว่าจะตัดสินใจ
+      เรื่อง reading history)
+- [ ] ทดสอบ end-to-end บน production จริง

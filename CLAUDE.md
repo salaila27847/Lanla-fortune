@@ -77,7 +77,9 @@
   แก้ไข 2026-08-12: ตอนแรกแนะนำ Railway แต่ผู้ใช้ทักท้วงว่าไม่ฟรีจริง (ตรวจสอบแล้วพบว่า Railway
   ให้ trial credit $5 ครั้งเดียว 30 วัน ต้องผูกบัตรเครดิตตั้งแต่สมัคร) จึงเปลี่ยนเป็น Render + Neon
   ซึ่งทั้งคู่ไม่ต้องผูกบัตรเครดิตเลย (Render free web service sleep หลังไม่มีคนใช้ 15 นาที,
-  Neon Postgres free tier ไม่หมดอายุ) — ยังไม่ได้สร้างไฟล์ deploy config แยกต่างหาก
+  Neon Postgres free tier ไม่หมดอายุ) — มี `render.yaml` (Blueprint) แล้ว และขั้นตอน deploy
+  ทั้งหมดอยู่ใน `docs/deployment.md` (ต้องทำผ่านบัญชีผู้ใช้เองในแต่ละ dashboard เนื่องจากต้องใช้
+  ข้อมูลลับ/บัญชีส่วนตัว) — ยังไม่ได้เชื่อม Neon จริงเพราะ backend ยังไม่มี DB layer เลย
 - **ระบบสมาชิก**: ใช้ Google Sign-In (OAuth) implement แล้วด้วย `next-auth@5` (Auth.js) — ดู
   `frontend/README.md` หัวข้อ "ตั้งค่า Google Sign-In" ปุ่มล็อกอินอยู่ใน Header ทุกหน้า แต่ยัง
   **ไม่บังคับ** ล็อกอินก่อนใช้ `/reading` (ยังเป็น guest-friendly เหมือนเดิม จนกว่าจะตัดสินใจอีกครั้ง
