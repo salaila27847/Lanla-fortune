@@ -2,11 +2,11 @@
 
 Not a pytest — it makes a real Gemini API call and needs a human to read the
 output, so it isn't meant to run in CI. Requires a real GEMINI_API_KEY in
-the environment (e.g. via backend/.env).
+backend/.env (this script loads it itself, same as app/main.py does).
 
 Usage:
     cd backend && source .venv/bin/activate
-    python scripts/qa_conflict_reading.py
+    PYTHONPATH=. python scripts/qa_conflict_reading.py
 
 Builds a scenario where the 3 engines deliberately disagree about a career
 move, then prints the synthesized reading so you can check by eye that
@@ -20,8 +20,12 @@ from __future__ import annotations
 import asyncio
 import json
 
+from dotenv import load_dotenv
+
 from app.core.schema import EngineResult, Finding
 from app.synthesis.master_interpreter import synthesize
+
+load_dotenv()
 
 # Uranian: favors the move (expansion, opportunity)
 URANIAN = EngineResult(
