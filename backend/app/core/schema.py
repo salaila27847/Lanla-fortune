@@ -10,8 +10,11 @@ from __future__ import annotations
 from datetime import date
 from datetime import time as dt_time
 from typing import Literal
+from zoneinfo import available_timezones
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+_VALID_TIMEZONES = frozenset(available_timezones())
 
 
 class Finding(BaseModel):
@@ -32,9 +35,16 @@ class BirthData(BaseModel):
     date: date
     time: dt_time | None = None
     place: str
-    latitude: float
-    longitude: float
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
     timezone: str
+
+    @field_validator("timezone")
+    @classmethod
+    def _validate_timezone(cls, value: str) -> str:
+        if value not in _VALID_TIMEZONES:
+            raise ValueError(f"Unknown IANA timezone: {value!r}")
+        return value
 
 
 class CardDraw(BaseModel):
