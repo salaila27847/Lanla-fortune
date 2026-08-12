@@ -56,3 +56,17 @@
   - จั่วไพ่ซ้ำ — ป้องกันโดยโครงสร้าง (`random.sample` ไม่คืนใบซ้ำ) ทั้ง tarot และ oracle engine
   - Claude API timeout/fail — `master_interpreter.py` มี fallback แล้ว (ตัดกลับไปสรุปผลดิบจาก
     3 engine ตรงๆ แทนการ error 500) ทดสอบจริงผ่าน HTTP แล้วว่าไม่ crash แม้ไม่มี API key
+  - Timezone/พิกัดไม่ถูกต้อง — `BirthData` validate ที่ schema (422 แทนที่จะ crash 500)
+
+## Phase 7 — ระบบสมาชิก (Google Sign-In)
+- [x] ติดตั้ง `next-auth@5` (Auth.js) พร้อม Google provider — `frontend/src/auth.ts`,
+      `frontend/src/app/api/auth/[...nextauth]/route.ts`
+- [x] UI ล็อกอิน/ล็อกเอาต์ — `AuthButton.tsx` (Server Component + Server Action) แสดงใน
+      `Header.tsx` ทุกหน้า ไม่ได้บังคับล็อกอินก่อนใช้หน้า `/reading` (ยังเป็น guest-friendly เหมือนเดิม)
+- [x] ทดสอบโครงสร้างแล้ว: `GET /api/auth/providers` คืนค่า provider ถูกต้อง, กด "เข้าสู่ระบบด้วย
+      Google" ได้ Server Action ที่สร้าง Google OAuth authorization URL ถูกต้องครบ (client_id,
+      redirect_uri, PKCE, scope) — ยังทดสอบ live ไม่ได้เพราะไม่มี Google OAuth credentials จริง
+- [ ] ผู้ใช้ต้องสร้าง Google OAuth Client ID/Secret จริงและใส่ใน `frontend/.env.local` ก่อนถึงจะ
+      ล็อกอินได้จริง (ดู `frontend/.env.example`)
+- [ ] ยังไม่ตัดสินใจ: จะบังคับล็อกอินก่อนใช้ `/reading` หรือไม่, จะเก็บประวัติคำทำนายผูกกับ user
+      หรือไม่ (ถ้าต้องการต้องเพิ่มตาราง users ใน Postgres/Neon และ backend ต้อง verify token)

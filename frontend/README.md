@@ -5,18 +5,31 @@ Next.js 14+ (App Router), TypeScript, TailwindCSS. Scaffolded with:
 ```bash
 npx create-next-app@latest . --typescript --tailwind --app --eslint --src-dir --import-alias "@/*"
 npm install framer-motion   # สำหรับ animation จั่วไพ่ / 90° dial
+npm install next-auth@beta  # Google Sign-In (Auth.js v5)
 ```
 
-## หน้าที่ต้องมี (ดู docs/PRD.md ส่วน user flow)
+## โครงสร้างที่มีอยู่จริง
 
-- `src/app/birth-data/page.tsx` — ฟอร์มกรอกข้อมูลเกิด + เลือกคำถาม
-- `src/app/tarot-draw/page.tsx` — จั่วไพ่ทาโรต์แบบ interactive
-- `src/app/oracle-draw/page.tsx` — จั่วไพ่ออราเคิล
-- `src/app/reading/page.tsx` — แสดงคำทำนายฉบับสมบูรณ์ + tab แยกศาสตร์
+- `src/app/page.tsx` — หน้า landing
+- `src/app/reading/page.tsx` — wizard เดียว: กรอกข้อมูลเกิด → จั่วไพ่ทาโรต์ → จั่วไพ่ออราเคิล →
+  แสดงคำทำนายฉบับสมบูรณ์ (ใช้ step state ไม่ได้แยกเป็นหลาย route ตามที่วางแผนไว้ตอนแรก)
+- `src/components/BirthDataForm.tsx`, `CardDrawStep.tsx`, `ReadingResult.tsx` — component ของแต่ละ step
+- `src/components/Header.tsx`, `AuthButton.tsx` — header ที่มีปุ่มล็อกอิน/ล็อกเอาต์ Google ทุกหน้า
 - `src/lib/api.ts` — client เรียก `POST /api/reading` ของ backend (ดู backend/app/main.py)
+- `src/auth.ts`, `src/app/api/auth/[...nextauth]/route.ts` — ตั้งค่า Google Sign-In (Auth.js v5)
 
-ในช่วงที่ backend engine ยังเป็น mock (Phase 1-2) หน้าเหล่านี้พัฒนาคู่ขนานได้เลย เพราะ endpoint
-`/api/reading` คืนค่าตาม schema จริงอยู่แล้ว แค่เนื้อหาข้างในเป็น mock data
+## ตั้งค่า Google Sign-In (ต้องทำก่อนล็อกอินได้จริง)
+
+1. สร้าง `.env.local` จาก `.env.example`
+2. รัน `npx auth secret` เพื่อสร้างค่า `AUTH_SECRET` แบบสุ่ม (หรือใช้ `python3 -c "import secrets; print(secrets.token_hex(32))"`)
+3. ไปที่ [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
+   → Create Credentials → OAuth client ID → เลือก "Web application"
+4. ใส่ Authorized redirect URI: `http://localhost:3000/api/auth/callback/google` (dev) และโดเมนจริงตอน deploy
+5. คัดลอก Client ID / Client Secret ใส่ `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` ใน `.env.local`
+
+ไม่มี `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` จริง แอปยังรันได้ปกติ (ปุ่มล็อกอินจะพา redirect ไป
+Google แล้วเจอ error จาก Google เอง เพราะ client ID ไม่มีตัวตนจริง) — หน้าเว็บอื่นๆ ที่ไม่ต้องล็อกอิน
+(รวมถึง `/reading`) ใช้งานได้ตามปกติโดยไม่ต้องล็อกอิน
 
 ## Dev server
 

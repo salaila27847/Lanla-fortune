@@ -78,5 +78,7 @@
   ให้ trial credit $5 ครั้งเดียว 30 วัน ต้องผูกบัตรเครดิตตั้งแต่สมัคร) จึงเปลี่ยนเป็น Render + Neon
   ซึ่งทั้งคู่ไม่ต้องผูกบัตรเครดิตเลย (Render free web service sleep หลังไม่มีคนใช้ 15 นาที,
   Neon Postgres free tier ไม่หมดอายุ) — ยังไม่ได้สร้างไฟล์ deploy config แยกต่างหาก
-- **ระบบสมาชิก**: ใช้ Google Sign-In (OAuth) เป็นวิธีสมัคร/ล็อกอินหลัก — ยกเลิกโมเดล guest-only
-  ตาม MVP เดิม, จะ implement ด้วย NextAuth.js (Auth.js) ฝั่ง frontend
+- **ระบบสมาชิก**: ใช้ Google Sign-In (OAuth) implement แล้วด้วย `next-auth@5` (Auth.js) — ดู
+  `frontend/README.md` หัวข้อ "ตั้งค่า Google Sign-In" ปุ่มล็อกอินอยู่ใน Header ทุกหน้า แต่ยัง
+  **ไม่บังคับ** ล็อกอินก่อนใช้ `/reading` (ยังเป็น guest-friendly เหมือนเดิม จนกว่าจะตัดสินใจอีกครั้ง
+  ว่าจะบังคับหรือจะผูกประวัติคำทำนายกับ user)
