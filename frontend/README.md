@@ -1,12 +1,8 @@
-# Frontend — ยังไม่ scaffold
+# Frontend — Fortune App
 
-ตั้งใจปล่อยว่างไว้ให้ Claude Code รัน scaffold tool โดยตรงในเครื่องจริง (มี network access เต็มที่)
-แทนที่จะสร้างไฟล์ Next.js ปลอมไว้ล่วงหน้า
-
-## คำสั่งที่ Claude Code ควรรัน (Phase 0)
+Next.js 14+ (App Router), TypeScript, TailwindCSS. Scaffolded with:
 
 ```bash
-cd frontend
 npx create-next-app@latest . --typescript --tailwind --app --eslint --src-dir --import-alias "@/*"
 npm install framer-motion   # สำหรับ animation จั่วไพ่ / 90° dial
 ```
@@ -21,3 +17,9 @@ npm install framer-motion   # สำหรับ animation จั่วไพ่
 
 ในช่วงที่ backend engine ยังเป็น mock (Phase 1-2) หน้าเหล่านี้พัฒนาคู่ขนานได้เลย เพราะ endpoint
 `/api/reading` คืนค่าตาม schema จริงอยู่แล้ว แค่เนื้อหาข้างในเป็น mock data
+
+## Dev server
+
+```bash
+npm run dev
+```

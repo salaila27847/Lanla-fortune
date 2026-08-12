@@ -7,7 +7,8 @@ so it never needs to know the internals of any one engine.
 
 from __future__ import annotations
 
-from datetime import date, time as dt_time
+from datetime import date
+from datetime import time as dt_time
 from typing import Literal
 
 from pydantic import BaseModel, Field

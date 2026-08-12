@@ -34,10 +34,12 @@ fortune-app/
 ## สถานะปัจจุบัน
 
 - [x] โครงสร้าง repo + เอกสาร (CLAUDE.md, PRD, data schema, task breakdown)
-- [x] Backend: schema กลาง, 3 engine stub (mock data), synthesis layer, FastAPI endpoint
-- [ ] Frontend: ยังไม่ scaffold — รัน `npx create-next-app@latest` ตาม `frontend/README.md`
+- [x] Backend: schema กลาง, 3 engine stub (mock data), synthesis layer, FastAPI endpoint, venv + tests ผ่าน
+- [x] Frontend: scaffold ด้วย `create-next-app` (TS, Tailwind, App Router) + framer-motion + `src/lib/api.ts`
+- [x] CI: GitHub Actions รัน lint + test ทั้ง backend/frontend บน push/PR ไปที่ `main`
 - [ ] Knowledge base จริง (ยูเรเนียน/ทาโรต์/ออราเคิล) — ยังเป็น mock ทั้งหมด
 - [ ] ชุดไพ่ออราเคิลหลัก — ยังไม่ตัดสินใจ (ต้องถามผู้ใช้)
+- [ ] หน้า frontend จริง (birth-data, tarot-draw, oracle-draw, reading) — ยังไม่สร้าง
 
 ## รันทดสอบ backend
 
