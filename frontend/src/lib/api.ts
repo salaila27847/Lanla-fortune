@@ -28,7 +28,12 @@ export type SynthesisOutput = {
   per_engine_breakdown: Record<string, EngineResult>;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+export type ReadingRecord = {
+  id: number;
+  created_at: string;
+  birth_data: BirthData;
+  synthesis: SynthesisOutput;
+};
 
 export class ReadingRequestError extends Error {
   status: number;
@@ -60,7 +65,7 @@ async function extractErrorDetail(res: Response): Promise<string | undefined> {
 }
 
 export async function getReading(birthData: BirthData): Promise<SynthesisOutput> {
-  const res = await fetch(`${API_BASE_URL}/api/reading`, {
+  const res = await fetch("/api/reading", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(birthData),
