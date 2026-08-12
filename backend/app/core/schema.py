@@ -7,7 +7,7 @@ so it never needs to know the internals of any one engine.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from datetime import time as dt_time
 from typing import Literal
 from zoneinfo import available_timezones
@@ -59,3 +59,10 @@ class SynthesisOutput(BaseModel):
     convergent_themes: list[str]
     divergent_notes: list[str]
     per_engine_breakdown: dict[str, EngineResult]
+
+
+class ReadingRecord(BaseModel):
+    id: int
+    created_at: datetime
+    birth_data: BirthData
+    synthesis: SynthesisOutput

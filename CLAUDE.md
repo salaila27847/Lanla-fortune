@@ -79,8 +79,16 @@
   ซึ่งทั้งคู่ไม่ต้องผูกบัตรเครดิตเลย (Render free web service sleep หลังไม่มีคนใช้ 15 นาที,
   Neon Postgres free tier ไม่หมดอายุ) — มี `render.yaml` (Blueprint) แล้ว และขั้นตอน deploy
   ทั้งหมดอยู่ใน `docs/deployment.md` (ต้องทำผ่านบัญชีผู้ใช้เองในแต่ละ dashboard เนื่องจากต้องใช้
-  ข้อมูลลับ/บัญชีส่วนตัว) — ยังไม่ได้เชื่อม Neon จริงเพราะ backend ยังไม่มี DB layer เลย
+  ข้อมูลลับ/บัญชีส่วนตัว) — **แก้ไข**: เชื่อม Neon แล้ว (บังคับ ไม่ใช่ตัวเลือก) เพราะ backend มี DB
+  layer จริงแล้ว (`backend/app/db/`) รองรับฟีเจอร์เก็บประวัติคำทำนายด้านล่าง
 - **ระบบสมาชิก**: ใช้ Google Sign-In (OAuth) implement แล้วด้วย `next-auth@5` (Auth.js) — ดู
-  `frontend/README.md` หัวข้อ "ตั้งค่า Google Sign-In" ปุ่มล็อกอินอยู่ใน Header ทุกหน้า แต่ยัง
-  **ไม่บังคับ** ล็อกอินก่อนใช้ `/reading` (ยังเป็น guest-friendly เหมือนเดิม จนกว่าจะตัดสินใจอีกครั้ง
-  ว่าจะบังคับหรือจะผูกประวัติคำทำนายกับ user)
+  `frontend/README.md` หัวข้อ "ตั้งค่า Google Sign-In" ปุ่มล็อกอินอยู่ใน Header ทุกหน้า —
+  **แก้ไข 2026-08-12**: ผู้ใช้ตัดสินใจแล้วทั้ง 2 ข้อที่เคยค้างไว้: (1) **บังคับล็อกอิน**ก่อนใช้
+  `/reading` และ `/history` แล้ว (เปลี่ยนจาก guest-friendly เดิม) ผ่าน `frontend/src/proxy.ts`
+  (Next.js 16 เปลี่ยนชื่อ `middleware.ts` เป็น `proxy.ts` — ระวังอย่าสร้าง `middleware.ts` ใหม่
+  จะไม่ทำงาน) (2) **เก็บประวัติคำทำนายผูกกับ user** แล้ว — ทุกครั้งที่เรียก `/api/reading` สำเร็จ
+  จะบันทึกลง Postgres/SQLite อัตโนมัติ ดูได้ที่ `/history` สถาปัตยกรรมยืนยันตัวตนใช้ BFF proxy
+  pattern: browser ไม่เรียก FastAPI backend ตรงๆ อีกแล้ว แต่ผ่าน Next.js Route Handler
+  (`frontend/src/app/api/reading/route.ts`) ที่ตรวจ session ฝั่ง server ก่อน แล้วส่งต่อไป backend
+  พร้อม shared secret (`INTERNAL_API_SECRET`) — **กฎ "ห้ามใช้ประวัติผู้ใช้" ในข้อ 1 ยังคงอยู่**:
+  ประวัติที่เก็บไว้ใช้แสดงผลให้ผู้ใช้ดูเองเท่านั้น ห้ามดึงกลับไปป้อนให้ Master Interpreter ทุกกรณี

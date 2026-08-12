@@ -50,6 +50,38 @@ class SynthesisOutput(BaseModel):
     per_engine_breakdown: dict[str, EngineResult]  # ผลดิบของแต่ละศาสตร์ ให้ผู้ใช้ตรวจสอบที่มาได้
 ```
 
+## User / Reading (persistence — Postgres/Neon prod, SQLite dev, ดู `backend/app/db/models.py`)
+
+ตารางเหล่านี้เป็น SQLAlchemy model ไม่ใช่ Pydantic — ใช้เก็บประวัติคำทำนายผูกกับ user ที่ล็อกอิน
+ด้วย Google เท่านั้น ไม่เคยถูกส่งเข้า prompt ของ Claude (ดูกฎ "ห้ามใช้ประวัติผู้ใช้" ใน CLAUDE.md ข้อ 1)
+— เป็นแค่ที่เก็บสำหรับให้ผู้ใช้ย้อนดูของตัวเองที่หน้า `/history`
+
+```python
+class User(Base):
+    id: int                  # primary key
+    google_sub: str          # unique — Google account id ที่เสถียร (จาก session.user.id)
+    email: str
+    name: str | None
+    created_at: datetime
+
+class Reading(Base):
+    id: int                  # primary key
+    user_id: int             # FK -> users.id
+    birth_data: dict          # BirthData.model_dump(mode="json") ทั้งก้อน
+    synthesis_output: dict    # SynthesisOutput.model_dump(mode="json") ทั้งก้อน
+    created_at: datetime
+```
+
+## ReadingRecord (response ของ `GET /api/readings` — Pydantic)
+
+```python
+class ReadingRecord(BaseModel):
+    id: int
+    created_at: datetime
+    birth_data: BirthData
+    synthesis: SynthesisOutput
+```
+
 ## หมายเหตุสำคัญ
 
 - **ไพ่ทาโรต์ (แก้ไข 2026-08-12)**: ตรวจสอบทุก repo ในบัญชี GitHub ที่ใช้งานแล้ว ไม่พบไฟล์อ้างอิงจากโปรเจกต์

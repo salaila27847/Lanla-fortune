@@ -75,14 +75,43 @@
       redirect_uri, PKCE, scope) — ยังทดสอบ live ไม่ได้เพราะไม่มี Google OAuth credentials จริง
 - [x] ผู้ใช้สร้าง Google OAuth Client ID/Secret จริงแล้วและใส่ใน `frontend/.env.local` — ทดสอบ
       ล็อกอินจริงบนเครื่องผู้ใช้แล้ว เข้าสู่ระบบด้วย Google สำเร็จ (ยืนยันด้วย screenshot)
-- [ ] ยังไม่ตัดสินใจ: จะบังคับล็อกอินก่อนใช้ `/reading` หรือไม่, จะเก็บประวัติคำทำนายผูกกับ user
-      หรือไม่ (ถ้าต้องการต้องเพิ่มตาราง users ใน Postgres/Neon และ backend ต้อง verify token)
+- [x] ตัดสินใจแล้ว (2026-08-12): บังคับล็อกอินก่อนใช้ `/reading` และ `/history` + เก็บประวัติคำทำนาย
+      ผูกกับ user จริง — ดู Phase 9 ด้านล่างสำหรับรายละเอียด implementation
 
 ## Phase 8 — Deployment (Vercel + Render + Neon)
 - [x] `render.yaml` (Blueprint) สำหรับ backend — เชื่อม repo แล้ว Render สร้าง web service ให้อัตโนมัติ
 - [x] `docs/deployment.md` — ขั้นตอนละเอียดทีละ dashboard (Render, Vercel, Neon, Google OAuth
       redirect URI สำหรับ production)
 - [ ] ผู้ใช้ต้อง deploy จริงผ่านบัญชีของตัวเอง (Claude ไม่มีสิทธิ์เข้าถึงบัญชี Render/Vercel/Neon) —
-      ทำตาม `docs/deployment.md` ข้อ 1-2 และ 4-5 ก่อน (ข้อ 3 เชื่อม Neon ข้ามได้จนกว่าจะตัดสินใจ
-      เรื่อง reading history)
+      ทำตาม `docs/deployment.md` ข้อ 1-5 ทั้งหมด **รวมข้อ 3 (เชื่อม Neon) ด้วย** — ไม่ใช่ตัวเลือกอีก
+      ต่อไปแล้ว เพราะ Phase 9 ทำให้ login/history ต้องมี DB จริงถึงจะใช้งานได้
 - [ ] ทดสอบ end-to-end บน production จริง
+
+## Phase 9 — บังคับล็อกอิน + เก็บประวัติคำทำนายผูกกับ user
+- [x] Backend: DB layer จริงด้วย SQLAlchemy 2.0 async (`backend/app/db/session.py`,
+      `backend/app/db/models.py`) — `User` (google_sub, email, name), `Reading` (birth_data +
+      synthesis_output เป็น JSON column ผูกกับ user_id) สร้างตารางอัตโนมัติตอน startup
+      (`Base.metadata.create_all`, ยังไม่ใช้ Alembic เพราะไม่มี migration มาก่อน)
+- [x] Backend: ยืนยันตัวตนแบบ BFF proxy + shared secret (`backend/app/core/auth.py`) — Next.js
+      server เป็นคนตรวจ session จริง (ผ่าน `auth()`) แล้วส่ง `X-Internal-Secret` +
+      `X-User-Id`/`X-User-Email`/`X-User-Name` มาให้ backend ตรวจซ้ำด้วย `hmac.compare_digest`
+      (เลือกทางนี้แทนการถอดรหัส JWE ของ NextAuth เองใน Python เพราะซับซ้อนและเปราะบางกว่ามาก)
+- [x] Backend: `POST /api/reading` บันทึกทุกคำทำนายลง DB อัตโนมัติ (response shape เดิมไม่เปลี่ยน),
+      `GET /api/readings` คืนประวัติของ user คนนั้นเท่านั้น (เรียงใหม่สุดก่อน) — มี unit test
+      ครอบคลุม 401 กรณี secret ผิด/ขาด, การบันทึกถูก user, และ **cross-user isolation** โดยเฉพาะ
+      (`backend/tests/test_reading_history.py`)
+- [x] Frontend: `frontend/src/proxy.ts` กัน `/reading`, `/history` ไม่ให้เข้าถ้ายังไม่ล็อกอิน
+      (Next.js 16 เปลี่ยนชื่อ convention จาก `middleware.ts` เป็น `proxy.ts` — ตรวจสอบกับ
+      `node_modules/next/dist/docs/` แล้วยืนยันแล้ว) พร้อม `callbacks.authorized` ใน `auth.ts`
+- [x] Frontend: แก้บั๊ก callbackUrl ไม่ไหลไปถึง `signIn()` ตอนใช้ custom sign-in page (ถ้าไม่แก้
+      ผู้ใช้จะเด้งกลับหน้าแรกเสมอหลัง login แทนที่จะกลับไปหน้าที่ตั้งใจเข้า)
+- [x] Frontend: `/history` หน้าใหม่ (Server Component) แสดงประวัติคำทำนาย, ลิงก์ "ดูประวัติคำทำนาย"
+      ใน `AuthButton.tsx`
+- [x] Frontend: `lib/backend.ts` (server-only helper แนบ header ยืนยันตัวตน) +
+      `app/api/reading/route.ts` (proxy คำขอจาก wizard ที่เป็น Client Component ไปยัง backend)
+- [x] ทดสอบแล้ว: backend 36 tests ผ่านทั้งหมด (`ruff check`/`ruff format --check` สะอาด), frontend
+      `npm run build`/`npm run lint` ผ่าน, ยืนยันด้วย curl ว่า auth/persistence/cross-user
+      isolation ทำงานถูกต้องจริงแบบ end-to-end, Playwright ยืนยัน redirect ตอนไม่ได้ล็อกอิน
+- [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: sandbox นี้ทำ Google OAuth login จริงไม่ได้ (ไม่มี credentials
+      จริง) — ต้องทดสอบ full flow (login → กรอกข้อมูล → จั่วไพ่ → เห็นคำทำนายใน `/history`) บนเครื่อง
+      ผู้ใช้เอง เหมือนตอนทดสอบ Google Sign-In ครั้งแรก

@@ -7,10 +7,8 @@
 environment variables) — Claude ไม่มีสิทธิ์เข้าถึงบัญชีเหล่านี้ให้คุณได้ ไฟล์ `render.yaml` ที่มีอยู่แล้ว
 ในโปรเจกต์ช่วยให้ขั้นตอน Render เป็นแบบคลิกเดียว (Blueprint)
 
-**หมายเหตุเรื่อง Neon/Postgres:** backend ปัจจุบัน**ยังไม่มี** DB layer เลย (ไม่มีตาราง ไม่มี
-SQLAlchemy model) เพราะฟีเจอร์ที่ต้องใช้ DB จริง (เก็บประวัติคำทำนายผูกกับ user) ยังไม่ตัดสินใจ
-(ดู `docs/task-breakdown.md` Phase 7) — ขั้นตอน Neon ด้านล่างจึงยังไม่จำเป็นสำหรับตอนนี้ ข้ามไปก่อนได้
-แอปทำงานได้ครบ (3 engine + synthesis + login) โดยไม่มี DB เลย จะกลับมาทำตอนตัดสินใจเรื่อง history แล้ว
+**อัปเดต:** ตอนนี้ `/reading` และ `/history` บังคับล็อกอินแล้ว และทุกคำทำนายถูกเก็บลง Postgres
+ผูกกับ user — ขั้นตอน Neon (ข้อ 3) จึงเป็นขั้นตอน**บังคับ**แล้ว ไม่ใช่ตัวเลือกอีกต่อไป
 
 ## 1. Backend → Render
 
@@ -22,6 +20,11 @@ SQLAlchemy model) เพราะฟีเจอร์ที่ต้องใ�
    - `ANTHROPIC_API_KEY` — จาก [console.anthropic.com](https://console.anthropic.com)
    - `FRONTEND_ORIGIN` — ใส่ URL ของ Vercel หลังจาก deploy frontend เสร็จ (ขั้นตอน 2) เช่น
      `https://lanla-fortune.vercel.app` — ถ้ามีหลาย origin (เช่น preview deploy) คั่นด้วย `,`
+     (ตอนนี้ browser ไม่ได้เรียก backend ตรงๆ แล้ว แต่เก็บไว้เผื่อเรียก `/health` เองจากที่อื่น)
+   - `DATABASE_URL` — connection string จาก Neon (ดูขั้นตอน 3) วางตามที่ Neon ให้มาได้เลย ไม่ต้อง
+     แก้ scheme เอง (โค้ดแปลง `postgresql://` → `postgresql+asyncpg://` ให้อัตโนมัติ)
+   - `INTERNAL_API_SECRET` — สร้างด้วย `openssl rand -hex 32` แล้วเอาค่า**เดียวกันเป๊ะๆ**ไปใส่ที่
+     Vercel ด้วย (ขั้นตอน 2) — ใช้ยืนยันว่าคำขอมาจาก frontend server ของเราจริง
 5. Deploy แล้วจด URL backend ไว้ (รูปแบบ `https://lanla-fortune-backend.onrender.com`) — ใช้ในขั้นตอน 2
 6. ทดสอบว่า backend ขึ้นจริง: `curl https://<backend-url>/health` ควรได้ `{"status":"ok"}`
 
@@ -37,18 +40,20 @@ SQLAlchemy model) เพราะฟีเจอร์ที่ต้องใ�
    `frontend/.env.example`:
    - `AUTH_SECRET` — สร้างด้วย `npx auth secret` (ค่าใหม่สำหรับ production ไม่ใช้ค่าเดียวกับ dev)
    - `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` — จาก Google Cloud Console (ดูขั้นตอน 4)
-   - `NEXT_PUBLIC_API_BASE_URL` — URL backend จาก Render ในขั้นตอน 1
+   - `BACKEND_INTERNAL_URL` — URL backend จาก Render ในขั้นตอน 1 (server-only ไม่มี `NEXT_PUBLIC_`
+     prefix — browser ไม่เห็นค่านี้เลย)
+   - `INTERNAL_API_SECRET` — ต้องตรงกับค่าที่ตั้งใน Render ขั้นตอน 1.4 เป๊ะๆ
 5. Deploy แล้วจด URL frontend ไว้ (เช่น `https://lanla-fortune.vercel.app`) — เอาไปใส่
-   `FRONTEND_ORIGIN` ใน Render (ขั้นตอน 1.4) แล้ว redeploy backend อีกครั้งให้ CORS ถูกต้อง
+   `FRONTEND_ORIGIN` ใน Render (ขั้นตอน 1.4) แล้ว redeploy backend อีกครั้ง
 
-## 3. เชื่อม Neon (ข้ามได้ตอนนี้ — ดูหมายเหตุด้านบน)
+## 3. เชื่อม Neon (บังคับ — ไม่มี DB แล้วล็อกอินไม่ได้ผลจริง เพราะเก็บประวัติไม่ได้)
 
-เมื่อถึงเวลาที่ต้องใช้จริง:
 1. [console.neon.tech](https://console.neon.tech) → New Project → คัดลอก connection string
-   (`postgresql://...`)
-2. ใส่เป็น `DATABASE_URL` ใน Render environment variables
-3. เพิ่ม `asyncpg` หรือ `psycopg[binary]` ใน `backend/requirements.txt` และเขียน SQLAlchemy
-   models/migrations ตามฟีเจอร์ history ที่จะตัดสินใจ
+   (`postgresql://...`) มาวางใน `DATABASE_URL` ที่ Render ตรงๆ ได้เลย ไม่ต้องแก้อะไร
+2. Deploy backend ใหม่อีกครั้ง — ตอน startup แอปจะสร้างตาราง `users`/`readings` อัตโนมัติ
+   (`Base.metadata.create_all`, ไม่ใช้ Alembic เพราะยังไม่มี migration ในโปรเจกต์)
+3. ทดสอบว่าตารางถูกสร้างจริง: เข้า Neon dashboard → SQL Editor → `\dt` หรือ
+   `select * from users limit 1;` ควรรันได้ไม่ error (แม้ว่าจะยังไม่มีแถวข้อมูล)
 
 ## 4. อัปเดต Google OAuth Console สำหรับ production
 
@@ -64,6 +69,9 @@ https://<your-vercel-domain>/api/auth/callback/google
 
 ## 5. ทดสอบ end-to-end บน production
 
-- เปิด URL Vercel → login ด้วย Google → กรอกข้อมูลเกิด (ลองพิมพ์ค้นหาสถานที่ด้วย เพื่อเช็ค
-  Nominatim ใช้งานได้จากโดเมนจริง) → จั่วไพ่ → ดูผลคำทำนายฉบับสมบูรณ์จนจบ
-- เช็ค Render logs ว่า `/api/reading` ตอบ 200 ไม่มี error เรื่อง `ANTHROPIC_API_KEY`
+- เปิด URL Vercel → เข้า `/reading` ตรงๆ ก่อน (ยังไม่ล็อกอิน) ควรเด้งกลับหน้าแรกพร้อม `callbackUrl`
+- login ด้วย Google → ควรเด้งกลับ `/reading` อัตโนมัติ → กรอกข้อมูลเกิด (ลองพิมพ์ค้นหาสถานที่ด้วย
+  เพื่อเช็ค Nominatim ใช้งานได้จากโดเมนจริง) → จั่วไพ่ → ดูผลคำทำนายฉบับสมบูรณ์จนจบ
+- เข้า `/history` เช็คว่าคำทำนายที่เพิ่งดูปรากฏอยู่ในประวัติ
+- เช็ค Render logs ว่า `/api/reading` และ `/api/readings` ตอบ 200 ไม่มี error เรื่อง
+  `ANTHROPIC_API_KEY`/`INTERNAL_API_SECRET`/`DATABASE_URL`
