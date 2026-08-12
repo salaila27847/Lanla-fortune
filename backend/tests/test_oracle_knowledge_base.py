@@ -10,18 +10,18 @@ import pytest
 from app.modules.oracle.engine import DEFAULT_DECK, _load_deck_cards, draw
 
 
-def test_deck_has_sixty_unique_cards():
+def test_deck_has_eighty_eight_unique_cards():
     cards = _load_deck_cards(DEFAULT_DECK)
-    assert len(cards) == 60
+    assert len(cards) == 88
 
     ids = [card["id"] for card in cards]
     assert len(ids) == len(set(ids))
 
 
-def test_deck_covers_all_three_categories():
+def test_deck_covers_all_four_categories():
     cards = _load_deck_cards(DEFAULT_DECK)
     categories = {card["category"] for card in cards}
-    assert categories == {"guardian", "animal", "flower"}
+    assert categories == {"guardian", "animal", "flower", "shadow"}
 
 
 @pytest.mark.asyncio
