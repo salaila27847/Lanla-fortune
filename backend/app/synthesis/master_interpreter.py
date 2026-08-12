@@ -74,7 +74,12 @@ async def synthesize(
             contents=json.dumps(payload, ensure_ascii=False),
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
-                max_output_tokens=1500,
+                max_output_tokens=4096,
+                # Structured JSON output doesn't need extended reasoning, and
+                # leaving this on AUTOMATIC (the model default) was silently
+                # eating the token budget on thinking before ever emitting
+                # the JSON, truncating it mid-string.
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
                 response_mime_type="application/json",
                 http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
             ),
