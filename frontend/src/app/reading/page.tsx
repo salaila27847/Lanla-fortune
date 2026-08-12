@@ -4,7 +4,7 @@ import { useState } from "react";
 import BirthDataForm from "@/components/BirthDataForm";
 import CardDrawStep from "@/components/CardDrawStep";
 import ReadingResult from "@/components/ReadingResult";
-import { getReading, type BirthData, type SynthesisOutput } from "@/lib/api";
+import { getReading, ReadingRequestError, type BirthData, type SynthesisOutput } from "@/lib/api";
 
 type Step = "birth-data" | "tarot" | "oracle" | "loading" | "result" | "error";
 
@@ -13,12 +13,14 @@ export default function ReadingPage() {
   const [birthData, setBirthData] = useState<BirthData | null>(null);
   const [result, setResult] = useState<SynthesisOutput | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isInputError, setIsInputError] = useState(false);
 
   function restart() {
     setStep("birth-data");
     setBirthData(null);
     setResult(null);
     setErrorMessage("");
+    setIsInputError(false);
   }
 
   async function fetchReading(data: BirthData) {
@@ -27,8 +29,14 @@ export default function ReadingPage() {
       const reading = await getReading(data);
       setResult(reading);
       setStep("result");
-    } catch {
-      setErrorMessage("ไม่สามารถเชื่อมต่อกับระบบดูดวงได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
+    } catch (err) {
+      if (err instanceof ReadingRequestError && err.status === 422) {
+        setErrorMessage(`ข้อมูลที่กรอกไม่ถูกต้อง: ${err.detail ?? "กรุณาตรวจสอบข้อมูลอีกครั้ง"}`);
+        setIsInputError(true);
+      } else {
+        setErrorMessage("ไม่สามารถเชื่อมต่อกับระบบดูดวงได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
+        setIsInputError(false);
+      }
       setStep("error");
     }
   }
@@ -78,10 +86,10 @@ export default function ReadingPage() {
           <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
           <button
             type="button"
-            onClick={() => birthData && fetchReading(birthData)}
+            onClick={() => (isInputError ? restart() : birthData && fetchReading(birthData))}
             className="rounded-full bg-zinc-950 px-6 py-2.5 text-sm font-medium text-zinc-50 dark:bg-zinc-50 dark:text-zinc-950"
           >
-            ลองใหม่
+            {isInputError ? "แก้ไขข้อมูล" : "ลองใหม่"}
           </button>
         </div>
       )}
