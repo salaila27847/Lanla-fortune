@@ -70,7 +70,7 @@
 - [x] ทดสอบโครงสร้างแล้ว: `GET /api/auth/providers` คืนค่า provider ถูกต้อง, กด "เข้าสู่ระบบด้วย
       Google" ได้ Server Action ที่สร้าง Google OAuth authorization URL ถูกต้องครบ (client_id,
       redirect_uri, PKCE, scope) — ยังทดสอบ live ไม่ได้เพราะไม่มี Google OAuth credentials จริง
-- [ ] ผู้ใช้ต้องสร้าง Google OAuth Client ID/Secret จริงและใส่ใน `frontend/.env.local` ก่อนถึงจะ
-      ล็อกอินได้จริง (ดู `frontend/.env.example`)
+- [x] ผู้ใช้สร้าง Google OAuth Client ID/Secret จริงแล้วและใส่ใน `frontend/.env.local` — ทดสอบ
+      ล็อกอินจริงบนเครื่องผู้ใช้แล้ว เข้าสู่ระบบด้วย Google สำเร็จ (ยืนยันด้วย screenshot)
 - [ ] ยังไม่ตัดสินใจ: จะบังคับล็อกอินก่อนใช้ `/reading` หรือไม่, จะเก็บประวัติคำทำนายผูกกับ user
       หรือไม่ (ถ้าต้องการต้องเพิ่มตาราง users ใน Postgres/Neon และ backend ต้อง verify token)
