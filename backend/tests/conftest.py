@@ -11,7 +11,7 @@ import os
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("INTERNAL_API_SECRET", "test-internal-secret")
-os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
+os.environ.setdefault("GEMINI_API_KEY", "test-key")
 
 import pytest
 from httpx import ASGITransport, AsyncClient

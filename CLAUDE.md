@@ -18,7 +18,7 @@
         └──────────────┼──────────────┘
                         ▼
               Master Interpreter
-        (Synthesis Layer — เรียก Claude API)
+        (Synthesis Layer — เรียก Gemini API)
                         │
                         ▼
               คำทำนายฉบับสมบูรณ์ (output)
@@ -33,11 +33,11 @@
 
 | ส่วน | เทคโนโลยี | เหตุผล |
 |---|---|---|
-| Backend | Python 3.11+, FastAPI, Pydantic v2 | เหมาะกับ ephemeris library (`pyswisseph`) สำหรับคำนวณยูเรเนียน และ async I/O เวลาเรียก Claude API |
+| Backend | Python 3.11+, FastAPI, Pydantic v2 | เหมาะกับ ephemeris library (`pyswisseph`) สำหรับคำนวณยูเรเนียน และ async I/O เวลาเรียก Gemini API |
 | Database | PostgreSQL (dev: SQLite ผ่าน SQLAlchemy, prod: Neon) | โครงสร้างข้อมูลชัดเจน รองรับการขยาย — Neon เพราะ free tier ไม่ต้องผูกบัตรเครดิต |
 | Knowledge base | ไฟล์ YAML/JSON versioned ใน `backend/app/knowledge_base/` | ให้ "เจ้าหน้าที่ค้นคว้า" (คนจริง) แก้ไขได้โดยไม่แตะโค้ด, track ผ่าน git |
 | Frontend | Next.js 14+ (App Router), TypeScript, TailwindCSS | SSR ดี, ทำ 90° dial แบบ interactive และ animation จั่วไพ่ได้ลื่นด้วย Framer Motion |
-| Synthesis layer | Anthropic Python SDK เรียก `claude-sonnet-5` | ตามที่ผู้ใช้ตัดสินใจ — ใช้ LLM ช่วยตีความไขว้ 3 ศาสตร์ |
+| Synthesis layer | `google-genai` Python SDK เรียก `gemini-3.5-flash` | **แก้ไข 2026-08-12**: เปลี่ยนจาก Anthropic Claude API เป็น Gemini API ตามที่ผู้ใช้ตัดสินใจ — Gemini มี free tier จริง (rate-limited แต่ไม่ต้องผูกบัตรเครดิต) สอดคล้องกับ Render/Vercel/Neon ที่เลือกไว้แล้วเพราะเหตุผลเดียวกัน |
 | Auth/session | Google Sign-In (OAuth) ผ่าน NextAuth.js (Auth.js) ฝั่ง frontend | ผู้ใช้ตัดสินใจแล้ว (2026-08-12) — สมัคร/ล็อกอินง่าย ไม่ต้องจัดการรหัสผ่านเอง |
 | Deployment | Vercel (frontend) + Render (backend) + Neon (Postgres) | ผู้ใช้ตัดสินใจแล้ว (2026-08-12) — ทั้ง 3 บริการไม่ต้องผูกบัตรเครดิตเลย (ตรวจสอบราคาจริงแล้ว, ดูหัวข้อ 6) |
 
@@ -92,3 +92,10 @@
   (`frontend/src/app/api/reading/route.ts`) ที่ตรวจ session ฝั่ง server ก่อน แล้วส่งต่อไป backend
   พร้อม shared secret (`INTERNAL_API_SECRET`) — **กฎ "ห้ามใช้ประวัติผู้ใช้" ในข้อ 1 ยังคงอยู่**:
   ประวัติที่เก็บไว้ใช้แสดงผลให้ผู้ใช้ดูเองเท่านั้น ห้ามดึงกลับไปป้อนให้ Master Interpreter ทุกกรณี
+- **LLM ของ synthesis layer**: **แก้ไข 2026-08-12** — เปลี่ยนจาก Anthropic Claude API เป็น
+  Google Gemini API (`google-genai` SDK, `gemini-3.5-flash`) ตามที่ผู้ใช้ตัดสินใจ เพราะ Gemini มี
+  free tier จริงที่ไม่ต้องผูกบัตรเครดิต (มี rate limit แต่พอสำหรับ demo/personal project) — ต้องใช้
+  `GEMINI_API_KEY` แทน `ANTHROPIC_API_KEY` (จาก [aistudio.google.com](https://aistudio.google.com))
+  interface ของ `synthesize()` ใน `backend/app/synthesis/master_interpreter.py` ไม่เปลี่ยน —
+  รับ 3 `EngineResult` แล้วคืน `SynthesisOutput` เหมือนเดิม เปลี่ยนแค่ตัว client/provider ข้างใน
+  `_fallback_synthesis()` (Phase 6 QA) เป็น provider-agnostic อยู่แล้ว ไม่ต้องแก้

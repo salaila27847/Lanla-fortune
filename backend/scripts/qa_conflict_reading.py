@@ -1,7 +1,7 @@
 """Phase 6 QA — manual check: do 3 conflicting engine results synthesize sensibly?
 
-Not a pytest — it makes a real Claude API call and needs a human to read the
-output, so it isn't meant to run in CI. Requires a real ANTHROPIC_API_KEY in
+Not a pytest — it makes a real Gemini API call and needs a human to read the
+output, so it isn't meant to run in CI. Requires a real GEMINI_API_KEY in
 the environment (e.g. via backend/.env).
 
 Usage:

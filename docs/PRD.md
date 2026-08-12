@@ -40,7 +40,7 @@
 
 ### 4.4 Master Interpreter (Synthesis Layer)
 - รับ `EngineResult` จากทั้ง 3 engine
-- เรียก Claude API (`claude-sonnet-5`) พร้อม prompt ที่ระบุกฎตายตัว:
+- เรียก Gemini API (`gemini-3.5-flash`) พร้อม prompt ที่ระบุกฎตายตัว:
   - ห้ามใส่ bias ส่วนตัว
   - ห้ามอ้างอิงข้อมูลนอกเหนือจากที่ส่งเข้าไปในเซสชันนี้
   - ต้องทำ 3 ขั้นตอน: หาจุดร่วม (convergence) → จัดการความขัดแย้ง (divergence) → เติมเต็มมุมที่ขาด (complementary)

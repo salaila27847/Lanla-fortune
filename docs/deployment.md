@@ -17,7 +17,8 @@ environment variables) — Claude ไม่มีสิทธิ์เข้า�
 3. Render จะเจอ `render.yaml` อัตโนมัติแล้วสร้าง web service `lanla-fortune-backend` ให้
 4. ตั้งค่า environment variables ที่ทำเครื่องหมาย `sync: false` ใน `render.yaml` (ต้องกรอกเองใน
    dashboard เพราะเป็นความลับ ไม่เก็บใน git):
-   - `ANTHROPIC_API_KEY` — จาก [console.anthropic.com](https://console.anthropic.com)
+   - `GEMINI_API_KEY` — จาก [aistudio.google.com](https://aistudio.google.com) → Get API key
+     (ฟรี ไม่ต้องผูกบัตรเครดิต — มี rate limit ของ free tier แต่พอสำหรับ demo/personal project)
    - `FRONTEND_ORIGIN` — ใส่ URL ของ Vercel หลังจาก deploy frontend เสร็จ (ขั้นตอน 2) เช่น
      `https://lanla-fortune.vercel.app` — ถ้ามีหลาย origin (เช่น preview deploy) คั่นด้วย `,`
      (ตอนนี้ browser ไม่ได้เรียก backend ตรงๆ แล้ว แต่เก็บไว้เผื่อเรียก `/health` เองจากที่อื่น)
@@ -74,4 +75,4 @@ https://<your-vercel-domain>/api/auth/callback/google
   เพื่อเช็ค Nominatim ใช้งานได้จากโดเมนจริง) → จั่วไพ่ → ดูผลคำทำนายฉบับสมบูรณ์จนจบ
 - เข้า `/history` เช็คว่าคำทำนายที่เพิ่งดูปรากฏอยู่ในประวัติ
 - เช็ค Render logs ว่า `/api/reading` และ `/api/readings` ตอบ 200 ไม่มี error เรื่อง
-  `ANTHROPIC_API_KEY`/`INTERNAL_API_SECRET`/`DATABASE_URL`
+  `GEMINI_API_KEY`/`INTERNAL_API_SECRET`/`DATABASE_URL`

@@ -1,6 +1,6 @@
 """Master Interpreter — the synthesis layer ("หัวหน้าทีมหลัก").
 
-Takes the 3 engines' EngineResult objects and asks Claude to cross-
+Takes the 3 engines' EngineResult objects and asks Gemini to cross-
 reference them into one reading. The rules below are load-bearing —
 do not soften or remove them when editing the prompt:
 
@@ -10,7 +10,7 @@ do not soften or remove them when editing the prompt:
   3. Three-step method — convergence, then divergence, then
      complementary framing (see PRD.md section 4.4).
 
-If the Claude call fails or times out (Phase 6 QA requirement), synthesize()
+If the Gemini call fails or times out (Phase 6 QA requirement), synthesize()
 falls back to _fallback_synthesis(), which builds a SynthesisOutput directly
 from the engines' own themes/summaries — plain set overlap for convergence,
 no invented interpretation, so it never violates rule 1 above either.
@@ -22,7 +22,8 @@ import json
 import logging
 import os
 
-from anthropic import APIError, AsyncAnthropic
+from google import genai
+from google.genai import errors, types
 
 from app.core.schema import EngineResult, SynthesisOutput
 
@@ -58,8 +59,8 @@ SYNTHESIS_TIMEOUT_SECONDS = 20.0
 async def synthesize(
     uranian: EngineResult, tarot: EngineResult, oracle: EngineResult
 ) -> SynthesisOutput:
-    client = AsyncAnthropic()  # reads ANTHROPIC_API_KEY from env
-    model = os.environ.get("SYNTHESIS_MODEL", "claude-sonnet-5")
+    client = genai.Client()  # reads GEMINI_API_KEY (or GOOGLE_API_KEY) from env
+    model = os.environ.get("SYNTHESIS_MODEL", "gemini-3.5-flash")
 
     payload = {
         "uranian": uranian.model_dump(),
@@ -68,15 +69,17 @@ async def synthesize(
     }
 
     try:
-        response = await client.messages.create(
+        response = await client.aio.models.generate_content(
             model=model,
-            max_tokens=1500,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}],
-            timeout=SYNTHESIS_TIMEOUT_SECONDS,
+            contents=json.dumps(payload, ensure_ascii=False),
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                max_output_tokens=1500,
+                response_mime_type="application/json",
+                http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
+            ),
         )
-        text_block = next(b for b in response.content if b.type == "text")
-        parsed = json.loads(text_block.text)
+        parsed = json.loads(response.text)
 
         return SynthesisOutput(
             final_reading=parsed["final_reading"],
@@ -84,12 +87,10 @@ async def synthesize(
             divergent_notes=parsed["divergent_notes"],
             per_engine_breakdown={"uranian": uranian, "tarot": tarot, "oracle": oracle},
         )
-    except (APIError, TypeError, KeyError, ValueError, StopIteration) as exc:
-        # TypeError covers the anthropic SDK's own "missing/invalid API key"
-        # failure, which it raises before ever making a request rather than
-        # as an APIError. KeyError/ValueError/StopIteration cover a malformed
-        # or non-JSON model response.
-        logger.warning("Synthesis via Claude failed, falling back to raw engine summary: %s", exc)
+    except (errors.APIError, TypeError, KeyError, ValueError) as exc:
+        # TypeError/ValueError cover the genai SDK's own "missing/invalid API
+        # key" failure and a malformed or non-JSON model response alike.
+        logger.warning("Synthesis via Gemini failed, falling back to raw engine summary: %s", exc)
         return _fallback_synthesis(uranian, tarot, oracle)
 
 
