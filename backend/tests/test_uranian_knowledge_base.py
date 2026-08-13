@@ -318,11 +318,14 @@ def test_picture_finding_ignores_witte_pictures_for_type2():
 
 
 def test_picture_finding_falls_back_to_generic_composition_when_unmatched():
+    # VULKANUS+POSEIDON is not in witte_pictures.yaml (Vulkanus chapter not done --
+    # it's second-to-last) nor in planetary_pictures.yaml's curated 50 pairs, so this
+    # exercises the generic keyword-composition tier specifically.
     picture = {
         "type": "type1",
-        "pair": ("VENUS", "JUPITER"),
+        "pair": ("VULKANUS", "POSEIDON"),
         "hit": "MOON",
-        "factors": frozenset({"VENUS", "JUPITER", "MOON"}),
+        "factors": frozenset({"VULKANUS", "POSEIDON", "MOON"}),
         "orb": 0.2,
     }
     finding = _picture_finding(picture)
