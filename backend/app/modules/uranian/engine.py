@@ -279,12 +279,13 @@ def _picture_finding(picture: dict[str, Any]) -> Finding:
         meaning = f"{names} เชื่อมโยงกันในดวงชะตา สะท้อนพลัง: {', '.join(dict.fromkeys(keywords))}"
         weight = 0.55 if picture["type"] == "type2" else 0.45
 
-    if "M" in factors:
-        axis_m = _load_axis_meanings().get("M", {})
-        for other in sorted(factors - {"M"}):
-            axis_meaning = axis_m.get(other)
+    all_axes = _load_axis_meanings()
+    for axis_id in sorted(factors & all_axes.keys()):
+        axis_entries = all_axes[axis_id]
+        for other in sorted(factors - {axis_id}):
+            axis_meaning = axis_entries.get(other)
             if axis_meaning:
-                meaning += f" (บนแกน M: {axis_meaning})"
+                meaning += f" (บนแกน {axis_id}: {axis_meaning})"
 
     return Finding(label=label, meaning=meaning, weight=weight)
 

@@ -14,11 +14,12 @@ factors.yaml               ← อีก 14 ปัจจัย (6 จุดส�
                             category (personal_point/planet), keywords, meaning_core
 planetary_pictures.yaml   ← glossary คู่ปัจจัย (factor pair) ที่มีความหมายเฉพาะตัว 50 คู่
                             (ถอดความจาก "Glossary of Selected Combinations")
-axis_meanings.yaml         ← ความหมายเมื่อปัจจัยหนึ่งจับคู่กับแกน M (21 คู่ — ครบทุกปัจจัยอื่น)
-                            แกน A/Sun/Moon/Node ยังไม่ได้ถอดความ (ดู research/ ด้านล่าง)
+axis_meanings.yaml         ← ความหมายเมื่อปัจจัยหนึ่งจับคู่กับแกน M/A/SUN/MOON/NODE — M/A/MOON/NODE
+                            ครบ 21 คู่ (ทุกปัจจัยอื่น), SUN มี 19 คู่ (ต้นฉบับไม่ได้ระบุ Sun+Apollon/
+                            Sun+Admetos)
 research/                  ← เอกสารวิจัยต้นทาง (ภาษาไทย, ถอดความจากตำรา ไม่ใช่คำแปลตรงตัว)
-                            เก็บไว้เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (เช่น axis_meanings แกนอื่น,
-                            house_meanings, factors principle/function/expression/manifestation)
+                            เก็บไว้เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (เช่น house_meanings,
+                            factors principle/function/expression/manifestation)
 ```
 
 `points.yaml` ใช้ id ตัวพิมพ์เล็ก (เช่น `cupido`) ส่วน `factors.yaml`/`planetary_pictures.yaml`/
@@ -53,8 +54,10 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
 
    เก็บเฉพาะภาพที่มีจุดส่วนตัว (Sun, Moon, M, A, Node, จุดอาริส) อย่างน้อยหนึ่งจุด แล้วจับคู่กับ
    `planetary_pictures.yaml` — ถ้าเจอคู่ตรง ใช้ความหมายจาก glossary (weight สูงกว่า) ถ้าไม่เจอ
-   ประกอบความหมายทั่วไปจาก keywords ของแต่ละปัจจัยแทน (weight ต่ำกว่า) ถ้าภาพมี M ร่วมอยู่ด้วย
-   จะเติมหมายเหตุจาก `axis_meanings.yaml` ต่อท้ายด้วย
+   ประกอบความหมายทั่วไปจาก keywords ของแต่ละปัจจัยแทน (weight ต่ำกว่า) ถ้าภาพมีแกนใดแกนหนึ่งใน
+   `axis_meanings.yaml` ร่วมอยู่ด้วย (M, A, SUN, MOON, NODE) จะเติมหมายเหตุจากแกนนั้นต่อท้าย —
+   ถ้ามีมากกว่าหนึ่งแกนในภาพเดียวกัน (เช่น M/Mars=Sun/Saturn มีทั้ง M และ SUN) จะเติมหมายเหตุของ
+   ทุกแกนที่พบ ไม่ใช่แค่แกนแรก (`_picture_finding` ใน `engine.py`)
 
 ไม่มี hardcode เนื้อหาความหมายในโค้ด engine ทั้งหมดโหลดจากไฟล์ YAML ข้างต้น
 
@@ -77,9 +80,12 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
 
 ## ยังไม่ได้ทำ (สืบทอดจาก handoff package)
 
-- `axis_meanings.yaml` มีแค่แกน M — แกน A, Sun, Moon, Node ยังไม่ได้ถอดความเป็น YAML
-  (เนื้อหามีอยู่แล้วใน `research/uranian-delineation-axes.md`)
-- ไม่มี `house_meanings` — engine นี้ยังไม่คำนวณว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่
-  (เนื้อหามีอยู่แล้วใน `research/uranian-delineation-axes.md` หัวข้อ 7)
+- ไม่มี `house_meanings` — engine นี้ยังไม่คำนวณว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่ (เนื้อหาความหมาย
+  "ธรรมชาติของเรือนที่ดาวสถิต" ต่อดาว มีอยู่แล้วใน `research/uranian-delineation-axes.md` หัวข้อ 7
+  — แต่การคำนวณจริงว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่ยังไม่ implement เพราะระบบเรือนยูเรเนียนเป็น
+  equal-house อ้างอิงจาก M ไม่ใช่ Placidus ที่ `swe.houses()` คืนมาตรงๆ — ต้องคำนวณ house cusp
+  เองจาก M ก่อน (ดู `research/` เอกสารบทที่ 4 เรื่อง 360°-dial/reflex house)
 - `planetary_pictures.yaml` เป็นการคัดสรร 50 คู่ ไม่ใช่ชุดสมบูรณ์ตามต้นฉบับ
+- `axis_meanings.yaml` แกน SUN ขาด Sun+Apollon และ Sun+Admetos (ต้นฉบับไม่ได้ระบุไว้), แกน ARIES
+  ยังไม่มีเลย (ไม่มีเนื้อหาต้นฉบับให้ถอดความ)
 - forecast (`solar_arc.py`/`transit.py`) ไม่มี rate limit หรือแคชผลลัพธ์

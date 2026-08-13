@@ -157,6 +157,20 @@ def test_axis_meanings_kb_has_m_axis_paired_with_every_other_factor():
     assert set(axis_m) == all_ids - {"M"}
 
 
+@pytest.mark.parametrize("axis_id", ["A", "MOON", "NODE"])
+def test_axis_meanings_kb_has_full_coverage_for_a_moon_node_axes(axis_id):
+    axis = _load_axis_meanings()[axis_id]
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    assert set(axis) == all_ids - {axis_id}
+
+
+def test_axis_meanings_kb_sun_axis_covers_all_but_two_undocumented_factors():
+    # The source book never gives Sun+Apollon / Sun+Admetos meanings.
+    axis_sun = _load_axis_meanings()["SUN"]
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    assert set(axis_sun) == all_ids - {"SUN", "APOLLON", "ADMETOS"}
+
+
 # ---------- planetary picture detection (synthetic positions) ----------
 
 
@@ -240,3 +254,31 @@ def test_picture_finding_appends_axis_m_note_when_m_is_involved():
     }
     finding = _picture_finding(picture)
     assert "บนแกน M" in finding.meaning
+
+
+def test_picture_finding_appends_axis_note_for_a_non_m_axis():
+    # NODE is now a documented axis too, not just M.
+    picture = {
+        "type": "type1",
+        "pair": ("NODE", "VENUS"),
+        "hit": "MARS",
+        "factors": frozenset({"NODE", "VENUS", "MARS"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert "บนแกน NODE" in finding.meaning
+
+
+def test_picture_finding_appends_notes_for_every_axis_present_in_the_picture():
+    # Both M and SUN are axes, and both are present in this picture — each
+    # should contribute its own axis note, not just the first one found.
+    picture = {
+        "type": "type2",
+        "pair": ("M", "MARS"),
+        "pair_b": ("SUN", "SATURN"),
+        "factors": frozenset({"M", "MARS", "SUN", "SATURN"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert "บนแกน M" in finding.meaning
+    assert "บนแกน SUN" in finding.meaning
