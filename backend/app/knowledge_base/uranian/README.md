@@ -41,7 +41,9 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
 1. แปลงวัน/เวลา/เขตเวลาเกิดเป็น Julian Day (UT) ด้วย `zoneinfo` — ถ้าไม่ทราบเวลาเกิด
    ใช้เที่ยงวันเป็นค่าประมาณ และลดค่า `confidence` ลง พร้อมแจ้งข้อจำกัดใน findings
 2. คำนวณตำแหน่งทั้ง 22 ปัจจัย (10 ดาวเคราะห์คลาสสิก + 8 ดาวเสริม + Node + จุดอาริส +
-   Ascendant/Midheaven ถ้าทราบเวลาเกิด)
+   Ascendant/Midheaven ถ้าทราบเวลาเกิด) — Node ใช้ **True Node** (`swe.TRUE_NODE`) ไม่ใช่ Mean
+   Node — ผู้ใช้ตัดสินใจแล้ว (2026-08-13) หลังเทียบผลกับเว็บอ้างอิงอื่นแล้วพบว่าต่างกัน ~0.5°
+   จาก Mean/True Node convention ที่ต่างกัน
 3. **Placement findings** — ดาวเสริมทั้ง 8 ดวงจับคู่กับราศีและองศาที่อยู่ ประกอบความหมายจาก
    `points.yaml` + `signs.yaml` (เหมือนเดิม)
 4. **Planetary-picture findings** — หา midpoint structure บน 90° dial ระหว่างปัจจัยทั้งหมด:

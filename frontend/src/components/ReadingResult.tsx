@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { SynthesisOutput } from "@/lib/api";
+import type { ForecastResponse, PictureResult, SynthesisOutput } from "@/lib/api";
 
 type Props = {
   result: SynthesisOutput;
+  forecast?: ForecastResponse | null;
   onRestart: () => void;
 };
 
@@ -14,16 +15,51 @@ const ENGINE_LABELS: Record<string, string> = {
   oracle: "ไพ่ออราเคิล",
 };
 
-type Tab = "overview" | "uranian" | "tarot" | "oracle";
+type Tab = "overview" | "uranian" | "tarot" | "oracle" | "forecast";
 
-export default function ReadingResult({ result, onRestart }: Props) {
+function PictureTable({ pictures }: { pictures: PictureResult[] }) {
+  if (pictures.length === 0) {
+    return <p className="text-sm text-zinc-500 dark:text-zinc-400">ไม่พบ planetary picture ในช่วงนี้</p>;
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+            <th className="py-2 pr-4 font-medium">Picture</th>
+            <th className="py-2 pr-4 font-medium">ประเภท</th>
+            <th className="py-2 font-medium">Orb</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pictures.map((picture, i) => (
+            <tr key={i} className="border-b border-zinc-100 dark:border-zinc-900">
+              <td className="py-2 pr-4 text-zinc-800 dark:text-zinc-200">{picture.label}</td>
+              <td className="py-2 pr-4 text-zinc-500 dark:text-zinc-400">
+                {picture.type === "type1" ? "Type I" : "Type II"}
+              </td>
+              <td className="py-2 text-zinc-500 dark:text-zinc-400">{picture.orb.toFixed(2)}°</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export default function ReadingResult({ result, forecast, onRestart }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
+
+  const hasForecast = Boolean(
+    forecast && (forecast.solar_arc || forecast.transit || forecast.lunar_return || forecast.relocation),
+  );
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "ภาพรวม" },
     { id: "uranian", label: ENGINE_LABELS.uranian },
     { id: "tarot", label: ENGINE_LABELS.tarot },
     { id: "oracle", label: ENGINE_LABELS.oracle },
+    ...(hasForecast ? [{ id: "forecast" as const, label: "การพยากรณ์ล่วงหน้า" }] : []),
   ];
 
   return (
@@ -114,6 +150,52 @@ export default function ReadingResult({ result, onRestart }: Props) {
               </ul>
             </div>
           ),
+      )}
+
+      {tab === "forecast" && forecast && (
+        <div className="flex flex-col gap-8">
+          {forecast.solar_arc && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                Solar Arc — ส่วนโค้งสุริยะ {forecast.solar_arc.arc_degrees.toFixed(2)}°
+              </h3>
+              <PictureTable pictures={forecast.solar_arc.pictures} />
+            </div>
+          )}
+
+          {forecast.transit && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Transit — ดาวโคจรผ่าน</h3>
+              <PictureTable pictures={forecast.transit.pictures} />
+            </div>
+          )}
+
+          {forecast.lunar_return && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                Lunar Return — จันทร์คืนตำแหน่งเกิด
+              </h3>
+              <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                {new Date(forecast.lunar_return.return_at).toLocaleString("th-TH", {
+                  dateStyle: "long",
+                  timeStyle: "short",
+                })}
+              </p>
+            </div>
+          )}
+
+          {forecast.relocation && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                Relocation — ดวงย้ายถิ่น
+              </h3>
+              <p className="text-sm text-zinc-800 dark:text-zinc-200">
+                ลัคนาใหม่ {forecast.relocation.ascendant.toFixed(2)}° · มิเดียมใหม่{" "}
+                {forecast.relocation.midheaven.toFixed(2)}°
+              </p>
+            </div>
+          )}
+        </div>
       )}
 
       <button

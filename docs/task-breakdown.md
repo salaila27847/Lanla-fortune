@@ -165,5 +165,94 @@
 - [ ] **ยังไม่ได้ทำ (เหมือนที่ package's README ระบุไว้เอง)**: `axis_meanings.yaml` มีแค่แกน M —
       แกน A/Sun/Moon/Node ยังไม่ถอดความ; ไม่มี house_meanings (ยังไม่คำนวณเรือน); ไม่มี solar arc /
       transit forecast — เนื้อหาต้นทางมีอยู่แล้วใน `research/` รอแปลงเป็น YAML/โค้ดต่อ
+- [x] **แก้ไข 2026-08-13**: ผู้ใช้เทียบผลลัพธ์ engine กับเว็บอ้างอิง 2 เว็บโดยใช้วันเกิดจริง —
+      ดาวเคราะห์คลาสสิก, Ascendant/MC, และดาวเสริมทั้ง 8 ดวงตรงกับทั้ง 2 เว็บในระดับ <1 ลิปดา
+      (ยืนยันว่า ephemeris/house/midpoint math ถูกต้อง) จุดเดียวที่ต่าง ~0.5° คือ Node เพราะ
+      engine ใช้ Mean Node แต่เว็บอ้างอิงใช้ True Node — ผู้ใช้ตัดสินใจแล้วให้เปลี่ยนเป็น
+      **True Node** (`swe.TRUE_NODE` แทน `swe.MEAN_NODE` ใน `_compute_positions()`) ทดสอบแล้วว่า
+      ตรงกับเว็บอ้างอิงในระดับ <1 ลิปดาเช่นกัน, 51 tests ยังผ่านหมด (ไม่มี test ใดอิง Node
+      longitude ตายตัว)
+- [x] **แก้ไข 2026-08-13**: เริ่มทำ Solar Arc Directions (บทที่ 10 ใน `research/`) — ผู้ใช้ตัดสินใจ
+      แล้วว่าตอนนี้เอาแค่ฟังก์ชันคำนวณก่อน **ยังไม่ต่อ endpoint/UI** (ต้องเพิ่ม target-date input ที่
+      `BirthData` ยังไม่มี ไว้ตัดสินใจ scope การเชื่อมกับแอปทีหลัง) — สร้าง
+      `backend/app/modules/uranian/solar_arc.py`: `progressed_sun_longitude()`, `solar_arc_degrees()`,
+      `directed_positions()` (ขับเคลื่อนทุกปัจจัยด้วยส่วนโค้งเท่ากัน ตามกฎ Solar Arc), และ
+      `find_directed_pictures()` (หา Type I/II ข้ามชุด radix+directed โดยตัดคู่ปัจจัยตัวเดียวกัน
+      ข้ามชุด radix/directed ออกจากการจับคู่ midpoint เพราะเป็นฟังก์ชันคงที่ของ arc ไม่ใช่
+      configuration จริง, ตัดภาพที่เป็น radix ล้วนออกเพราะ natal engine ครอบคลุมแล้ว, ตัด Type II
+      ที่ทั้งสองคู่เป็นดาวชุดเดียวกันข้าม radix/directed ออกเพราะเกือบจะเป็นฟังก์ชันคงที่ของ arc
+      เช่นกัน — คงไว้เฉพาะภาพที่พึ่งพาตำแหน่งจริงของดวงชะตา) เพิ่ม unit test 11 เคสใน
+      `test_uranian_solar_arc.py` (คำนวณ arc, directed positions, และภาพสังเคราะห์ครบทุก
+      edge case ข้างต้น) — รวม 62 tests ผ่านหมด, ruff clean
+- [ ] **ยังไม่ได้ทำ**: ยังไม่ตัดสินใจว่าจะให้ผู้ใช้เลือก target date ยังไง (เพิ่มเข้า `/reading` เดิม
+      แบบ auto-forecast วันนี้, แยกเป็นฟีเจอร์ใหม่ให้เลือกวัน, หรืออื่นๆ) — solar_arc.py ยังไม่ถูกเรียก
+      จาก `calculate()`/`EngineResult`/endpoint ใดๆ ทั้งสิ้น
+- [x] **แก้ไข 2026-08-13**: ทำต่อ Transit + Station Points + Lunar Return + Relocation (บทที่ 11-12
+      ใน `research/`) ตามที่ผู้ใช้ขอให้ครอบคลุมทุกหัวข้อในตาราง "ฟีเจอร์ที่ควรมีในระบบ" — ยังคง
+      calculation-only เหมือน solar_arc.py (ยังไม่ต่อ endpoint/UI) สร้าง
+      `backend/app/modules/uranian/transit.py`:
+      - `transit_positions()` — ตำแหน่งจริง ณ วันที่ต้องการ (19 ปัจจัย: ดาวเคราะห์คลาสสิก 10 +
+        ดาวเสริม 8 + Node จริง ไม่รวม M/A เพราะเป็นคนละเทคนิค "Daily M/A")
+      - `find_transit_pictures()` — หา Type I/II ข้าม radix+transit (และ directed ถ้ามี) ที่ orb
+        แคบ 1° ตามที่เอกสารกำหนด, บังคับต้องมีปัจจัยที่ "กำลังเคลื่อนไหว" (transit/directed) อย่างน้อย
+        1 ตัว และมี personal point แบบ radix/directed อย่างน้อย 1 ตัว (transit ของ Sun/Moon/Node เอง
+        ไม่นับเป็น personal point เพราะเป็นดาวที่กำลังโคจรผ่าน ไม่ใช่จุดอ้างอิงคงที่)
+      - `_is_arc_locked_pair()` — ระหว่างพัฒนาพบบั๊กจริงที่ตัวเองเขียน: กฎตัดคู่ปัจจัยเดียวกันข้าม
+        radix/directed (ลอกมาจาก solar_arc.py) ตรวจจับแค่กรณีตรงไปตรงมา (radix Sun/Venus vs directed
+        Sun/Venus) แต่พลาดกรณี "cross pairing" (radix Sun/directed Venus vs directed Sun/radix Venus)
+        ซึ่งเป็น identity ทางคณิตศาสตร์เดียวกันทุกประการ (`midpoint(x,y+k) == midpoint(x+k,y)`) แก้แล้ว
+        ด้วยกฎที่ตรวจทุกวิธีแบ่งกลุ่มพร้อมกัน — ยืนยันด้วย unit test ทั้ง 2 กรณี และยืนยันว่า
+        radix/transit (ไม่ใช่ radix/directed) ไม่ถูกตัดออกเพราะ transit ไม่ได้ขยับด้วย arc คงที่แบบ
+        directed
+      - `daily_speed()` / `find_stations_in_range()` — หา station point จากการเปลี่ยนเครื่องหมาย
+        ความเร็วรายวัน ทดสอบกับคาบ Mercury retrograde จริงเดือนก.พ.-มี.ค. 2026 (เจอ 2 สถานีตรงตาม
+        คาบจริง คาบอื่นในปี 2026 ก็นับได้ 6 สถานีรวม ตรงกับที่ Mercury retrograde ปีละ ~3 รอบ)
+      - `find_lunar_return()` — bisection search หาวันที่ดวงจันทร์ transit กลับตำแหน่งเกิดพอดี
+        (แม่นถึงระดับ <0.01° เพราะดวงจันทร์ไม่มีทางถอยหลัง เดินหน้าทางเดียวเสมอ scan ทุก 6 ชม.
+        ไม่มีทางพลาดจุดตัด)
+      - `relocated_angles()` — คำนวณ A/M ใหม่จากพิกัดปลายทาง ใช้เวลาเกิด UTC เดิม
+      - **ยังไม่ทำ**: "Daily Meridian and Ascendant" (M/A ณ ปัจจุบัน คนละเทคนิคกับ relocation ที่เป็น
+        M/A ณ สถานที่อื่น) และ "Transit Axes" แบบเจาะจง (นอกเหนือจากที่ `find_transit_pictures`
+        ครอบคลุมโดยธรรมชาติอยู่แล้วเพราะปฏิบัติกับ transit เป็นแค่อีก layer หนึ่งใน Type I/II เดียวกัน)
+      - เพิ่ม unit test 16 เคสใน `test_uranian_transit.py` — รวม 78 tests ผ่านหมด, ruff clean
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ทดสอบผ่าน unit test + manual script เท่านั้น ยังไม่ได้ทดสอบ
       end-to-end ผ่าน `/api/reading` จริงที่มี `GEMINI_API_KEY` จริง (ข้อจำกัดเดิมจาก Phase 6/10)
+
+## Phase 12 — เชื่อม Solar Arc/Transit/Lunar Return/Relocation เข้ากับแอปจริง
+
+ผู้ใช้ตัดสินใจแล้ว (2026-08-13): เพิ่ม checkbox 4 ตัวในฟอร์มกรอกข้อมูลเกิด `/reading` เดิม
+(ไม่แยกหน้าใหม่) แต่ละตัวเปิด/ปิดฟิลด์ข้อมูลของตัวเอง และผลลัพธ์แสดงเป็น**ตารางดิบ** ไม่ผ่าน
+Gemini synthesis (ต่างจาก `/api/reading` ที่สังเคราะห์เป็นคำทำนายภาษา)
+
+- [x] Backend: เพิ่ม schema (`ForecastRequest`/`ForecastResponse` + sub-request/result ต่อเทคนิค)
+      ใน `app/core/schema.py`, เพิ่ม `POST /api/forecast` ใน `main.py` — auth-gated แบบเดียวกับ
+      `/api/reading` (`get_current_user`) แต่**ไม่บันทึกลง reading history** เพราะเป็นตารางดิบ
+      ไม่ใช่คำทำนาย รับ birth_data + sub-request ที่เลือก (solar_arc/transit/lunar_return/relocation)
+      แต่ละตัว optional คำนวณเฉพาะที่ส่งมา จำกัดผลลัพธ์ 30 picture ต่อเทคนิค (`FORECAST_PICTURE_LIMIT`)
+      แปลง factor id ภายใน (`r:SUN`, `d:MOON`, `t:JUPITER` ฯลฯ) เป็น label ภาษาไทยอ่านง่ายผ่าน
+      `_factor_display_name()` เดิมจาก `engine.py`
+- [x] Backend: เพิ่ม unit test 8 เคสใน `test_forecast_endpoint.py` (ครอบคลุมทุก sub-request,
+      auth, no-time-for-relocation error, ยิงทุกตัวพร้อมกัน)
+- [x] **เจอบั๊ก race condition จริงระหว่างทดสอบ end-to-end ในเบราว์เซอร์**: frontend ยิง
+      `/api/reading` และ `/api/forecast` พร้อมกัน (`Promise.all`) — สำหรับ user คนใหม่ที่ไม่เคย
+      login มาก่อน ทั้ง 2 request's `get_current_user()` แข่งกัน INSERT `google_sub` เดียวกัน
+      ตัวที่แพ้ชน UNIQUE constraint แล้ว 500 ทั้ง endpoint แก้ที่ `app/core/auth.py`: ดัก
+      `IntegrityError` ตอน flush แล้ว rollback + select ใหม่ (ได้ row ที่อีก request เพิ่ง commit
+      ไป) เพิ่ม regression test `test_auth_race.py` (ใช้ temp-file SQLite ไม่ใช่ `:memory:` เพราะ
+      `:memory:` + StaticPool ใช้ connection เดียวจริง ไม่สามารถจำลอง 2 transaction ที่เป็นอิสระ
+      จากกันจริงได้) ยืนยันแล้วว่า test นี้ fail จริงถ้าไม่มี fix (ลอง revert แล้วรัน) และผ่านหลัง fix
+- [x] Frontend: `BirthDataForm.tsx` เพิ่ม section "การพยากรณ์ล่วงหน้า (ไม่บังคับ)" — checkbox 4 ตัว
+      (Solar Arc/Transit/Lunar Return/Relocation) แต่ละตัวเปิดฟิลด์ของตัวเองเมื่อติ๊ก ปิดเมื่อไม่ติ๊ก
+      ตามที่ผู้ใช้ขอ, `onSubmit` ส่ง `ForecastOptions` เพิ่มจาก `BirthData` เดิม
+- [x] Frontend: `app/api/forecast/route.ts` (BFF proxy ใหม่ เหมือน `app/api/reading/route.ts`),
+      `lib/api.ts` เพิ่ม type + `getForecast()`, `reading/page.tsx` ยิง `getReading()` +
+      `getForecast()` พร้อมกันด้วย `Promise.all` (forecast เป็น best-effort — ถ้าพังไม่บังการอ่าน
+      หลักด้วย `.catch(() => null)`), `ReadingResult.tsx` เพิ่ม tab "การพยากรณ์ล่วงหน้า" (โชว์เฉพาะ
+      เมื่อมีผลลัพธ์) แสดงตาราง picture ต่อเทคนิค
+- [x] ทดสอบผ่านเบราว์เซอร์จริงแล้ว (Playwright): คลิก checkbox ครบ 4 ตัว ยืนยันฟิลด์เปิด/ปิดถูกต้อง,
+      submit ผ่าน tarot/oracle draw จนถึงหน้าผลลัพธ์, เห็น forecast tab พร้อมตาราง Solar
+      Arc/Transit/Lunar Return จริงจาก backend local (bypass login ชั่วคราวเพราะ sandbox นี้ทำ
+      Google OAuth จริงไม่ได้ — revert กลับหมดแล้วก่อนจบงาน ยืนยันด้วย `git diff` ว่าไฟล์ auth
+      กลับสู่สภาพเดิม), `npm run build`/`npm run lint` ผ่าน, backend 87 tests ผ่าน, ruff clean
+- [ ] **ยังไม่ทำ**: การจำกัด (rate limit) หรือแคชผลลัพธ์ forecast, relocation ยังใช้กรอกพิกัดเอง
+      (ไม่มี autocomplete ค้นหาสถานที่แบบช่องกรอกที่เกิดเดิม)
