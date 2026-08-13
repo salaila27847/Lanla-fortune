@@ -23,6 +23,7 @@ from app.modules.uranian.engine import (
     _load_planetary_pictures,
     _load_points,
     _load_signs,
+    _load_witte_pictures,
     _midpoint,
     _midpoint_matrix,
     _picture_finding,
@@ -171,6 +172,24 @@ def test_axis_meanings_kb_sun_axis_covers_all_but_two_undocumented_factors():
     assert set(axis_sun) == all_ids - {"SUN", "APOLLON", "ADMETOS"}
 
 
+def test_witte_pictures_kb_covers_all_twenty_one_meridian_base_pairs():
+    witte = _load_witte_pictures()
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    m_pairs = {pair for pair in witte if "M" in pair}
+    assert {next(iter(pair - {"M"})) for pair in m_pairs} == all_ids - {"M"}
+
+
+def test_witte_pictures_kb_third_factors_are_valid_and_distinct_from_the_pair():
+    witte = _load_witte_pictures()
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    for pair, entries in witte.items():
+        assert entries, pair
+        for third_factor, meaning in entries.items():
+            assert third_factor in all_ids
+            assert third_factor not in pair
+            assert meaning.strip()
+
+
 # ---------- planetary picture detection (synthetic positions) ----------
 
 
@@ -229,6 +248,36 @@ def test_picture_finding_uses_glossary_meaning_when_a_pair_matches():
     finding = _picture_finding(picture)
     assert "การเดินทาง" in finding.meaning
     assert finding.weight == 0.75
+
+
+def test_picture_finding_prefers_witte_exact_match_over_generic_glossary():
+    # M+VULKANUS=CUPIDO has a specific entry in witte_pictures.yaml (the real
+    # Rules for Planetary Pictures glossary) — it should win over
+    # planetary_pictures.yaml's pair-only entries and the generic fallback.
+    picture = {
+        "type": "type1",
+        "pair": ("M", "VULKANUS"),
+        "hit": "CUPIDO",
+        "factors": frozenset({"M", "VULKANUS", "CUPIDO"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert finding.weight == 0.95
+    assert finding.meaning.startswith("อำนาจและอิทธิพลผ่านครอบครัวหรือชุมชน")
+
+
+def test_picture_finding_ignores_witte_pictures_for_type2():
+    # witte_pictures.yaml only covers Type I (pair + single third factor) —
+    # Type II pictures must still fall through to the generic glossary/composition.
+    picture = {
+        "type": "type2",
+        "pair": ("M", "VULKANUS"),
+        "pair_b": ("CUPIDO", "ZEUS"),
+        "factors": frozenset({"M", "VULKANUS", "CUPIDO", "ZEUS"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert finding.weight != 0.95
 
 
 def test_picture_finding_falls_back_to_generic_composition_when_unmatched():

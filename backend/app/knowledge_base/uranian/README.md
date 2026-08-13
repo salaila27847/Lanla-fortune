@@ -14,9 +14,16 @@ factors.yaml               ← อีก 14 ปัจจัย (6 จุดส�
                             category (personal_point/planet), keywords, meaning_core
 planetary_pictures.yaml   ← glossary คู่ปัจจัย (factor pair) ที่มีความหมายเฉพาะตัว 50 คู่
                             (ถอดความจาก "Glossary of Selected Combinations")
-axis_meanings.yaml         ← ความหมายเมื่อปัจจัยหนึ่งจับคู่กับแกน M/A/SUN/MOON/NODE — M/A/MOON/NODE
-                            ครบ 21 คู่ (ทุกปัจจัยอื่น), SUN มี 19 คู่ (ต้นฉบับไม่ได้ระบุ Sun+Apollon/
-                            Sun+Admetos)
+axis_meanings.yaml         ← ความหมายเมื่อปัจจัยหนึ่งจับคู่กับแกน M/A/SUN/MOON/NODE (ระดับ "ธีมของ
+                            คู่" ไม่แยกตามปัจจัยที่ 3) — M/A/MOON/NODE ครบ 21 คู่ (ทุกปัจจัยอื่น),
+                            SUN มี 19 คู่ (ต้นฉบับไม่ได้ระบุ Sun+Apollon/Sun+Admetos)
+witte_pictures.yaml        ← glossary ละเอียดกว่า axis_meanings.yaml อีกชั้น — คู่ปัจจัย + ปัจจัย
+                            ที่ 3 ที่ตกกลาง = ความหมายเฉพาะ (เช่น M+SUN=ARIES ต่างจาก M+SUN=SATURN)
+                            ถอดความจากตำรา "Rules for Planetary Pictures" ของ Witte ฉบับเต็มที่
+                            ผู้ใช้ส่งมาให้ (OCR คุณภาพต่ำ ต้องอ่านสร้างใหม่ทุกรายการ) — ตอนนี้มีแค่
+                            หมวด Meridian (M + อีก 21 ปัจจัย, 412 รายการ) ยังไม่ได้ทำอีก 21 หมวด
+                            ที่เหลือของหนังสือ (Aries, Sun, Ascendant, Moon, Node, ดาวเคราะห์/TNP
+                            อีก 16 ดวง)
 research/                  ← เอกสารวิจัยต้นทาง (ภาษาไทย, ถอดความจากตำรา ไม่ใช่คำแปลตรงตัว)
                             เก็บไว้เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (เช่น house_meanings,
                             factors principle/function/expression/manifestation)
@@ -52,12 +59,16 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
    - **Type II**: midpoint ของคู่หนึ่งตรงกับ midpoint ของอีกคู่หนึ่ง (เช่น `M/Moon=Venus/Sun`)
      orb 3.0°
 
-   เก็บเฉพาะภาพที่มีจุดส่วนตัว (Sun, Moon, M, A, Node, จุดอาริส) อย่างน้อยหนึ่งจุด แล้วจับคู่กับ
-   `planetary_pictures.yaml` — ถ้าเจอคู่ตรง ใช้ความหมายจาก glossary (weight สูงกว่า) ถ้าไม่เจอ
-   ประกอบความหมายทั่วไปจาก keywords ของแต่ละปัจจัยแทน (weight ต่ำกว่า) ถ้าภาพมีแกนใดแกนหนึ่งใน
-   `axis_meanings.yaml` ร่วมอยู่ด้วย (M, A, SUN, MOON, NODE) จะเติมหมายเหตุจากแกนนั้นต่อท้าย —
-   ถ้ามีมากกว่าหนึ่งแกนในภาพเดียวกัน (เช่น M/Mars=Sun/Saturn มีทั้ง M และ SUN) จะเติมหมายเหตุของ
-   ทุกแกนที่พบ ไม่ใช่แค่แกนแรก (`_picture_finding` ใน `engine.py`)
+   เก็บเฉพาะภาพที่มีจุดส่วนตัว (Sun, Moon, M, A, Node, จุดอาริส) อย่างน้อยหนึ่งจุด แล้วหาความหมาย
+   ตามลำดับความสำคัญนี้ (`_picture_finding` ใน `engine.py`):
+   1. **Type I ที่ตรงกับ `witte_pictures.yaml` เป๊ะๆ** (คู่ปัจจัย + ปัจจัยที่ 3 ตรงกัน) — เจาะจงและ
+      authoritative ที่สุด (weight 0.95) ตอนนี้ครอบคลุมแค่หมวด Meridian (M-pair)
+   2. ถ้าไม่เจอ ลอง `planetary_pictures.yaml` (คู่ปัจจัยทั่วไป ไม่แยกปัจจัยที่ 3, weight 0.75-0.85)
+   3. ถ้ายังไม่เจอ ประกอบความหมายทั่วไปจาก keywords ของแต่ละปัจจัยแทน (weight 0.45-0.55)
+
+   จากนั้นถ้าภาพมีแกนใดแกนหนึ่งใน `axis_meanings.yaml` ร่วมอยู่ด้วย (M, A, SUN, MOON, NODE) จะเติม
+   หมายเหตุจากแกนนั้นต่อท้ายเสมอ ไม่ว่าความหมายหลักจะมาจากขั้นตอนไหนก็ตาม — ถ้ามีมากกว่าหนึ่งแกนใน
+   ภาพเดียวกัน (เช่น M/Mars=Sun/Saturn มีทั้ง M และ SUN) จะเติมหมายเหตุของทุกแกนที่พบ ไม่ใช่แค่แกนแรก
 
 ไม่มี hardcode เนื้อหาความหมายในโค้ด engine ทั้งหมดโหลดจากไฟล์ YAML ข้างต้น
 
@@ -85,7 +96,13 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
   — แต่การคำนวณจริงว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่ยังไม่ implement เพราะระบบเรือนยูเรเนียนเป็น
   equal-house อ้างอิงจาก M ไม่ใช่ Placidus ที่ `swe.houses()` คืนมาตรงๆ — ต้องคำนวณ house cusp
   เองจาก M ก่อน (ดู `research/` เอกสารบทที่ 4 เรื่อง 360°-dial/reflex house)
-- `planetary_pictures.yaml` เป็นการคัดสรร 50 คู่ ไม่ใช่ชุดสมบูรณ์ตามต้นฉบับ
+- `planetary_pictures.yaml` เป็นการคัดสรร 50 คู่ ไม่ใช่ชุดสมบูรณ์ตามต้นฉบับ (แต่ `witte_pictures.yaml`
+  ครอบคลุมได้ละเอียดกว่ามากสำหรับหมวด Meridian แล้ว — ดูด้านบน)
 - `axis_meanings.yaml` แกน SUN ขาด Sun+Apollon และ Sun+Admetos (ต้นฉบับไม่ได้ระบุไว้), แกน ARIES
   ยังไม่มีเลย (ไม่มีเนื้อหาต้นฉบับให้ถอดความ)
+- `witte_pictures.yaml` มีแค่หมวด Meridian (21 คู่จากทั้งหมด ~231 คู่ที่เป็นไปได้ในหนังสือ) —
+  หมวด Aries/Sun/Ascendant/Moon/Node และดาวเคราะห์/TNP อีก 16 ดวงยังไม่ได้ทำ (ตำราต้นฉบับผู้ใช้ส่ง
+  มาเป็นไฟล์ scan+OCR ทั้งเล่ม ~255 หน้า — ต้องขอผู้ใช้ส่งซ้ำถ้าจะทำหมวดถัดไป เพราะไฟล์ต้นฉบับใหญ่
+  เกินจะเก็บสำเนาไว้ใน repo ได้สะดวก) บาง base pair ในหมวด Meridian เองก็ขาดบางรายการเพราะ OCR
+  กู้คืนไม่ได้ (ดู comment `# missing:` ในตัวไฟล์ yaml)
 - forecast (`solar_arc.py`/`transit.py`) ไม่มี rate limit หรือแคชผลลัพธ์

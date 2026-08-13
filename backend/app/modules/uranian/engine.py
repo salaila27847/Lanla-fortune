@@ -21,7 +21,7 @@ Two kinds of findings are produced:
 
 Meanings are assembled from backend/app/knowledge_base/uranian/
 (points.yaml, signs.yaml, factors.yaml, planetary_pictures.yaml,
-axis_meanings.yaml), never hardcoded here.
+axis_meanings.yaml, witte_pictures.yaml), never hardcoded here.
 
 The function signature and return type (EngineResult) must not change —
 the synthesis layer depends on this contract.
@@ -104,6 +104,21 @@ def _load_axis_meanings() -> dict[str, dict[str, str]]:
     return {
         axis["axis"]: {entry["paired_factor"]: entry["meaning_th"] for entry in axis["entries"]}
         for axis in data["axes"]
+    }
+
+
+@lru_cache
+def _load_witte_pictures() -> dict[frozenset[str], dict[str, str]]:
+    """The exact "Rules for Planetary Pictures" glossary: base pair -> third
+    factor -> specific meaning (Type I only). Far more granular than
+    planetary_pictures.yaml's pair-only entries, so _picture_finding()
+    checks this first for Type I pictures."""
+    data = yaml.safe_load((KB_DIR / "witte_pictures.yaml").read_text(encoding="utf-8"))
+    return {
+        frozenset(base_pair["factors"]): {
+            entry["third_factor"]: entry["meaning_th"] for entry in base_pair["entries"]
+        }
+        for base_pair in data["base_pairs"]
     }
 
 
@@ -263,6 +278,11 @@ def _picture_finding(picture: dict[str, Any]) -> Finding:
         c, d = picture["pair_b"]
         label = f"{disp(a)}/{disp(b)} = {disp(c)}/{disp(d)} (คลาดเคลื่อน {picture['orb']:.2f}°)"
 
+    witte_meaning = None
+    if picture["type"] == "type1":
+        witte_pair = _load_witte_pictures().get(frozenset(picture["pair"]))
+        witte_meaning = witte_pair.get(picture["hit"]) if witte_pair else None
+
     glossary = _load_planetary_pictures()
     matches = [
         glossary[frozenset(combo)]
@@ -270,7 +290,10 @@ def _picture_finding(picture: dict[str, Any]) -> Finding:
         if frozenset(combo) in glossary
     ]
 
-    if matches:
+    if witte_meaning:
+        meaning = witte_meaning
+        weight = 0.95
+    elif matches:
         meaning = " ".join(dict.fromkeys(match["meaning_th"] for match in matches))
         weight = 0.85 if picture["type"] == "type2" else 0.75
     else:

@@ -343,3 +343,37 @@ Transit/Solar Arc/Lunar Return/Relocation ไปพิจารณาด้ว�
       (บทที่ 4) อธิบายแค่หลักการกว้างๆ ไม่ได้ให้สูตรคำนวณละเอียดพอจะ implement ได้ทันทีโดยไม่เดา —
       รอผู้ใช้ยืนยัน convention ที่แน่นอนก่อน), แกน ARIES ของ `axis_meanings.yaml` (ไม่มีเนื้อหา
       ต้นฉบับให้ถอดความ), Sun+Apollon/Sun+Admetos
+
+## Phase 15 — witte_pictures.yaml: glossary ละเอียด (คู่ + ปัจจัยที่ 3) จากตำรา Witte ฉบับเต็ม
+
+ผู้ใช้ส่งไฟล์ scan+OCR ของหนังสือ *Rules for Planetary Pictures (Uranian System)* ของ Alfred Witte
+ฉบับเต็ม (~255 หน้า, เรียบเรียงโดย Hans Niggemann, 1959) มาให้ — นี่คือตำรา *Regelwerk fuer
+Planetenbilder* ที่ CLAUDE.md/`planetary_pictures.yaml` เคยอ้างถึงว่าเป็นตำราอ้างอิงมาตรฐานของวงการ
+ยูเรเนียนที่ "ละเอียดกว่านี้มาก" — คุณภาพ OCR แย่มาก มีตัวอักษรเพี้ยนแทบทุกย่อหน้า (เช่น
+"Witte"→"Mitte", "Meridian"→"tlcridlan") ผู้ใช้ขอให้ตรวจสอบอย่างถี่ถ้วนก่อนใช้ — ขนาดเต็มเล่มมี
+~2,900+ รายการย่อย (คู่ปัจจัย + ปัจจัยที่ 3 = ความหมายเฉพาะ, โครงสร้างละเอียดกว่า
+`planetary_pictures.yaml` ปัจจุบันมาก) ถามผู้ใช้ก่อนว่าจะเริ่มขอบเขตไหน — ผู้ใช้เลือก **เริ่มจาก
+หมวด Meridian ก่อน** (ตรงกับลำดับความสำคัญที่หนังสือเองระบุไว้: Meridian → Cardinal(Aries) → Sun
+→ Ascendant → Moon → Node → ดาวเคราะห์/TNP อีก 16 ดวง)
+
+- [x] อ่านและสร้างประโยคภาษาอังกฤษที่สมเหตุสมผลใหม่จาก OCR ของหมวด Meridian ทั้งหมด (M + อีก 21
+      ปัจจัยที่เหลือ, หน้า 1-22 ของหนังสือ) ก่อนแปลเป็นไทย — บางรายการกู้คืนจาก OCR ไม่ได้อย่างมั่นใจ
+      (บรรทัดหาย/ปนกันจาก OCR) จึง **ละไว้แทนการเดา** แทนที่จะเสี่ยงใส่ความหมายผิด (ทำนองเดียวกับที่
+      `axis_meanings.yaml` แกน SUN ขาด 2 รายการอยู่แล้ว) — สร้าง
+      `backend/app/knowledge_base/uranian/witte_pictures.yaml`: 21 base pair (M + ปัจจัยอื่นทุกตัว)
+      รวม 412 รายการ (คู่ + ปัจจัยที่ 3 = ความหมายเฉพาะ) ตรวจสอบด้วยสคริปต์ยืนยันว่าไม่มี factor id
+      ผิด ไม่มีปัจจัยที่ 3 ซ้ำกับคู่หลัก ไม่มีรายการซ้ำ และทุกรายการมีเนื้อหาจริง
+- [x] `engine.py`: เพิ่ม `_load_witte_pictures()` และแก้ `_picture_finding()` ให้เช็ค
+      `witte_pictures.yaml` **ก่อน** `planetary_pictures.yaml` สำหรับ Type I picture ที่ตรงคู่+
+      ปัจจัยที่ 3 เป๊ะๆ (weight 0.95 — สูงกว่าทุกแหล่งอื่นเพราะเจาะจงและ authoritative ที่สุด) ถ้าไม่
+      ตรงค่อย fallback ไปตามลำดับเดิม (`planetary_pictures.yaml` → keyword ทั่วไป) Type II ไม่ใช้
+      `witte_pictures.yaml` (ตำรามีแค่โครงสร้าง 3 ปัจจัยต่อ Type I ไม่ใช่ Type II) — axis note
+      ต่อท้ายยังทำงานเหมือนเดิมไม่ว่าความหมายหลักจะมาจากขั้นตอนไหน
+- [x] เพิ่ม unit test 5 เคสใน `test_uranian_knowledge_base.py` (ครอบคลุมทุก base pair ในหมวด
+      Meridian, ความถูกต้องของปัจจัยที่ 3 ทุกตัว, ยืนยันว่า witte ชนะ glossary ทั่วไปจริงเมื่อมีทั้งคู่
+      เข้าเงื่อนไข, ยืนยันว่า Type II ไม่ใช้ witte) — รวม **106 tests ผ่านหมด**, ruff clean — ยืนยัน
+      ด้วย manual run จริงว่า lookup ทำงานถูกต้อง (เช่น `M/Vulkanus=Cupido` ได้ weight 0.95 และ
+      ความหมายตรงตาม yaml เป๊ะ)
+- [ ] **ยังไม่ได้ทำ**: อีก 21 หมวดที่เหลือของหนังสือ (Aries, Sun, Ascendant, Moon, Node, ดาวเคราะห์/
+      TNP อีก 16 ดวง — หน้า 23-255) — ไฟล์ต้นฉบับ OCR ใหญ่เกินจะเก็บสำเนาไว้ใน repo ได้สะดวก
+      (9,599 บรรทัด) ต้องขอให้ผู้ใช้ส่งซ้ำถ้าจะทำหมวดถัดไป
