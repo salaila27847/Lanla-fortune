@@ -165,5 +165,12 @@
 - [ ] **ยังไม่ได้ทำ (เหมือนที่ package's README ระบุไว้เอง)**: `axis_meanings.yaml` มีแค่แกน M —
       แกน A/Sun/Moon/Node ยังไม่ถอดความ; ไม่มี house_meanings (ยังไม่คำนวณเรือน); ไม่มี solar arc /
       transit forecast — เนื้อหาต้นทางมีอยู่แล้วใน `research/` รอแปลงเป็น YAML/โค้ดต่อ
+- [x] **แก้ไข 2026-08-13**: ผู้ใช้เทียบผลลัพธ์ engine กับเว็บอ้างอิง 2 เว็บโดยใช้วันเกิดจริง —
+      ดาวเคราะห์คลาสสิก, Ascendant/MC, และดาวเสริมทั้ง 8 ดวงตรงกับทั้ง 2 เว็บในระดับ <1 ลิปดา
+      (ยืนยันว่า ephemeris/house/midpoint math ถูกต้อง) จุดเดียวที่ต่าง ~0.5° คือ Node เพราะ
+      engine ใช้ Mean Node แต่เว็บอ้างอิงใช้ True Node — ผู้ใช้ตัดสินใจแล้วให้เปลี่ยนเป็น
+      **True Node** (`swe.TRUE_NODE` แทน `swe.MEAN_NODE` ใน `_compute_positions()`) ทดสอบแล้วว่า
+      ตรงกับเว็บอ้างอิงในระดับ <1 ลิปดาเช่นกัน, 51 tests ยังผ่านหมด (ไม่มี test ใดอิง Node
+      longitude ตายตัว)
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ทดสอบผ่าน unit test + manual script เท่านั้น ยังไม่ได้ทดสอบ
       end-to-end ผ่าน `/api/reading` จริงที่มี `GEMINI_API_KEY` จริง (ข้อจำกัดเดิมจาก Phase 6/10)

@@ -2,9 +2,9 @@
 
 Computes all 22 Hamburg School factors — the 10 classical bodies (Sun
 through Pluto), the 8 trans-Neptunian points (Cupido, Hades, Zeus,
-Kronos, Apollon, Admetos, Vulkanus, Poseidon), the Node, the Aries
-Point, and — when the birth time is known — Ascendant/Midheaven — via
-pyswisseph's built-in Moshier ephemeris (no external data files or
+Kronos, Apollon, Admetos, Vulkanus, Poseidon), the (true) Node, the
+Aries Point, and — when the birth time is known — Ascendant/Midheaven —
+via pyswisseph's built-in Moshier ephemeris (no external data files or
 network access needed).
 
 Two kinds of findings are produced:
@@ -166,7 +166,7 @@ def _compute_positions(jd: float, birth_data: BirthData, known_time: bool) -> di
     }
     for point_id, swe_id in TNP_SWE_IDS.items():
         positions[point_id.upper()] = swe.calc_ut(jd, swe_id)[0][0]
-    positions["NODE"] = swe.calc_ut(jd, swe.MEAN_NODE)[0][0]
+    positions["NODE"] = swe.calc_ut(jd, swe.TRUE_NODE)[0][0]
     positions["ARIES"] = 0.0
 
     if known_time:
