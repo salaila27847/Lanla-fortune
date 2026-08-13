@@ -139,3 +139,31 @@
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ไม่มี `GEMINI_API_KEY` จริงใน sandbox นี้ — ทดสอบได้แค่ path
       fallback (key ปลอม/ไม่มี → `_fallback_synthesis()` ทำงานถูกต้อง ไม่ crash) ต้องทดสอบคุณภาพ
       การตีความจริงด้วย key จริงบนเครื่องผู้ใช้ (`backend/scripts/qa_conflict_reading.py` ใช้ทดสอบได้)
+
+## Phase 11 — Uranian engine: planetary pictures (Type I/II) + combinations glossary
+
+ผู้ใช้ส่ง handoff package (`lanla-fortune-uranian-package.zip`) ที่มีโค้ดต้นแบบ
+(`uranian_math.py`, `ephemeris.py`, `picture_finder.py`, `seed_data.py`, `schema.sql`,
+`test_engine.py`) และเอกสารวิจัยภาษาไทย 6 ไฟล์ (ถอดความจาก *The Language of Uranian Astrology*
+โดย Roger A. Jacobson) — เชื่อมเข้ากับ engine ที่ใช้งานจริงแล้วดังนี้:
+
+- [x] ขยาย `engine.py` ให้คำนวณครบ 22 ปัจจัย (เดิมมีแค่ TNP 8 ดวง + Sun/Moon/Asc/MC) — เพิ่ม
+      ดาวเคราะห์คลาสสิก 8 ดวง (Mercury-Pluto), Node (mean), และจุดอาริส (คงที่ 0°)
+- [x] เพิ่มการหา **planetary picture** บน 90° dial ทั่วทั้ง 22 ปัจจัย — Type I (`_find_pictures`
+      ใน `engine.py`, orb 1.5°) และ Type II (orb 3.0°) กรองเฉพาะภาพที่มีจุดส่วนตัวอย่างน้อยหนึ่งจุด
+      แทนที่ hit-finding แบบเดิมที่เช็คเฉพาะ TNP-vs-personal-point-pair (ซึ่งเป็นกรณีย่อยของอันใหม่)
+- [x] KB ใหม่ 3 ไฟล์ (YAML ตามแพทเทิร์นเดิมของโปรเจกต์ ไม่ใช้ตาราง DB ตามที่ `schema.sql` ของ
+      package เสนอ เพราะขัดกับหลักการ "knowledge base เป็นไฟล์ YAML/JSON" ใน CLAUDE.md §2):
+      `factors.yaml` (14 ปัจจัยที่ไม่มีใน `points.yaml`), `planetary_pictures.yaml` (glossary
+      คู่ปัจจัย 50 คู่ จาก `seed_data.py`), `axis_meanings.yaml` (แกน M 21 คู่ จาก `seed_data.py`)
+- [x] เก็บเอกสารวิจัยต้นฉบับทั้ง 6 ไฟล์ไว้ที่ `backend/app/knowledge_base/uranian/research/`
+      เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (ดู "ยังไม่ได้ทำ" ใน `knowledge_base/uranian/README.md`)
+- [x] เพิ่ม unit test 15 เคสใน `test_uranian_knowledge_base.py` (พอร์ตจาก `test_engine.py` ของ
+      package + เทสต์ KB loading ใหม่) — รวม 51 tests ผ่านทั้งหมด, `ruff check`/`ruff format --check`
+      สะอาด — ยืนยันด้วย manual run จริงว่า picture-finder เจอ Type I/II จริงและ match glossary
+      ถูกต้อง (เช่น `Mars/Sun=Hades/Neptune` → "น้ำ การจมน้ำ การขาดอากาศหายใจ")
+- [ ] **ยังไม่ได้ทำ (เหมือนที่ package's README ระบุไว้เอง)**: `axis_meanings.yaml` มีแค่แกน M —
+      แกน A/Sun/Moon/Node ยังไม่ถอดความ; ไม่มี house_meanings (ยังไม่คำนวณเรือน); ไม่มี solar arc /
+      transit forecast — เนื้อหาต้นทางมีอยู่แล้วใน `research/` รอแปลงเป็น YAML/โค้ดต่อ
+- [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ทดสอบผ่าน unit test + manual script เท่านั้น ยังไม่ได้ทดสอบ
+      end-to-end ผ่าน `/api/reading` จริงที่มี `GEMINI_API_KEY` จริง (ข้อจำกัดเดิมจาก Phase 6/10)

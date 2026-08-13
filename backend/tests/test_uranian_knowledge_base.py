@@ -11,11 +11,21 @@ import pytest
 
 from app.core.schema import BirthData
 from app.modules.uranian.engine import (
+    PERSONAL_POINT_IDS,
     TNP_SWE_IDS,
     _dial90_orb,
+    _factor_category,
+    _factor_display_name,
+    _factor_keywords,
+    _find_pictures,
+    _load_axis_meanings,
+    _load_factors,
+    _load_planetary_pictures,
     _load_points,
     _load_signs,
     _midpoint,
+    _midpoint_matrix,
+    _picture_finding,
     _sign_for_longitude,
     calculate,
 )
@@ -93,3 +103,140 @@ async def test_calculate_is_deterministic_for_the_same_birth_data():
     first = await calculate(BIRTH_WITH_TIME)
     second = await calculate(BIRTH_WITH_TIME)
     assert [f.label for f in first.raw_findings] == [f.label for f in second.raw_findings]
+
+
+# ---------- factors.yaml / planetary_pictures.yaml / axis_meanings.yaml ----------
+
+
+def test_factors_kb_covers_the_other_fourteen_factors():
+    factors = _load_factors()
+    expected = {"SUN", "MOON", "M", "A", "NODE", "ARIES"} | {
+        "MERCURY",
+        "VENUS",
+        "MARS",
+        "JUPITER",
+        "SATURN",
+        "URANUS",
+        "NEPTUNE",
+        "PLUTO",
+    }
+    assert set(factors) == expected
+    for factor in factors.values():
+        assert factor["meaning_core"]
+        assert factor["keywords"]
+        assert factor["category"] in {"personal_point", "planet"}
+
+
+def test_all_twenty_two_factors_are_resolvable():
+    """factors.yaml (14) + points.yaml (8 TNPs, lowercase ids) together must
+    cover every factor id the engine can produce in a picture."""
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    assert len(all_ids) == 22
+    for factor_id in all_ids:
+        assert _factor_display_name(factor_id)
+        assert _factor_keywords(factor_id)
+
+
+def test_factor_category_classifies_tnps_planets_and_personal_points():
+    assert _factor_category("CUPIDO") == "transneptunian"
+    assert _factor_category("MERCURY") == "planet"
+    assert _factor_category("SUN") == "personal_point"
+
+
+def test_planetary_pictures_kb_has_no_duplicate_pairs():
+    pictures = _load_planetary_pictures()
+    assert len(pictures) == 50
+    for entry in pictures.values():
+        assert entry["meaning_th"]
+        assert entry["source_ref"]
+
+
+def test_axis_meanings_kb_has_m_axis_paired_with_every_other_factor():
+    axis_m = _load_axis_meanings()["M"]
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    assert set(axis_m) == all_ids - {"M"}
+
+
+# ---------- planetary picture detection (synthetic positions) ----------
+
+
+def test_type1_picture_detected_when_factor_sits_on_a_midpoint():
+    # M-KRONOS midpoint is 20; JUPITER sits right on it.
+    positions = {"M": 0.0, "KRONOS": 40.0, "JUPITER": 20.0, "SATURN": 200.0}
+    midpoints = _midpoint_matrix(positions)
+    pictures = [
+        p
+        for p in _find_pictures(positions, PERSONAL_POINT_IDS)
+        if p["type"] == "type1" and p["factors"] == frozenset({"M", "KRONOS", "JUPITER"})
+    ]
+    assert len(pictures) == 1
+    assert pictures[0]["orb"] < 0.01
+    assert midpoints[frozenset({"M", "KRONOS"})] == pytest.approx(20.0)
+
+
+def test_type1_picture_out_of_orb_is_not_detected():
+    positions = {"M": 0.0, "KRONOS": 40.0, "JUPITER": 25.0}  # 5° off the 20° midpoint
+    pictures = _find_pictures(positions, PERSONAL_POINT_IDS)
+    assert not any(p["factors"] == frozenset({"M", "KRONOS", "JUPITER"}) for p in pictures)
+
+
+def test_type2_picture_detected_when_two_midpoints_coincide():
+    # M/MOON midpoint = 10; VENUS/SUN midpoint = 10 too.
+    positions = {"M": 0.0, "MOON": 20.0, "VENUS": 11.0, "SUN": 9.0}
+    pictures = [
+        p
+        for p in _find_pictures(positions, PERSONAL_POINT_IDS)
+        if p["type"] == "type2" and p["factors"] == frozenset({"M", "MOON", "VENUS", "SUN"})
+    ]
+    assert len(pictures) == 1
+
+
+def test_type2_picture_requires_four_distinct_factors():
+    positions = {"M": 0.0, "MOON": 20.0, "SUN": 10.0}
+    pictures = _find_pictures(positions, PERSONAL_POINT_IDS)
+    assert not any(p["type"] == "type2" for p in pictures)
+
+
+def test_pictures_without_a_personal_point_are_filtered_out():
+    # MERCURY/SATURN midpoint hit by VENUS — no personal point involved.
+    positions = {"MERCURY": 0.0, "SATURN": 40.0, "VENUS": 20.0}
+    pictures = _find_pictures(positions, PERSONAL_POINT_IDS)
+    assert pictures == []
+
+
+def test_picture_finding_uses_glossary_meaning_when_a_pair_matches():
+    picture = {
+        "type": "type1",
+        "pair": ("MERCURY", "SATURN"),
+        "hit": "SUN",
+        "factors": frozenset({"MERCURY", "SATURN", "SUN"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert "การเดินทาง" in finding.meaning
+    assert finding.weight == 0.75
+
+
+def test_picture_finding_falls_back_to_generic_composition_when_unmatched():
+    picture = {
+        "type": "type1",
+        "pair": ("VENUS", "JUPITER"),
+        "hit": "MOON",
+        "factors": frozenset({"VENUS", "JUPITER", "MOON"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert finding.weight == 0.45
+    assert "เชื่อมโยงกันในดวงชะตา" in finding.meaning
+
+
+def test_picture_finding_appends_axis_m_note_when_m_is_involved():
+    picture = {
+        "type": "type1",
+        "pair": ("M", "SATURN"),
+        "hit": "SUN",
+        "factors": frozenset({"M", "SATURN", "SUN"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert "บนแกน M" in finding.meaning

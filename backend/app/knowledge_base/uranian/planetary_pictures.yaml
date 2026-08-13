@@ -1,0 +1,162 @@
+# "Glossary of Selected Combinations" — คู่ปัจจัย (factor pair) ที่มีความหมายเฉพาะตัว
+# เป็นที่ยอมรับกว้างขวางในโหราศาสตร์ยูเรเนียน (Hamburg School) เมื่อสองปัจจัยนี้ปรากฏร่วมกัน
+# ใน planetary picture เดียวกัน (ไม่ว่าจะเป็น Type I: A/B=C หรือ Type II: A/B=C/D)
+# ให้ยึดความหมายนี้เป็นแกนหลักในการตีความ แล้วผสมกับความหมายของปัจจัยอื่นที่ร่วมอยู่ในภาพเดียวกัน
+#
+# ที่มา: ถอดความ/สรุปโครงสร้างจาก "The Language of Uranian Astrology" โดย Roger A. Jacobson
+# (มีลิขสิทธิ์) — เป็นการถอดความสำหรับใช้งานภายในโปรเจกต์เท่านั้น ไม่ใช่คำแปลตรงตัว
+# ดูเอกสารอ้างอิงฉบับเต็มที่ backend/app/knowledge_base/uranian/research/uranian-glossary-combinations.md
+#
+# หมายเหตุ: ชุดนี้เป็นการคัดสรร (50 คู่) ไม่ใช่ชุดสมบูรณ์ตามต้นฉบับ — เมื่อไม่เจอคู่ตรงในนี้
+# engine จะ fallback ไปประกอบความหมายทั่วไปจาก factors.yaml/points.yaml แทน
+pictures:
+  - factors: [MERCURY, SATURN]
+    meaning_th: "การเดินทาง"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MERCURY, CUPIDO]
+    meaning_th: "ดนตรี บทเพลง"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MERCURY, APOLLON]
+    meaning_th: "มุมมองที่ช่วยให้สื่อสารเข้าใจง่ายขึ้น"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MERCURY, ADMETOS]
+    meaning_th: "สมาธิจดจ่อทางความคิด ความเชี่ยวชาญเฉพาะทาง"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [VENUS, MARS]
+    meaning_th: "ความรักเชิงกามารมณ์ ความสัมพันธ์ทางสายเลือด การให้กำเนิด"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [VENUS, URANUS]
+    meaning_th: "ความรักแบบโรแมนติก ความหวังที่อาจไม่เป็นจริง"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [VENUS, ADMETOS]
+    meaning_th: "การทำสมาธิ ครุ่นคิดใคร่ครวญ"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MARS, JUPITER]
+    meaning_th: "บุตร กิจกรรมเชิงสร้างสรรค์"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MARS, SATURN]
+    meaning_th: "อุบัติเหตุ"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MARS, URANUS]
+    meaning_th: "การติดเชื้อเฉียบพลัน"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MARS, NEPTUNE]
+    meaning_th: "การวางแผน การจัดระบบ"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MARS, PLUTO]
+    meaning_th: "การแต่งงาน กิจกรรมกลุ่ม"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MARS, CUPIDO]
+    meaning_th: "การยิงปืน"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [MARS, ZEUS]
+    meaning_th: "บ้าน สิ่งปลูกสร้าง การย้ายที่อยู่"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [JUPITER, SATURN]
+    meaning_th: "โชคลาภไม่คาดคิด การคลายความตึงเครียด"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [JUPITER, URANUS]
+    meaning_th: "การเก็งกำไร"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [JUPITER, NEPTUNE]
+    meaning_th: "ความสงบ ความพึงพอใจ"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [JUPITER, ADMETOS]
+    meaning_th: "ความสามารถในการแยกแยะ วิจารณญาณ"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [JUPITER, POSEIDON]
+    meaning_th: "ความเครียด การแยกทางแบบฉับพลัน"
+    source_ref: "Jacobson Glossary p.179"
+  - factors: [SATURN, URANUS]
+    meaning_th: "ความตาย กิจกรรมไม่ต่อเนื่อง การหย่าร้าง"
+    source_ref: "Jacobson Glossary p.179-180"
+  - factors: [SATURN, CUPIDO]
+    meaning_th: "การว่างงาน ภาวะซึมเศร้า"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [SATURN, HADES]
+    meaning_th: "การสอน การให้ความรู้ สถานะนักเรียน"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [SATURN, APOLLON]
+    meaning_th: "เกี่ยวข้องกับโหราศาสตร์"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [SATURN, ADMETOS]
+    meaning_th: "การติดอยู่ในสถานการณ์ที่ออกไม่ได้"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [SATURN, POSEIDON]
+    meaning_th: "การศึกษา การอบรมเลี้ยงดู การสอน"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [URANUS, NEPTUNE]
+    meaning_th: "ความตาย การหมดสติ"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [URANUS, PLUTO]
+    meaning_th: "การระเบิด"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [URANUS, CUPIDO]
+    meaning_th: "การหนีตามกัน"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [URANUS, ZEUS]
+    meaning_th: "ไฟไหม้ การลั่นไกปืน"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [URANUS, APOLLON]
+    meaning_th: "เรื่องของโหราศาสตร์"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [URANUS, VULKANUS]
+    meaning_th: "พลังงานไฟฟ้า"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [URANUS, POSEIDON]
+    meaning_th: "ภาพยนตร์ ความกระจ่างในการหยั่งรู้"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [NEPTUNE, PLUTO]
+    meaning_th: "การเปลี่ยนแปลงในอนาคต ความเปลี่ยนแปลงที่ตรวจจับยาก"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [NEPTUNE, HADES]
+    meaning_th: "น้ำ การจมน้ำ การขาดอากาศหายใจ"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [NEPTUNE, ZEUS]
+    meaning_th: "จินตนาการเชิงสร้างสรรค์ ความพยายามที่ไร้ผล"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [NEPTUNE, KRONOS]
+    meaning_th: "การหลอกลวงในระดับสูง อากาศ"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [NEPTUNE, APOLLON]
+    meaning_th: "การทูต"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [NEPTUNE, ADMETOS]
+    meaning_th: "เคมี วิทยาศาสตร์แห่งอนาคต"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [NEPTUNE, VULKANUS]
+    meaning_th: "การเปลี่ยนผ่านจากสภาวะหนึ่งไปอีกสภาวะหนึ่ง"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [NEPTUNE, POSEIDON]
+    meaning_th: "ความผิดหวังครั้งใหญ่ จิตวิทยา"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [PLUTO, CUPIDO]
+    meaning_th: "การเปลี่ยนแปลงครั้งสำคัญในครอบครัว"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [PLUTO, ZEUS]
+    meaning_th: "การเริ่มต้นกิจการใหม่"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [PLUTO, ADMETOS]
+    meaning_th: "การเปลี่ยนแปลงพื้นฐานตั้งแต่รากฐาน"
+    source_ref: "Jacobson Glossary p.180"
+  - factors: [CUPIDO, APOLLON]
+    meaning_th: "การสร้างครอบครัว การแต่งงาน"
+    source_ref: "Jacobson Glossary p.181"
+  - factors: [HADES, APOLLON]
+    meaning_th: "ชั้นเรียน วิทยาการโบราณ"
+    source_ref: "Jacobson Glossary p.181"
+  - factors: [HADES, ADMETOS]
+    meaning_th: "ชาติภพก่อน"
+    source_ref: "Jacobson Glossary p.181"
+  - factors: [ZEUS, KRONOS]
+    meaning_th: "วิศวกรรม ตำแหน่งผู้บัญชาการสูงสุด"
+    source_ref: "Jacobson Glossary p.181"
+  - factors: [ZEUS, APOLLON]
+    meaning_th: "การวิจัยทางวิทยาศาสตร์ การทดลอง"
+    source_ref: "Jacobson Glossary p.181"
+  - factors: [KRONOS, POSEIDON]
+    meaning_th: "จิตวิญญาณขั้นสูง ปัญญา วัฒนธรรม"
+    source_ref: "Jacobson Glossary p.181"
+  - factors: [ADMETOS, POSEIDON]
+    meaning_th: "การศึกษา การสอน ปรัชญาเชิงลึก"
+    source_ref: "Jacobson Glossary p.181"
