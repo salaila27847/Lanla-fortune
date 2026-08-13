@@ -187,5 +187,33 @@
 - [ ] **ยังไม่ได้ทำ**: ยังไม่ตัดสินใจว่าจะให้ผู้ใช้เลือก target date ยังไง (เพิ่มเข้า `/reading` เดิม
       แบบ auto-forecast วันนี้, แยกเป็นฟีเจอร์ใหม่ให้เลือกวัน, หรืออื่นๆ) — solar_arc.py ยังไม่ถูกเรียก
       จาก `calculate()`/`EngineResult`/endpoint ใดๆ ทั้งสิ้น
+- [x] **แก้ไข 2026-08-13**: ทำต่อ Transit + Station Points + Lunar Return + Relocation (บทที่ 11-12
+      ใน `research/`) ตามที่ผู้ใช้ขอให้ครอบคลุมทุกหัวข้อในตาราง "ฟีเจอร์ที่ควรมีในระบบ" — ยังคง
+      calculation-only เหมือน solar_arc.py (ยังไม่ต่อ endpoint/UI) สร้าง
+      `backend/app/modules/uranian/transit.py`:
+      - `transit_positions()` — ตำแหน่งจริง ณ วันที่ต้องการ (19 ปัจจัย: ดาวเคราะห์คลาสสิก 10 +
+        ดาวเสริม 8 + Node จริง ไม่รวม M/A เพราะเป็นคนละเทคนิค "Daily M/A")
+      - `find_transit_pictures()` — หา Type I/II ข้าม radix+transit (และ directed ถ้ามี) ที่ orb
+        แคบ 1° ตามที่เอกสารกำหนด, บังคับต้องมีปัจจัยที่ "กำลังเคลื่อนไหว" (transit/directed) อย่างน้อย
+        1 ตัว และมี personal point แบบ radix/directed อย่างน้อย 1 ตัว (transit ของ Sun/Moon/Node เอง
+        ไม่นับเป็น personal point เพราะเป็นดาวที่กำลังโคจรผ่าน ไม่ใช่จุดอ้างอิงคงที่)
+      - `_is_arc_locked_pair()` — ระหว่างพัฒนาพบบั๊กจริงที่ตัวเองเขียน: กฎตัดคู่ปัจจัยเดียวกันข้าม
+        radix/directed (ลอกมาจาก solar_arc.py) ตรวจจับแค่กรณีตรงไปตรงมา (radix Sun/Venus vs directed
+        Sun/Venus) แต่พลาดกรณี "cross pairing" (radix Sun/directed Venus vs directed Sun/radix Venus)
+        ซึ่งเป็น identity ทางคณิตศาสตร์เดียวกันทุกประการ (`midpoint(x,y+k) == midpoint(x+k,y)`) แก้แล้ว
+        ด้วยกฎที่ตรวจทุกวิธีแบ่งกลุ่มพร้อมกัน — ยืนยันด้วย unit test ทั้ง 2 กรณี และยืนยันว่า
+        radix/transit (ไม่ใช่ radix/directed) ไม่ถูกตัดออกเพราะ transit ไม่ได้ขยับด้วย arc คงที่แบบ
+        directed
+      - `daily_speed()` / `find_stations_in_range()` — หา station point จากการเปลี่ยนเครื่องหมาย
+        ความเร็วรายวัน ทดสอบกับคาบ Mercury retrograde จริงเดือนก.พ.-มี.ค. 2026 (เจอ 2 สถานีตรงตาม
+        คาบจริง คาบอื่นในปี 2026 ก็นับได้ 6 สถานีรวม ตรงกับที่ Mercury retrograde ปีละ ~3 รอบ)
+      - `find_lunar_return()` — bisection search หาวันที่ดวงจันทร์ transit กลับตำแหน่งเกิดพอดี
+        (แม่นถึงระดับ <0.01° เพราะดวงจันทร์ไม่มีทางถอยหลัง เดินหน้าทางเดียวเสมอ scan ทุก 6 ชม.
+        ไม่มีทางพลาดจุดตัด)
+      - `relocated_angles()` — คำนวณ A/M ใหม่จากพิกัดปลายทาง ใช้เวลาเกิด UTC เดิม
+      - **ยังไม่ทำ**: "Daily Meridian and Ascendant" (M/A ณ ปัจจุบัน คนละเทคนิคกับ relocation ที่เป็น
+        M/A ณ สถานที่อื่น) และ "Transit Axes" แบบเจาะจง (นอกเหนือจากที่ `find_transit_pictures`
+        ครอบคลุมโดยธรรมชาติอยู่แล้วเพราะปฏิบัติกับ transit เป็นแค่อีก layer หนึ่งใน Type I/II เดียวกัน)
+      - เพิ่ม unit test 16 เคสใน `test_uranian_transit.py` — รวม 78 tests ผ่านหมด, ruff clean
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ทดสอบผ่าน unit test + manual script เท่านั้น ยังไม่ได้ทดสอบ
       end-to-end ผ่าน `/api/reading` จริงที่มี `GEMINI_API_KEY` จริง (ข้อจำกัดเดิมจาก Phase 6/10)
