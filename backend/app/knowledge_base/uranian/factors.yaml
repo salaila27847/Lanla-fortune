@@ -1,0 +1,104 @@
+# ปัจจัย (factors) อีก 14 ตัวนอกเหนือจาก 8 ดาวเสริมใน points.yaml — จุดส่วนตัวอ้างอิง 6 จุด
+# (ARIES, M, A, SUN, MOON, NODE) และดาวเคราะห์คลาสสิก 8 ดวง (MERCURY-PLUTO) — รวมกับ points.yaml
+# แล้วครบ 22 ปัจจัยที่ engine ใช้หา planetary picture (ดู engine.py: _find_pictures)
+#
+# ต่างจาก points.yaml ตรงที่นี่เป็นความหมายทั่วไปตามหลักโหราศาสตร์สากล (ไม่ได้ถอดความจากตำรา
+# ยูเรเนียนเล่มใดโดยเฉพาะ) ใช้ id ตัวพิมพ์ใหญ่ให้ตรงกับ planetary_pictures.yaml/axis_meanings.yaml
+factors:
+  - id: SUN
+    name_th: "อาทิตย์"
+    name_en: "Sun"
+    category: personal_point
+    keywords: ["อัตลักษณ์", "พลังชีวิต", "ความมั่นใจในตนเอง"]
+    meaning_core: "แก่นอัตลักษณ์ พลังชีวิต และความมั่นใจในการแสดงตัวตนออกสู่โลกภายนอก"
+
+  - id: MOON
+    name_th: "จันทร์"
+    name_en: "Moon"
+    category: personal_point
+    keywords: ["อารมณ์", "สัญชาตญาณ", "ความรู้สึกภายใน"]
+    meaning_core: "โลกภายในของอารมณ์ ความรู้สึก และการตอบสนองตามสัญชาตญาณ"
+
+  - id: M
+    name_th: "มิเดียม"
+    name_en: "Midheaven"
+    category: personal_point
+    keywords: ["อาชีพ", "บทบาทสาธารณะ", "เป้าหมายในชีวิต"]
+    meaning_core: "บทบาทและภาพลักษณ์ที่แสดงต่อสังคม เป้าหมายในหน้าที่การงานและตำแหน่งแห่งตน"
+
+  - id: A
+    name_th: "อาเซนแดนต์"
+    name_en: "Ascendant"
+    category: personal_point
+    keywords: ["การแสดงออก", "ปฏิสัมพันธ์กับสิ่งแวดล้อม", "บุคลิกภาพภายนอก"]
+    meaning_core: "วิธีที่ตัวตนปะทะและมีปฏิสัมพันธ์กับสิ่งแวดล้อมรอบตัว บุคลิกที่แสดงออกเป็นด่านแรก"
+
+  - id: NODE
+    name_th: "โหนด"
+    name_en: "Node"
+    category: personal_point
+    keywords: ["เครือข่ายสังคม", "ความผูกพัน", "การเชื่อมโยงกับผู้อื่น"]
+    meaning_core: "จุดเชื่อมโยงกับผู้คนและเครือข่ายทางสังคม ความผูกพันที่เชื่อมโยงเส้นทางชีวิตเข้ากับผู้อื่น"
+
+  - id: ARIES
+    name_th: "จุดอาริส"
+    name_en: "Aries Point"
+    category: personal_point
+    keywords: ["ตัวตนต่อโลกภายนอก", "การรับรู้ในที่สาธารณะ"]
+    meaning_core: "จุดอ้างอิงที่แสดงถึงการรับรู้ตัวตนของเจ้าของดวงในสายตาคนภายนอกหรือสาธารณะ"
+
+  - id: MERCURY
+    name_th: "พุธ"
+    name_en: "Mercury"
+    category: planet
+    keywords: ["การสื่อสาร", "ความคิด", "การเรียนรู้"]
+    meaning_core: "กระบวนการคิด การสื่อสาร และการเรียนรู้แลกเปลี่ยนข้อมูล"
+
+  - id: VENUS
+    name_th: "ศุกร์"
+    name_en: "Venus"
+    category: planet
+    keywords: ["ความรัก", "คุณค่า", "ความสวยงาม"]
+    meaning_core: "ความรัก ความสัมพันธ์ คุณค่าที่ยึดถือ และความชื่นชมในความงาม"
+
+  - id: MARS
+    name_th: "อังคาร"
+    name_en: "Mars"
+    category: planet
+    keywords: ["การกระทำ", "แรงขับเคลื่อน", "ความกล้าหาญ"]
+    meaning_core: "แรงขับเคลื่อนสู่การลงมือทำ ความกล้าหาญ และพลังงานเชิงรุก"
+
+  - id: JUPITER
+    name_th: "พฤหัสบดี"
+    name_en: "Jupiter"
+    category: planet
+    keywords: ["การขยายตัว", "โชคลาภ", "การเติบโต"]
+    meaning_core: "การขยายตัว โอกาส โชคลาภ และมุมมองที่เปิดกว้าง"
+
+  - id: SATURN
+    name_th: "เสาร์"
+    name_en: "Saturn"
+    category: planet
+    keywords: ["โครงสร้าง", "ความรับผิดชอบ", "ข้อจำกัด"]
+    meaning_core: "โครงสร้าง ระเบียบวินัย ความรับผิดชอบ และข้อจำกัดที่ต้องเผชิญ"
+
+  - id: URANUS
+    name_th: "ยูเรนัส"
+    name_en: "Uranus"
+    category: planet
+    keywords: ["การเปลี่ยนแปลงฉับพลัน", "อิสรภาพ", "ความคิดสร้างสรรค์นอกกรอบ"]
+    meaning_core: "ความเปลี่ยนแปลงที่เกิดขึ้นอย่างฉับพลัน อิสรภาพ และความคิดสร้างสรรค์ที่แหวกขนบ"
+
+  - id: NEPTUNE
+    name_th: "เนปจูน"
+    name_en: "Neptune"
+    category: planet
+    keywords: ["จินตนาการ", "ความฝัน", "ความไม่ชัดเจน"]
+    meaning_core: "จินตนาการ แรงบันดาลใจ และภาวะที่ขอบเขตความจริงพร่าเลือน"
+
+  - id: PLUTO
+    name_th: "พลูโต"
+    name_en: "Pluto"
+    category: planet
+    keywords: ["การเปลี่ยนแปลงลึกซึ้ง", "พลังแฝง", "การเกิดใหม่"]
+    meaning_core: "การเปลี่ยนแปลงเชิงลึกถึงราก พลังแฝงที่ซ่อนอยู่ และกระบวนการสลายเพื่อเกิดใหม่"

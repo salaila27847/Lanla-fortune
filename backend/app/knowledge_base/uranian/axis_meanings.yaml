@@ -1,0 +1,55 @@
+# axis_meanings — ความหมายเมื่อปัจจัยหนึ่งจับคู่กับ "แกน" อ้างอิงหลัก (axis factor)
+# ใช้เสริมความหมายของ planetary picture ที่มีแกนนั้นร่วมอยู่ด้วย เช่น picture ที่มี M อยู่
+# จะดึงความหมายของ M ร่วมกับปัจจัยอื่นในภาพมาเสริมบริบท ("บนแกน M: ...")
+#
+# ที่มา: ถอดความจาก "The Language of Uranian Astrology" โดย Roger A. Jacobson (มีลิขสิทธิ์)
+# เป็นการถอดความสำหรับใช้งานภายในโปรเจกต์เท่านั้น ไม่ใช่คำแปลตรงตัว — ดูเอกสารอ้างอิงฉบับเต็มที่
+# backend/app/knowledge_base/uranian/research/uranian-delineation-axes.md
+#
+# สถานะ: มีเฉพาะแกน M (21 คู่ — ครบทุกปัจจัยอื่นที่มี) — แกน A, SUN, MOON, NODE ยังไม่ได้ถอดความ
+# (เนื้อหามีอยู่แล้วในเอกสารอ้างอิงข้างต้น หัวข้อแกน A/Sun/Moon/Node รอแปลงเป็น YAML ต่อ)
+axes:
+  - axis: M
+    entries:
+      - paired_factor: ARIES
+        meaning_th: "ตัวตนของผู้เจ้าของดวงในโลกภายนอก บทบาททางอาชีพ"
+      - paired_factor: SUN
+        meaning_th: "อัตตาส่วนตัว ร่างกายและจิตวิญญาณ การแสดงออกของ \"ตัวฉัน\""
+      - paired_factor: A
+        meaning_th: "ปฏิสัมพันธ์ระหว่างตนเองกับสิ่งแวดล้อม"
+      - paired_factor: MOON
+        meaning_th: "อารมณ์และความรู้สึกที่มีต่อตนเอง"
+      - paired_factor: NODE
+        meaning_th: "ความผูกพันส่วนตัว เครือข่ายทางอาชีพ วงสังคมส่วนตัว"
+      - paired_factor: MERCURY
+        meaning_th: "ความคิดส่วนตัว การครุ่นคิด บทสนทนากับตัวเอง"
+      - paired_factor: VENUS
+        meaning_th: "รสนิยมและความชอบส่วนตัว ความสามารถในการรัก ความสุขส่วนตัว"
+      - paired_factor: MARS
+        meaning_th: "การผจญภัยส่วนตัว การกระทำที่ขับเคลื่อนจากภายใน"
+      - paired_factor: JUPITER
+        meaning_th: "โชคดีส่วนตัว ความสุขภายใน"
+      - paired_factor: SATURN
+        meaning_th: "ภาระและความรับผิดชอบส่วนตัว หน้าที่ในอาชีพ"
+      - paired_factor: URANUS
+        meaning_th: "ความตึงเครียดภายใน ความประหลาดใจ การเบี่ยงเบนจากขนบส่วนตัว"
+      - paired_factor: NEPTUNE
+        meaning_th: "จินตนาการและจุดอ่อนส่วนตัว ความไม่มั่นคงในใจ"
+      - paired_factor: PLUTO
+        meaning_th: "พัฒนาการส่วนตัว การเปลี่ยนแปลงภายใน ความก้าวหน้าในอาชีพ"
+      - paired_factor: CUPIDO
+        meaning_th: "ความผูกพันกับครอบครัว ความสมดุลและรสนิยมทางศิลปะ"
+      - paired_factor: HADES
+        meaning_th: "ความทุกข์ใจหรือความเดือดร้อนส่วนตัว ความลับส่วนตัว"
+      - paired_factor: ZEUS
+        meaning_th: "เป้าหมายส่วนตัวและอาชีพ ความสามารถเชิงสร้างสรรค์"
+      - paired_factor: KRONOS
+        meaning_th: "ความสามารถส่วนตัว ความเป็นอิสระ การเป็นผู้เชี่ยวชาญ"
+      - paired_factor: APOLLON
+        meaning_th: "ขอบเขตประสบการณ์ชีวิต ความสำเร็จส่วนตัว โอกาสในอาชีพ"
+      - paired_factor: ADMETOS
+        meaning_th: "ความมั่นคงภายใน ความดื้อรั้นส่วนตัว"
+      - paired_factor: VULKANUS
+        meaning_th: "พลังภายใน อำนาจส่วนตัว"
+      - paired_factor: POSEIDON
+        meaning_th: "ประกายศักดิ์สิทธิ์ภายใน จิตวิญญาณของตนเอง"
