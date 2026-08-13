@@ -258,15 +258,17 @@ def test_pictures_without_a_personal_point_are_filtered_out():
 
 
 def test_picture_finding_uses_glossary_meaning_when_a_pair_matches():
+    # ADMETOS+POSEIDON is not yet in witte_pictures.yaml (Admetos chapter not done),
+    # so this exercises the planetary_pictures.yaml fallback tier specifically.
     picture = {
         "type": "type1",
-        "pair": ("MERCURY", "SATURN"),
+        "pair": ("ADMETOS", "POSEIDON"),
         "hit": "SUN",
-        "factors": frozenset({"MERCURY", "SATURN", "SUN"}),
+        "factors": frozenset({"ADMETOS", "POSEIDON", "SUN"}),
         "orb": 0.2,
     }
     finding = _picture_finding(picture)
-    assert "การเดินทาง" in finding.meaning
+    assert "การศึกษา" in finding.meaning
     assert finding.weight == 0.75
 
 
