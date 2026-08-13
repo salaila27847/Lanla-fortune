@@ -172,5 +172,20 @@
       **True Node** (`swe.TRUE_NODE` แทน `swe.MEAN_NODE` ใน `_compute_positions()`) ทดสอบแล้วว่า
       ตรงกับเว็บอ้างอิงในระดับ <1 ลิปดาเช่นกัน, 51 tests ยังผ่านหมด (ไม่มี test ใดอิง Node
       longitude ตายตัว)
+- [x] **แก้ไข 2026-08-13**: เริ่มทำ Solar Arc Directions (บทที่ 10 ใน `research/`) — ผู้ใช้ตัดสินใจ
+      แล้วว่าตอนนี้เอาแค่ฟังก์ชันคำนวณก่อน **ยังไม่ต่อ endpoint/UI** (ต้องเพิ่ม target-date input ที่
+      `BirthData` ยังไม่มี ไว้ตัดสินใจ scope การเชื่อมกับแอปทีหลัง) — สร้าง
+      `backend/app/modules/uranian/solar_arc.py`: `progressed_sun_longitude()`, `solar_arc_degrees()`,
+      `directed_positions()` (ขับเคลื่อนทุกปัจจัยด้วยส่วนโค้งเท่ากัน ตามกฎ Solar Arc), และ
+      `find_directed_pictures()` (หา Type I/II ข้ามชุด radix+directed โดยตัดคู่ปัจจัยตัวเดียวกัน
+      ข้ามชุด radix/directed ออกจากการจับคู่ midpoint เพราะเป็นฟังก์ชันคงที่ของ arc ไม่ใช่
+      configuration จริง, ตัดภาพที่เป็น radix ล้วนออกเพราะ natal engine ครอบคลุมแล้ว, ตัด Type II
+      ที่ทั้งสองคู่เป็นดาวชุดเดียวกันข้าม radix/directed ออกเพราะเกือบจะเป็นฟังก์ชันคงที่ของ arc
+      เช่นกัน — คงไว้เฉพาะภาพที่พึ่งพาตำแหน่งจริงของดวงชะตา) เพิ่ม unit test 11 เคสใน
+      `test_uranian_solar_arc.py` (คำนวณ arc, directed positions, และภาพสังเคราะห์ครบทุก
+      edge case ข้างต้น) — รวม 62 tests ผ่านหมด, ruff clean
+- [ ] **ยังไม่ได้ทำ**: ยังไม่ตัดสินใจว่าจะให้ผู้ใช้เลือก target date ยังไง (เพิ่มเข้า `/reading` เดิม
+      แบบ auto-forecast วันนี้, แยกเป็นฟีเจอร์ใหม่ให้เลือกวัน, หรืออื่นๆ) — solar_arc.py ยังไม่ถูกเรียก
+      จาก `calculate()`/`EngineResult`/endpoint ใดๆ ทั้งสิ้น
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ทดสอบผ่าน unit test + manual script เท่านั้น ยังไม่ได้ทดสอบ
       end-to-end ผ่าน `/api/reading` จริงที่มี `GEMINI_API_KEY` จริง (ข้อจำกัดเดิมจาก Phase 6/10)
