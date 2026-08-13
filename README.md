@@ -59,8 +59,8 @@ Lanla-fortune/
       tab (ภาพรวม/แยกศาสตร์/พยากรณ์ล่วงหน้า พร้อมปุ่มข้ามดูทีละแบบ)
 - [x] CI: GitHub Actions รัน lint + test ทั้ง backend/frontend บน push/PR ไปที่ `main`
 - [x] Deployment: Vercel (frontend) + Render (backend) + Neon (Postgres) — ดู `docs/deployment.md`
-- [ ] `axis_meanings.yaml`/`house_meanings` ของ Uranian KB ยังไม่ครบทุกแกน (ดู
-      `backend/app/knowledge_base/uranian/README.md`)
+- [ ] `house_meanings` ของ Uranian KB ยังไม่ทำ (ต้องคำนวณ house cusp แบบ equal-house จาก M ก่อน,
+      ยังไม่มีในโค้ด) — ดู `backend/app/knowledge_base/uranian/README.md`
 - [ ] Rate limit / cache สำหรับ forecast endpoint ยังไม่ทำ
 
 รายละเอียดทุก phase ดูที่ `docs/task-breakdown.md`

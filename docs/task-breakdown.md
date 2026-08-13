@@ -162,9 +162,9 @@
       package + เทสต์ KB loading ใหม่) — รวม 51 tests ผ่านทั้งหมด, `ruff check`/`ruff format --check`
       สะอาด — ยืนยันด้วย manual run จริงว่า picture-finder เจอ Type I/II จริงและ match glossary
       ถูกต้อง (เช่น `Mars/Sun=Hades/Neptune` → "น้ำ การจมน้ำ การขาดอากาศหายใจ")
-- [ ] **ยังไม่ได้ทำ (เหมือนที่ package's README ระบุไว้เอง)**: `axis_meanings.yaml` มีแค่แกน M —
-      แกน A/Sun/Moon/Node ยังไม่ถอดความ; ไม่มี house_meanings (ยังไม่คำนวณเรือน); ไม่มี solar arc /
-      transit forecast — เนื้อหาต้นทางมีอยู่แล้วใน `research/` รอแปลงเป็น YAML/โค้ดต่อ
+- [x] **แก้ไข 2026-08-13 (Phase 14)**: `axis_meanings.yaml` ครบทั้ง 5 แกนแล้ว (M/A/Sun/Moon/Node)
+      — ดู Phase 14 ด้านล่าง — ยังไม่มี house_meanings (ยังไม่คำนวณเรือน) และยังไม่มี solar arc /
+      transit forecast ตอนที่เขียนบรรทัดนี้ครั้งแรก — ปัจจุบัน solar arc/transit ทำแล้วใน Phase 11-13
 - [x] **แก้ไข 2026-08-13**: ผู้ใช้เทียบผลลัพธ์ engine กับเว็บอ้างอิง 2 เว็บโดยใช้วันเกิดจริง —
       ดาวเคราะห์คลาสสิก, Ascendant/MC, และดาวเสริมทั้ง 8 ดวงตรงกับทั้ง 2 เว็บในระดับ <1 ลิปดา
       (ยืนยันว่า ephemeris/house/midpoint math ถูกต้อง) จุดเดียวที่ต่าง ~0.5° คือ Node เพราะ
@@ -317,3 +317,29 @@ Transit/Solar Arc/Lunar Return/Relocation ไปพิจารณาด้ว�
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: คุณภาพจริงของการสังเคราะห์ forecast โดย Gemini (มี key จริง)
       ยังทดสอบไม่ได้ในนี้ เหมือนข้อจำกัดเดิมของ Phase 6/10 — ทดสอบได้แค่ path fallback กับ payload
       shape ที่ถูกต้อง
+
+## Phase 14 — axis_meanings.yaml ครบ 5 แกน (M/A/Sun/Moon/Node)
+
+ผู้ใช้ส่งไฟล์หนังสือ (`uranianchaptersth.zip`, 12 ไฟล์ต่อบท) ตามที่บอกไว้ใน Phase 13 ว่า "มีข้อมูล
+แล้วเด่วส่งให้" — ตรวจสอบแล้วพบว่าเนื้อหาเหมือนกับ `research/uranian-delineation-axes.md` ที่มีอยู่
+แล้วทุกประการ (จาก handoff package เดิม, Phase 11) เพียงแค่ถูกแบ่งเป็นไฟล์ต่อบทแทนไฟล์รวมตามหัวข้อ
+— ไม่มีเนื้อหาใหม่ แต่ยืนยันว่าเนื้อหาที่มีอยู่แล้วถูกต้องครบถ้วนพอจะแปลงเป็น YAML ได้เลย
+
+- [x] แปลงตาราง A-Axis/Sun-Axis/Moon-Axis/Node-Axis จาก `research/uranian-delineation-axes.md`
+      หัวข้อ 3-6 เป็น `axis_meanings.yaml` เพิ่มจากที่มีแค่แกน M เดิม — backfill คู่ที่หนังสือเขียนไว้
+      ฝั่งเดียว (เช่น "M + A" อยู่ใต้หัวข้อ M แต่ไม่มี "A + M" ซ้ำใต้หัวข้อ A) ด้วยข้อความเดียวกันข้าม
+      แกน เพราะ midpoint สมมาตร ผลคือ M/A/MOON/NODE ครบ 21 คู่ (ทุกปัจจัยอื่น) ส่วน SUN ได้ 19 คู่
+      (ต้นฉบับไม่เคยระบุความหมาย Sun+Apollon และ Sun+Admetos)
+- [x] `engine.py`: `_picture_finding()` เดิม hardcode เช็คเฉพาะแกน M (`if "M" in factors`) — แก้เป็น
+      loop ทุกแกนที่มีใน `axis_meanings.yaml` และอยู่ในภาพนั้นจริง เพื่อให้ภาพที่มีมากกว่าหนึ่งแกน
+      (เช่น M/Mars=Sun/Saturn มีทั้ง M และ SUN) ได้หมายเหตุจากทุกแกน ไม่ใช่แค่แกนแรกที่เจอ
+- [x] เพิ่ม unit test 8 เคสใน `test_uranian_knowledge_base.py` (ครอบคลุมทุกแกน + หลายแกนพร้อมกันใน
+      ภาพเดียว) — รวม 102 tests ผ่านหมด, ruff clean — ยืนยันด้วย manual run จริงกับวันเกิด 22 กรกฎาคม
+      1990 ว่าภาพที่มีมากกว่าหนึ่งแกนได้หมายเหตุครบทุกแกนจริง (เช่น A/Mars=Apollon/Neptune ได้ทั้ง 3
+      หมายเหตุจากแกน A)
+- [ ] **ยังไม่ได้ทำ**: `house_meanings` (เนื้อหา "ธรรมชาติของเรือนที่ดาวสถิต" ต่อดาว มีอยู่แล้วใน
+      `research/uranian-delineation-axes.md` หัวข้อ 7 แต่การคำนวณจริงว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่
+      ยังไม่ implement — ต้องคำนวณ house cusp แบบ equal-house จาก M ก่อน ซึ่งเอกสารต้นทางที่มีอยู่
+      (บทที่ 4) อธิบายแค่หลักการกว้างๆ ไม่ได้ให้สูตรคำนวณละเอียดพอจะ implement ได้ทันทีโดยไม่เดา —
+      รอผู้ใช้ยืนยัน convention ที่แน่นอนก่อน), แกน ARIES ของ `axis_meanings.yaml` (ไม่มีเนื้อหา
+      ต้นฉบับให้ถอดความ), Sun+Apollon/Sun+Admetos
