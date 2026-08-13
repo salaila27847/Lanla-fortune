@@ -77,3 +77,50 @@ export async function getReading(birthData: BirthData): Promise<SynthesisOutput>
 
   return res.json();
 }
+
+export type ForecastOptions = {
+  solar_arc?: { target_date: string };
+  transit?: { target_date: string };
+  lunar_return?: { search_start: string };
+  relocation?: { place: string; latitude: number; longitude: number };
+};
+
+export type PictureResult = {
+  type: "type1" | "type2";
+  label: string;
+  factors: string[];
+  orb: number;
+};
+
+export type SolarArcResult = { arc_degrees: number; pictures: PictureResult[] };
+export type TransitResult = { pictures: PictureResult[] };
+export type LunarReturnResult = { return_at: string };
+export type RelocationResult = { ascendant: number; midheaven: number };
+
+export type ForecastResponse = {
+  solar_arc: SolarArcResult | null;
+  transit: TransitResult | null;
+  lunar_return: LunarReturnResult | null;
+  relocation: RelocationResult | null;
+};
+
+export function hasForecastOptions(options: ForecastOptions): boolean {
+  return Boolean(options.solar_arc || options.transit || options.lunar_return || options.relocation);
+}
+
+export async function getForecast(
+  birthData: BirthData,
+  options: ForecastOptions,
+): Promise<ForecastResponse> {
+  const res = await fetch("/api/forecast", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ birth_data: birthData, ...options }),
+  });
+
+  if (!res.ok) {
+    throw new ReadingRequestError(res.status, await extractErrorDetail(res));
+  }
+
+  return res.json();
+}

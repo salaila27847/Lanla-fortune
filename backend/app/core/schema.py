@@ -66,3 +66,61 @@ class ReadingRecord(BaseModel):
     created_at: datetime
     birth_data: BirthData
     synthesis: SynthesisOutput
+
+
+class SolarArcRequest(BaseModel):
+    target_date: date
+
+
+class TransitRequest(BaseModel):
+    target_date: date
+
+
+class LunarReturnRequest(BaseModel):
+    search_start: date
+
+
+class RelocationRequest(BaseModel):
+    place: str
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
+
+
+class ForecastRequest(BaseModel):
+    birth_data: BirthData
+    solar_arc: SolarArcRequest | None = None
+    transit: TransitRequest | None = None
+    lunar_return: LunarReturnRequest | None = None
+    relocation: RelocationRequest | None = None
+
+
+class PictureResult(BaseModel):
+    type: Literal["type1", "type2"]
+    label: str
+    factors: list[str]
+    orb: float
+
+
+class SolarArcResult(BaseModel):
+    arc_degrees: float
+    pictures: list[PictureResult]
+
+
+class TransitResult(BaseModel):
+    pictures: list[PictureResult]
+
+
+class LunarReturnResult(BaseModel):
+    return_at: datetime
+
+
+class RelocationResult(BaseModel):
+    ascendant: float
+    midheaven: float
+
+
+class ForecastResponse(BaseModel):
+    solar_arc: SolarArcResult | None = None
+    transit: TransitResult | None = None
+    lunar_return: LunarReturnResult | None = None
+    relocation: RelocationResult | None = None

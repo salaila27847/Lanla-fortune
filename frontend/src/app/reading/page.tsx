@@ -4,21 +4,34 @@ import { useState } from "react";
 import BirthDataForm from "@/components/BirthDataForm";
 import CardDrawStep from "@/components/CardDrawStep";
 import ReadingResult from "@/components/ReadingResult";
-import { getReading, ReadingRequestError, type BirthData, type SynthesisOutput } from "@/lib/api";
+import {
+  getForecast,
+  getReading,
+  hasForecastOptions,
+  ReadingRequestError,
+  type BirthData,
+  type ForecastOptions,
+  type ForecastResponse,
+  type SynthesisOutput,
+} from "@/lib/api";
 
 type Step = "birth-data" | "tarot" | "oracle" | "loading" | "result" | "error";
 
 export default function ReadingPage() {
   const [step, setStep] = useState<Step>("birth-data");
   const [birthData, setBirthData] = useState<BirthData | null>(null);
+  const [forecastOptions, setForecastOptions] = useState<ForecastOptions>({});
   const [result, setResult] = useState<SynthesisOutput | null>(null);
+  const [forecast, setForecast] = useState<ForecastResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isInputError, setIsInputError] = useState(false);
 
   function restart() {
     setStep("birth-data");
     setBirthData(null);
+    setForecastOptions({});
     setResult(null);
+    setForecast(null);
     setErrorMessage("");
     setIsInputError(false);
   }
@@ -26,8 +39,16 @@ export default function ReadingPage() {
   async function fetchReading(data: BirthData) {
     setStep("loading");
     try {
-      const reading = await getReading(data);
+      const [reading, forecastResult] = await Promise.all([
+        getReading(data),
+        // Forecast add-ons are a separate, best-effort call — a failure
+        // here shouldn't block the main reading from showing.
+        hasForecastOptions(forecastOptions)
+          ? getForecast(data, forecastOptions).catch(() => null)
+          : Promise.resolve(null),
+      ]);
       setResult(reading);
+      setForecast(forecastResult);
       setStep("result");
     } catch (err) {
       if (err instanceof ReadingRequestError && err.status === 422) {
@@ -45,8 +66,9 @@ export default function ReadingPage() {
     <div className="flex flex-1 flex-col justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
       {step === "birth-data" && (
         <BirthDataForm
-          onSubmit={(data) => {
+          onSubmit={(data, options) => {
             setBirthData(data);
+            setForecastOptions(options);
             setStep("tarot");
           }}
         />
@@ -94,7 +116,9 @@ export default function ReadingPage() {
         </div>
       )}
 
-      {step === "result" && result && <ReadingResult result={result} onRestart={restart} />}
+      {step === "result" && result && (
+        <ReadingResult result={result} forecast={forecast} onRestart={restart} />
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { BirthData } from "@/lib/api";
+import type { BirthData, ForecastOptions } from "@/lib/api";
 import { searchPlace, type GeocodeResult } from "@/lib/geocode";
 
 type CityPreset = {
@@ -19,8 +19,10 @@ const CITY_PRESETS: CityPreset[] = [
   { label: "หาดใหญ่", place: "หาดใหญ่", latitude: 7.0084, longitude: 100.4747, timezone: "Asia/Bangkok" },
 ];
 
+const TODAY = new Date().toISOString().slice(0, 10);
+
 type Props = {
-  onSubmit: (birthData: BirthData) => void;
+  onSubmit: (birthData: BirthData, forecastOptions: ForecastOptions) => void;
 };
 
 export default function BirthDataForm({ onSubmit }: Props) {
@@ -31,6 +33,17 @@ export default function BirthDataForm({ onSubmit }: Props) {
   const [latitude, setLatitude] = useState(CITY_PRESETS[0].latitude);
   const [longitude, setLongitude] = useState(CITY_PRESETS[0].longitude);
   const [timezone, setTimezone] = useState(CITY_PRESETS[0].timezone);
+
+  const [solarArcEnabled, setSolarArcEnabled] = useState(false);
+  const [solarArcDate, setSolarArcDate] = useState(TODAY);
+  const [transitEnabled, setTransitEnabled] = useState(false);
+  const [transitDate, setTransitDate] = useState(TODAY);
+  const [lunarReturnEnabled, setLunarReturnEnabled] = useState(false);
+  const [lunarReturnDate, setLunarReturnDate] = useState(TODAY);
+  const [relocationEnabled, setRelocationEnabled] = useState(false);
+  const [relocationPlace, setRelocationPlace] = useState("");
+  const [relocationLat, setRelocationLat] = useState(0);
+  const [relocationLon, setRelocationLon] = useState(0);
 
   const [searchResults, setSearchResults] = useState<GeocodeResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -100,14 +113,26 @@ export default function BirthDataForm({ onSubmit }: Props) {
     e.preventDefault();
     if (!date) return;
 
-    onSubmit({
-      date,
-      time: knowsTime ? `${time}:00` : null,
-      place,
-      latitude,
-      longitude,
-      timezone,
-    });
+    const forecastOptions: ForecastOptions = {
+      ...(solarArcEnabled && { solar_arc: { target_date: solarArcDate } }),
+      ...(transitEnabled && { transit: { target_date: transitDate } }),
+      ...(lunarReturnEnabled && { lunar_return: { search_start: lunarReturnDate } }),
+      ...(relocationEnabled && {
+        relocation: { place: relocationPlace, latitude: relocationLat, longitude: relocationLon },
+      }),
+    };
+
+    onSubmit(
+      {
+        date,
+        time: knowsTime ? `${time}:00` : null,
+        place,
+        latitude,
+        longitude,
+        timezone,
+      },
+      forecastOptions,
+    );
   }
 
   return (
@@ -236,6 +261,117 @@ export default function BirthDataForm({ onSubmit }: Props) {
           onChange={(e) => setTimezone(e.target.value)}
           className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
         />
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          การพยากรณ์ล่วงหน้า (ไม่บังคับ)
+        </span>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          ผลลัพธ์ส่วนนี้เป็นตารางดิบจากเอนจินยูเรเนียนโดยตรง ยังไม่ผ่านการสังเคราะห์คำทำนาย
+        </p>
+
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            checked={solarArcEnabled}
+            onChange={(e) => setSolarArcEnabled(e.target.checked)}
+          />
+          Solar Arc (ส่วนโค้งสุริยะ)
+        </label>
+        {solarArcEnabled && (
+          <input
+            type="date"
+            value={solarArcDate}
+            onChange={(e) => setSolarArcDate(e.target.value)}
+            aria-label="วันที่ต้องการดู Solar Arc"
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          />
+        )}
+
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            checked={transitEnabled}
+            onChange={(e) => setTransitEnabled(e.target.checked)}
+          />
+          Transit (ดาวโคจรผ่าน)
+        </label>
+        {transitEnabled && (
+          <input
+            type="date"
+            value={transitDate}
+            onChange={(e) => setTransitDate(e.target.value)}
+            aria-label="วันที่ต้องการดู Transit"
+            className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+          />
+        )}
+
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            checked={lunarReturnEnabled}
+            onChange={(e) => setLunarReturnEnabled(e.target.checked)}
+          />
+          Lunar Return (จันทร์คืนตำแหน่งเกิด)
+        </label>
+        {lunarReturnEnabled && (
+          <div className="flex flex-col gap-1">
+            <input
+              type="date"
+              value={lunarReturnDate}
+              onChange={(e) => setLunarReturnDate(e.target.value)}
+              aria-label="เริ่มค้นหา Lunar Return จากวันที่"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              ค้นหาวันที่ดวงจันทร์โคจรกลับมาตำแหน่งเกิด นับจากวันที่นี้เป็นต้นไป
+            </p>
+          </div>
+        )}
+
+        <label className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <input
+            type="checkbox"
+            checked={relocationEnabled}
+            onChange={(e) => setRelocationEnabled(e.target.checked)}
+          />
+          Relocation (ดวงย้ายถิ่น)
+        </label>
+        {relocationEnabled && (
+          <div className="flex flex-col gap-2">
+            <input
+              type="text"
+              value={relocationPlace}
+              onChange={(e) => setRelocationPlace(e.target.value)}
+              placeholder="ชื่อสถานที่ปลายทาง"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                type="number"
+                step="0.0001"
+                value={relocationLat}
+                onChange={(e) => setRelocationLat(Number(e.target.value))}
+                aria-label="ละติจูดปลายทาง"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              />
+              <input
+                type="number"
+                step="0.0001"
+                value={relocationLon}
+                onChange={(e) => setRelocationLon(Number(e.target.value))}
+                aria-label="ลองจิจูดปลายทาง"
+                className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              />
+            </div>
+            {!knowsTime && (
+              <p className="text-xs text-red-600 dark:text-red-400">
+                ต้องทราบเวลาเกิดจึงจะคำนวณดวงย้ายถิ่นได้
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <button

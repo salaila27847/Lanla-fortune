@@ -217,3 +217,42 @@
       - เพิ่ม unit test 16 เคสใน `test_uranian_transit.py` — รวม 78 tests ผ่านหมด, ruff clean
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ทดสอบผ่าน unit test + manual script เท่านั้น ยังไม่ได้ทดสอบ
       end-to-end ผ่าน `/api/reading` จริงที่มี `GEMINI_API_KEY` จริง (ข้อจำกัดเดิมจาก Phase 6/10)
+
+## Phase 12 — เชื่อม Solar Arc/Transit/Lunar Return/Relocation เข้ากับแอปจริง
+
+ผู้ใช้ตัดสินใจแล้ว (2026-08-13): เพิ่ม checkbox 4 ตัวในฟอร์มกรอกข้อมูลเกิด `/reading` เดิม
+(ไม่แยกหน้าใหม่) แต่ละตัวเปิด/ปิดฟิลด์ข้อมูลของตัวเอง และผลลัพธ์แสดงเป็น**ตารางดิบ** ไม่ผ่าน
+Gemini synthesis (ต่างจาก `/api/reading` ที่สังเคราะห์เป็นคำทำนายภาษา)
+
+- [x] Backend: เพิ่ม schema (`ForecastRequest`/`ForecastResponse` + sub-request/result ต่อเทคนิค)
+      ใน `app/core/schema.py`, เพิ่ม `POST /api/forecast` ใน `main.py` — auth-gated แบบเดียวกับ
+      `/api/reading` (`get_current_user`) แต่**ไม่บันทึกลง reading history** เพราะเป็นตารางดิบ
+      ไม่ใช่คำทำนาย รับ birth_data + sub-request ที่เลือก (solar_arc/transit/lunar_return/relocation)
+      แต่ละตัว optional คำนวณเฉพาะที่ส่งมา จำกัดผลลัพธ์ 30 picture ต่อเทคนิค (`FORECAST_PICTURE_LIMIT`)
+      แปลง factor id ภายใน (`r:SUN`, `d:MOON`, `t:JUPITER` ฯลฯ) เป็น label ภาษาไทยอ่านง่ายผ่าน
+      `_factor_display_name()` เดิมจาก `engine.py`
+- [x] Backend: เพิ่ม unit test 8 เคสใน `test_forecast_endpoint.py` (ครอบคลุมทุก sub-request,
+      auth, no-time-for-relocation error, ยิงทุกตัวพร้อมกัน)
+- [x] **เจอบั๊ก race condition จริงระหว่างทดสอบ end-to-end ในเบราว์เซอร์**: frontend ยิง
+      `/api/reading` และ `/api/forecast` พร้อมกัน (`Promise.all`) — สำหรับ user คนใหม่ที่ไม่เคย
+      login มาก่อน ทั้ง 2 request's `get_current_user()` แข่งกัน INSERT `google_sub` เดียวกัน
+      ตัวที่แพ้ชน UNIQUE constraint แล้ว 500 ทั้ง endpoint แก้ที่ `app/core/auth.py`: ดัก
+      `IntegrityError` ตอน flush แล้ว rollback + select ใหม่ (ได้ row ที่อีก request เพิ่ง commit
+      ไป) เพิ่ม regression test `test_auth_race.py` (ใช้ temp-file SQLite ไม่ใช่ `:memory:` เพราะ
+      `:memory:` + StaticPool ใช้ connection เดียวจริง ไม่สามารถจำลอง 2 transaction ที่เป็นอิสระ
+      จากกันจริงได้) ยืนยันแล้วว่า test นี้ fail จริงถ้าไม่มี fix (ลอง revert แล้วรัน) และผ่านหลัง fix
+- [x] Frontend: `BirthDataForm.tsx` เพิ่ม section "การพยากรณ์ล่วงหน้า (ไม่บังคับ)" — checkbox 4 ตัว
+      (Solar Arc/Transit/Lunar Return/Relocation) แต่ละตัวเปิดฟิลด์ของตัวเองเมื่อติ๊ก ปิดเมื่อไม่ติ๊ก
+      ตามที่ผู้ใช้ขอ, `onSubmit` ส่ง `ForecastOptions` เพิ่มจาก `BirthData` เดิม
+- [x] Frontend: `app/api/forecast/route.ts` (BFF proxy ใหม่ เหมือน `app/api/reading/route.ts`),
+      `lib/api.ts` เพิ่ม type + `getForecast()`, `reading/page.tsx` ยิง `getReading()` +
+      `getForecast()` พร้อมกันด้วย `Promise.all` (forecast เป็น best-effort — ถ้าพังไม่บังการอ่าน
+      หลักด้วย `.catch(() => null)`), `ReadingResult.tsx` เพิ่ม tab "การพยากรณ์ล่วงหน้า" (โชว์เฉพาะ
+      เมื่อมีผลลัพธ์) แสดงตาราง picture ต่อเทคนิค
+- [x] ทดสอบผ่านเบราว์เซอร์จริงแล้ว (Playwright): คลิก checkbox ครบ 4 ตัว ยืนยันฟิลด์เปิด/ปิดถูกต้อง,
+      submit ผ่าน tarot/oracle draw จนถึงหน้าผลลัพธ์, เห็น forecast tab พร้อมตาราง Solar
+      Arc/Transit/Lunar Return จริงจาก backend local (bypass login ชั่วคราวเพราะ sandbox นี้ทำ
+      Google OAuth จริงไม่ได้ — revert กลับหมดแล้วก่อนจบงาน ยืนยันด้วย `git diff` ว่าไฟล์ auth
+      กลับสู่สภาพเดิม), `npm run build`/`npm run lint` ผ่าน, backend 87 tests ผ่าน, ruff clean
+- [ ] **ยังไม่ทำ**: การจำกัด (rate limit) หรือแคชผลลัพธ์ forecast, relocation ยังใช้กรอกพิกัดเอง
+      (ไม่มี autocomplete ค้นหาสถานที่แบบช่องกรอกที่เกิดเดิม)

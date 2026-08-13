@@ -13,6 +13,7 @@ import os
 
 from fastapi import Depends, Header, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import User
@@ -38,7 +39,16 @@ async def get_current_user(
     if user is None:
         user = User(google_sub=x_user_id, email=x_user_email, name=x_user_name)
         db.add(user)
-        await db.flush()
+        try:
+            await db.flush()
+        except IntegrityError:
+            # Lost a race with a concurrent request creating the same brand-new
+            # user (e.g. the frontend firing /api/reading and /api/forecast at
+            # once on someone's first request ever) — roll back our attempted
+            # insert and pick up the row the other request just committed.
+            await db.rollback()
+            result = await db.execute(select(User).where(User.google_sub == x_user_id))
+            user = result.scalar_one()
     elif user.email != x_user_email or user.name != x_user_name:
         user.email = x_user_email
         user.name = x_user_name
