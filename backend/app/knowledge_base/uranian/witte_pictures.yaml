@@ -14,10 +14,12 @@
 # ท้ายแต่ละคู่ที่ขาด) — มีต้นฉบับ OCR ดิบอยู่ที่ไฟล์ที่ผู้ใช้อัปโหลด ยังไม่ได้ก็อปปี้เข้า research/
 # เพราะไฟล์ต้นฉบับใหญ่มาก (9599 บรรทัด) ให้ผู้ใช้ส่งซ้ำถ้าต้องการทำหมวดถัดไป
 #
-# สถานะ (แก้ไข 2026-08-13, Phase 15): มีเฉพาะหมวด Meridian (M + อีก 21 ปัจจัยที่เหลือทั้งหมด,
-# หน้า 1-22 ของหนังสือ) — ยังไม่ได้ทำหมวด Aries/Sun/Ascendant/Moon/Node และดาวเคราะห์/TNP อีก 16
-# ดวง (หน้า 23-255) ตามลำดับความสำคัญที่หนังสือเองระบุไว้ (Meridian ก่อน, ตามด้วย Cardinal/Aries,
-# Sun, Ascendant, Moon, Node)
+# สถานะ (แก้ไข 2026-08-13, Phase 16): มีหมวด Meridian ครบ (M + อีก 21 ปัจจัยที่เหลือ, หน้า 1-22)
+# และหมวด Aries ครบ (ARIES + อีก 20 ปัจจัยที่เหลือ — ไม่รวม M เพราะ M+ARIES อยู่ในหมวด Meridian
+# แล้ว, หน้า 23-43) — ยังไม่ได้ทำหมวด Sun/Ascendant/Moon/Node และดาวเคราะห์/TNP อีก 16 ดวง (หน้า
+# 44-255) ตามลำดับความสำคัญที่หนังสือเองระบุไว้ (Meridian → Cardinal/Aries → Sun → Ascendant →
+# Moon → Node → ดาวเคราะห์เรียงตามระยะจากดวงอาทิตย์) หมวด Aries คุณภาพ OCR แย่กว่าหมวด Meridian
+# มาก โดยเฉพาะคู่ ARIES+HADES ที่กู้คืนได้แค่ ~17/20 รายการ
 #
 # engine.py ใช้ไฟล์นี้เฉพาะกับ Type I picture (pair + hit ตรงตัว) เป็นลำดับความสำคัญสูงสุด
 # ก่อน planetary_pictures.yaml (คู่ทั่วไป) และก่อน fallback แบบ keyword — ดู _picture_finding()
@@ -937,3 +939,863 @@ base_pairs:
         meaning_th: "ความกว้างขวางทางจิตวิญญาณ อิสระทางจิตวิญญาณ มุมมองโลกของตนเอง"
       - third_factor: VULKANUS
         meaning_th: "การมีสติปัญญาอันทรงพลัง"
+  - factors: [ARIES, SUN]
+    keyword_en: "The body, everything pertaining to the body. Problems and matters of the daily life."
+    # missing: NEPTUNE, APOLLON (OCR เพี้ยนเกินกู้คืนได้อย่างมั่นใจ)
+    entries:
+      - third_factor: M
+        meaning_th: "ความเชื่อมโยงส่วนตัวกับเรื่องราวในชีวิตประจำวัน ณ ขณะนั้น"
+      - third_factor: A
+        meaning_th: "คนรู้จักมากมายผ่านการทำกิจวัตรประจำวัน ความเชื่อมโยงส่วนตัวกับผู้อื่นในที่สาธารณะ"
+      - third_factor: MOON
+        meaning_th: "ร่างกายของผู้หญิง มิตรภาพกับผู้หญิง"
+      - third_factor: NODE
+        meaning_th: "การสัมผัสหรือรวมตัวทางกายท่ามกลางผู้คนหลายคน"
+      - third_factor: MERCURY
+        meaning_th: "ร่างกายวัยเยาว์ เกี่ยวกับความเป็นหนุ่มสาว การเคลื่อนไหว ความคิดของคนหมู่มากในหนึ่งวัน"
+      - third_factor: VENUS
+        meaning_th: "กิจกรรมหรือความสามารถด้านความรักของคนหมู่มาก ช่วงวัยเจริญพันธุ์"
+      - third_factor: MARS
+        meaning_th: "ช่วงเวลาที่ร่างกายแข็งแรงที่สุด ร่างกายและผู้คนที่ลงมือกระทำ"
+      - third_factor: JUPITER
+        meaning_th: "ช่วงเวลาเก็บเกี่ยวผลจากกิจกรรมทางกาย ผู้คนมากมายมีความสุข"
+      - third_factor: SATURN
+        meaning_th: "ช่วงบั้นปลายชีวิต ความเจ็บป่วยทางกาย การแยกจากทางกาย การสูญเสีย"
+      - third_factor: URANUS
+        meaning_th: "ความตึงเครียดทางกายสูง ร่างกายที่เคลื่อนไหวฉับพลัน ความวุ่นวาย ความกระสับกระส่าย ร่างกายทรุดโทรม"
+      - third_factor: PLUTO
+        meaning_th: "การเคลื่อนไหวของร่างกาย การดูดซึมสารอาหาร การเจริญเติบโตและโภชนาการ"
+      - third_factor: CUPIDO
+        meaning_th: "การรวมกันทางกายในชีวิตแต่งงาน ร่างกายที่มีจิตใจรักศิลปะ ทรัพย์สินของบริษัท/องค์กร"
+      - third_factor: HADES
+        meaning_th: "ร่างกายอ่อนแอ ความเจ็บป่วย ความบกพร่อง ความยากจน การว่างงาน"
+      - third_factor: ZEUS
+        meaning_th: "ผู้นำทางกายภาพ"
+      - third_factor: KRONOS
+        meaning_th: "ความสามารถที่เกี่ยวข้องกับร่างกาย การนำทางความคิดหรือจิตวิญญาณ"
+      - third_factor: ADMETOS
+        meaning_th: "การจากร่างกายจากโลกนี้ ความตาย มรดก"
+      - third_factor: VULKANUS
+        meaning_th: "ความแข็งแรงของร่างกาย ความสำเร็จ"
+      - third_factor: POSEIDON
+        meaning_th: "จิตวิญญาณ กายทิพย์"
+
+  - factors: [ARIES, A]
+    keyword_en: "Meetings, places, locations."
+    entries:
+      - third_factor: M
+        meaning_th: "อิทธิพลของสถานที่ต่อตำแหน่งหน้าที่การงาน สายสัมพันธ์ทางธุรกิจ"
+      - third_factor: SUN
+        meaning_th: "สถานที่และประเทศที่ได้รู้จัก การทักทายกัน"
+      - third_factor: MOON
+        meaning_th: "สถานที่มากมายที่ได้รู้จักโดยไม่ได้ลงหลักปักฐาน สถานที่ที่มีผู้คนหนาแน่น คนรู้จักที่เป็นผู้หญิง"
+      - third_factor: NODE
+        meaning_th: "สายสัมพันธ์กับผู้คนมากมายในหลายสถานที่และประเทศ"
+      - third_factor: MERCURY
+        meaning_th: "การเดินทางหรือการจราจรของสถานที่ ถนน หรือจัตุรัส บทสนทนา"
+      - third_factor: VENUS
+        meaning_th: "ประเทศ สถานที่ โรงละครที่สวยงาม คนรู้จักเชิงชู้สาว"
+      - third_factor: MARS
+        meaning_th: "สถานที่ทำงาน โรงงานเครื่องจักร ค่ายฝึก การทำสิ่งใดเพื่อผู้อื่น"
+      - third_factor: JUPITER
+        meaning_th: "สถานที่อุดมสมบูรณ์ ความพอใจต่อกัน มิตรภาพร่าเริง"
+      - third_factor: SATURN
+        meaning_th: "หมู่บ้าน ทุ่งนา การอำลาผู้คนมากมาย"
+      - third_factor: URANUS
+        meaning_th: "โรงงานผลิต สนามยิงปืน สนามฝึก เหตุการณ์ฉับพลันท่ามกลางผู้คน"
+      - third_factor: NEPTUNE
+        meaning_th: "ดินแดนที่ไม่รู้จัก ยังไม่ได้สำรวจ การถูกหลอกโดยคนหมู่มาก ความผิดพลาดเรื่องสถานที่หรือทิศทาง"
+      - third_factor: PLUTO
+        meaning_th: "การเปลี่ยนสถานที่ การเติบโตของสถานที่ พัฒนาการภายในของสถานที่ การค้า การเปลี่ยนแปลงการจราจร"
+      - third_factor: CUPIDO
+        meaning_th: "ดินแดนหรือสถานที่ที่มีผู้อยู่อาศัย อพาร์ตเมนต์ การไปคอนเสิร์ตหรืองานสังคม การรวมตัวผ่านศิลปะ งานเฉลิมฉลองครอบครัว"
+      - third_factor: HADES
+        meaning_th: "ประเทศยากจน สถานที่น่าเกลียด ถูกทิ้งร้างหรือถูกทำลาย การคบหาคนไม่ดี การพบผู้ป่วย"
+      - third_factor: ZEUS
+        meaning_th: "สถานที่ทางทหาร โรงงานผลิตอาวุธ มิตรภาพในสงคราม ประสาทสัมผัสเรื่องทิศทาง"
+      - third_factor: KRONOS
+        meaning_th: "มหานคร เมืองหลวงที่มีรัฐบาล การวางแผนสิ่งใหญ่ร่วมกับผู้อื่น"
+      - third_factor: APOLLON
+        meaning_th: "สถานที่ที่มีคนมาเยือนมาก การพบปะมากมาย ผู้คนมากมาย สถานที่ห่างไกล"
+      - third_factor: ADMETOS
+        meaning_th: "สถานที่ต่ำหรือลึก ห้องนิรภัย เหมือง การลงหลักปักฐาน ความรกร้าง"
+      - third_factor: VULKANUS
+        meaning_th: "ประเทศอุตสาหกรรม การเชื่อมโยงกับผู้อื่นผ่านงานเครื่องจักร สนามรบ"
+      - third_factor: POSEIDON
+        meaning_th: "เมืองที่มีมหาวิทยาลัยและสำนักพิมพ์ การได้รับการแนะนำแนวคิด การแสวงหาชุมชนทางจิตวิญญาณและความคิด"
+
+  - factors: [ARIES, MOON]
+    keyword_en: "Female persons. Peoples."
+    entries:
+      - third_factor: M
+        meaning_th: "การอยู่ใต้อิทธิพลของสาธารณะหรือผู้หญิง"
+      - third_factor: SUN
+        meaning_th: "ผู้หญิงของผู้ชาย ความอ่อนไหวของร่างกาย"
+      - third_factor: A
+        meaning_th: "คนรู้จักที่เป็นผู้หญิง การรวมตัวกัน"
+      - third_factor: NODE
+        meaning_th: "การรวมตัวของผู้หญิงและผู้คน"
+      - third_factor: MERCURY
+        meaning_th: "ความคิดเกี่ยวกับผู้หญิง ผู้หญิงนักคิด การแลกเปลี่ยนความคิดระหว่างผู้คนต่างกลุ่ม"
+      - third_factor: VENUS
+        meaning_th: "ความรักของผู้หญิง ความเป็นแม่"
+      - third_factor: MARS
+        meaning_th: "ผู้หญิงที่กระตือรือร้น ภรรยา คู่ครอง ผู้คนขยันทำงาน เมื่อรวมกับฮาเดสคือทหาร"
+      - third_factor: JUPITER
+        meaning_th: "ความสุขของผู้หญิง ประชาชนที่มีความสุข"
+      - third_factor: SATURN
+        meaning_th: "ประชากรที่แก่ชราและร่อยหรอลง ผู้หญิงที่แยกทาง หญิงม่าย หญิงที่ถูกทอดทิ้ง หญิงชรา"
+      - third_factor: URANUS
+        meaning_th: "ความวุ่นวายของประชาชน ผู้หญิงที่ประสาทเสีย(ตื่นเต้นรุนแรง) กระเพาะแปรปรวน ความหงุดหงิดง่าย"
+      - third_factor: NEPTUNE
+        meaning_th: "ผู้หญิงอ่อนแอ ผู้หญิงติดเชื้อ ผู้หญิงอ่อนไหว การเคลื่อนไหวของอากาศ"
+      - third_factor: PLUTO
+        meaning_th: "พัฒนาการของผู้หญิง ความสามารถทุ่มเทของเธอ การเติบโตของผู้คน การเปลี่ยนแปลงโครงสร้างประชากร"
+      - third_factor: CUPIDO
+        meaning_th: "แม่บ้าน เจ้าสาว ศิลปิน การรวมตัวของผู้คน"
+      - third_factor: HADES
+        meaning_th: "หญิงชราอ่อนแรง ยาย มดลูกที่เป็นโรค ผู้อยู่อาศัยที่ยากจน"
+      - third_factor: ZEUS
+        meaning_th: "การเป็นแม่ การติดอาวุธหรือเสริมกำลังผู้คน"
+      - third_factor: KRONOS
+        meaning_th: "ผู้แทนของผู้มีอำนาจ เจ้าหน้าที่ แม่บ้าน บุคคลผู้ยิ่งใหญ่"
+      - third_factor: APOLLON
+        meaning_th: "มานุษยวิทยา ชาติพันธุ์วิทยา ผู้หญิงที่มีความสุข ผู้คนและมวลชน"
+      - third_factor: ADMETOS
+        meaning_th: "ความตายของผู้คนที่กำลังจะตาย การตายของผู้หญิงจำนวนมาก"
+      - third_factor: VULKANUS
+        meaning_th: "ผู้คนที่ทรงพลัง อิทธิพลของผู้หญิง ผู้บริหาร การสร้างความตื่นเต้น ผู้คนที่ได้รับการชื่นชม"
+      - third_factor: POSEIDON
+        meaning_th: "สื่อวิญญาณ ผู้หญิงที่มีความคิดเชิงปัญญาอย่างเปิดเผย"
+
+  - factors: [ARIES, NODE]
+    keyword_en: "Union of many persons."
+    # missing: MOON (บรรทัด OCR หายไประหว่างช่วง Ascendant กับ Mercury)
+    entries:
+      - third_factor: M
+        meaning_th: "การติดต่อทางความคิดกับผู้คนมากมาย"
+      - third_factor: SUN
+        meaning_th: "ความเกี่ยวข้องทางกายกับคนหมู่มาก"
+      - third_factor: A
+        meaning_th: "คนรู้จักมากมาย สายสัมพันธ์กับผู้หญิง"
+      - third_factor: MERCURY
+        meaning_th: "การแลกเปลี่ยนความคิด"
+      - third_factor: VENUS
+        meaning_th: "การรวมกันด้วยความรักกับคนหมู่มาก ความรักใคร่ที่เกิดขึ้นเร็ว"
+      - third_factor: MARS
+        meaning_th: "การรวมกันเชิงกามารมณ์กับคนหมู่มาก การรวมตัวเพื่อเป้าหมายร่วมกัน"
+      - third_factor: JUPITER
+        meaning_th: "มิตรภาพที่มีความสุขกับผู้อื่น"
+      - third_factor: SATURN
+        meaning_th: "การแยกจากโดยทั่วไป"
+      - third_factor: URANUS
+        meaning_th: "ความตื่นเต้นร่วมกับคนหมู่มาก การพบปะหรือรวมตัวอย่างฉับพลัน"
+      - third_factor: NEPTUNE
+        meaning_th: "การหลีกเลี่ยงผู้คน การแยกจากเชิงกามารมณ์ ความผิดพลาดในความสัมพันธ์กับหลายคน"
+      - third_factor: PLUTO
+        meaning_th: "คนหมู่มากรวมตัวเพื่อเปลี่ยนแปลงบางสิ่ง การเปลี่ยนแปลงในความสัมพันธ์กับคนหมู่มาก"
+      - third_factor: CUPIDO
+        meaning_th: "การรวมกลุ่มผ่านศิลปะของครอบครัว"
+      - third_factor: HADES
+        meaning_th: "ความเกี่ยวข้องที่ไม่น่าพึงใจกับคนหมู่มาก"
+      - third_factor: ZEUS
+        meaning_th: "การรวมตัวเพื่อผลิตสร้าง การแพร่พันธุ์ การรวมกลุ่มหนาแน่น"
+      - third_factor: KRONOS
+        meaning_th: "การรวมกลุ่มของผู้มีอำนาจ หรือของรัฐ"
+      - third_factor: APOLLON
+        meaning_th: "สายสัมพันธ์ที่แพร่หลาย สายสัมพันธ์ของนักวิทยาศาสตร์และพ่อค้า"
+      - third_factor: ADMETOS
+        meaning_th: "จุดจบของสายสัมพันธ์ สายสัมพันธ์ที่ไร้ผล"
+      - third_factor: VULKANUS
+        meaning_th: "สายสัมพันธ์ที่มีอิทธิพลของคนหมู่มาก"
+      - third_factor: POSEIDON
+        meaning_th: "สายสัมพันธ์ของคนหมู่มากเพื่อเป้าหมายอันสูงส่ง"
+
+  - factors: [ARIES, MERCURY]
+    keyword_en: "General thinking. Motion. Thinking of strangers, news."
+    # missing: NODE (หาไม่พบใน OCR)
+    entries:
+      - third_factor: M
+        meaning_th: "การถูกอิทธิพลจากความคิดเห็นสาธารณะ ความสนใจในความเห็นทั่วไป"
+      - third_factor: SUN
+        meaning_th: "การกระทำโดยทั่วไป การตกอยู่ใต้กระแสนิยมตามยุคสมัย"
+      - third_factor: A
+        meaning_th: "การเข้าไปเกี่ยวข้องกับความคิดเห็นสาธารณะ"
+      - third_factor: MOON
+        meaning_th: "ความคิดเห็นสาธารณะในปัจจุบัน ความไม่แน่นอนของความเห็นสาธารณะ"
+      - third_factor: VENUS
+        meaning_th: "การสร้างคนรู้จักผ่านความคิดเห็นสาธารณะ แนวคิดทั่วไปเรื่องความงาม การแต่งตัวประดับตน"
+      - third_factor: MARS
+        meaning_th: "ความตื่นเต้นโดยทั่วไป มวลชนที่เคลื่อนไหว"
+      - third_factor: JUPITER
+        meaning_th: "ความช่างพูด มวลชนที่หมกมุ่นกับการพูดคุย บทสนทนาทั่วไป"
+      - third_factor: SATURN
+        meaning_th: "ความคิดเรื่องการแยกจากโดยทั่วไป จุดเริ่มต้นของการเดินทาง"
+      - third_factor: URANUS
+        meaning_th: "ข่าวสารทั่วไป รายงานหนังสือพิมพ์ โทรเลข"
+      - third_factor: NEPTUNE
+        meaning_th: "ความคิดที่ล่องลอยไม่มีทางเป็นจริง ความสับสนทั่วไป คำพูด ความเห็น ข่าวที่ยิ่งสร้างความสับสน"
+      - third_factor: PLUTO
+        meaning_th: "การรับรู้ ความเข้าใจ พัฒนาการของความคิดเห็นสาธารณะ"
+      - third_factor: CUPIDO
+        meaning_th: "ความคิดเห็นทั่วไปเรื่องการแต่งงาน แนวโน้มเด่นในศิลปะ ความเห็นของสังคมหรือกลุ่มรวมตัว"
+      - third_factor: HADES
+        meaning_th: "อารมณ์ความคิดที่น่าเกลียดของสาธารณะ ความคิดทั่วไปที่ถูกบังคับและชี้นำ"
+      - third_factor: ZEUS
+        meaning_th: "ความคิดเชิงสร้างสรรค์ของสาธารณชนทั่วไป"
+      - third_factor: KRONOS
+        meaning_th: "ความคิดสูงส่งและมีเกียรติ การเจรจาหรือข้อบังคับทางกฎหมายระหว่างประเทศ เมื่อรวมกับอพอลโลคือข้อตกลงทางการค้า"
+      - third_factor: APOLLON
+        meaning_th: "ความคิดเห็นที่แพร่หลาย ความคิดของมวลชน"
+      - third_factor: ADMETOS
+        meaning_th: "รูปแบบการพูดที่ตายตัว วิธีการแสดงออก สุภาษิต"
+      - third_factor: VULKANUS
+        meaning_th: "ความคิดที่ทรงพลัง ความเร็วสูง เครื่องยนต์ การขับเคลื่อน"
+      - third_factor: POSEIDON
+        meaning_th: "แนวคิดของความคิดเห็นสาธารณะ"
+
+  - factors: [ARIES, VENUS]
+    keyword_en: "The power of attraction. Love in general. To surround many people with love."
+    entries:
+      - third_factor: M
+        meaning_th: "เจ้าของดวงเป็นที่รักและมีแรงดึงดูดสูง มอบความรักมากมายสู่โลก"
+      - third_factor: SUN
+        meaning_th: "คุณสมบัติความรักของร่างกาย เครื่องประดับ"
+      - third_factor: A
+        meaning_th: "การเป็นที่รักอย่างมากจากผู้อื่น"
+      - third_factor: MOON
+        meaning_th: "ความรักของผู้หญิง ความรักของผู้คน การเป็นที่รักของสาธารณะ"
+      - third_factor: NODE
+        meaning_th: "สายสัมพันธ์ความรักโดยทั่วไป"
+      - third_factor: MERCURY
+        meaning_th: "ความชื่นชมในศิลปะ ความงามทางความคิด คนรู้จักใหม่ผ่านการเป็นที่ชื่นชอบทั่วไป"
+      - third_factor: MARS
+        meaning_th: "ช่วงเวลาผสมพันธุ์ ญาติฝ่ายมารดา"
+      - third_factor: JUPITER
+        meaning_th: "ความสุขล้นเหลือ"
+      - third_factor: SATURN
+        meaning_th: "การจากลาในความรัก"
+      - third_factor: URANUS
+        meaning_th: "ความคลั่งไคล้ในความรักอย่างฉับพลัน เหตุการณ์ฉับพลันสำหรับผู้หญิง"
+      - third_factor: NEPTUNE
+        meaning_th: "ความรักข้างเดียว ความเท็จ การแสร้งรัก"
+      - third_factor: PLUTO
+        meaning_th: "ความคิดที่กลมกลืนโดยทั่วไป พัฒนาการ"
+      - third_factor: CUPIDO
+        meaning_th: "การแต่งงานด้วยความรัก เรื่องการแต่งงานของผู้หญิง"
+      - third_factor: HADES
+        meaning_th: "ความผิดศีลธรรมโดยทั่วไป"
+      - third_factor: ZEUS
+        meaning_th: "แรงขับด้านการสืบพันธุ์โดยทั่วไป ช่วงเวลาหว่านเมล็ดที่ดี ผู้หว่านที่ดี"
+      - third_factor: KRONOS
+        meaning_th: "ทัศนคติการกุศลของสาธารณชน ความคิดสงบสันติทั่วไป ความเต็มใจช่วยเหลือ"
+      - third_factor: APOLLON
+        meaning_th: "สันติภาพ ความปรองดอง ความเป็นหนึ่งเดียว มิตรภาพโดยทั่วไป"
+      - third_factor: ADMETOS
+        meaning_th: "การตายของผู้หญิง"
+      - third_factor: VULKANUS
+        meaning_th: "ความปรารถนาแรงกล้าโดยทั่วไป ความโกรธ แรงดึงดูดอันทรงพลัง ความโหยหาบางสิ่ง"
+      - third_factor: POSEIDON
+        meaning_th: "ความโน้มเอียงทางศาสนาของสาธารณชน การชำระให้บริสุทธิ์"
+
+  - factors: [ARIES, MARS]
+    keyword_en: "Labor, the forces of nature. Injuries."
+    entries:
+      - third_factor: M
+        meaning_th: "พลังงาน ความกล้าหาญ ความยุ่งอยู่กับงาน"
+      - third_factor: SUN
+        meaning_th: "กิจกรรมหรือแรงงานของผู้ชาย การต่อสู้"
+      - third_factor: A
+        meaning_th: "การกระทำของผู้อื่น ความรุนแรงจากผู้อื่น"
+      - third_factor: MOON
+        meaning_th: "การกระทำของผู้หญิงหรือในที่สาธารณะ ผู้คนที่ทำสงคราม"
+      - third_factor: NODE
+        meaning_th: "กิจกรรมรวมตัว สายสัมพันธ์การทำงานทั่วไป"
+      - third_factor: MERCURY
+        meaning_th: "พลังทางความคิด การกระทำที่กระตือรือร้น การสร้างสรรค์"
+      - third_factor: VENUS
+        meaning_th: "การกระทำด้วยความรัก ญาติฝ่ายบิดา หรือคนรู้จักใกล้ชิด"
+      - third_factor: JUPITER
+        meaning_th: "การกระทำที่โชคดี"
+      - third_factor: SATURN
+        meaning_th: "จุดเริ่มต้นของงานหนัก การกระทำที่นำไปสู่การแยกจาก ความตายจากการทำงาน อุปสรรคหรือการหยุดงาน"
+      - third_factor: URANUS
+        meaning_th: "การกระทำฉับพลัน การบาดเจ็บ เมื่อรวมกับฮาเดสคือบาดเจ็บสาหัส"
+      - third_factor: NEPTUNE
+        meaning_th: "การเป็นพิษ ความพยายามที่สูญเปล่า งานที่ไม่น่าพอใจ"
+      - third_factor: PLUTO
+        meaning_th: "การวางแผน การจดจ่อ"
+      - third_factor: CUPIDO
+        meaning_th: "พิธีแต่งงาน การกระทำร่วมกัน"
+      - third_factor: HADES
+        meaning_th: "การกระทำอันเลวร้าย"
+      - third_factor: ZEUS
+        meaning_th: "การกระทำที่ให้ผล สำเร็จผ่านเครื่องจักร พลังงานที่ถูกกำหนดทิศทาง การเผาไหม้"
+      - third_factor: KRONOS
+        meaning_th: "การกระทำของรัฐบาล อำนาจของผู้ปกครอง"
+      - third_factor: APOLLON
+        meaning_th: "งานวิทยาศาสตร์ กิจการด้านการค้าและอุตสาหกรรม"
+      - third_factor: ADMETOS
+        meaning_th: "การกดขี่และความหวาดกลัว"
+      - third_factor: VULKANUS
+        meaning_th: "พลังงานเชิงกล งานที่สำเร็จลุล่วง"
+      - third_factor: POSEIDON
+        meaning_th: "กิจกรรมทางศีลธรรมและความคิดโดยทั่วไป"
+
+  - factors: [ARIES, JUPITER]
+    keyword_en: "Good fortune in general. Success."
+    entries:
+      - third_factor: M
+        meaning_th: "ความรู้สึกมีความสุขของตนเอง การถูกทำให้มีความสุข"
+      - third_factor: SUN
+        meaning_th: "ความผาสุกทางกาย การได้รับรางวัลจากความสำเร็จด้านกีฬา"
+      - third_factor: A
+        meaning_th: "ความโชคดีร่วมกับผู้อื่น"
+      - third_factor: MOON
+        meaning_th: "ความสุขของผู้หญิง โชคดีกับสาธารณะ ชั่วโมงแห่งโชค"
+      - third_factor: NODE
+        meaning_th: "โชคดีในการรวมตัว/สายสัมพันธ์"
+      - third_factor: MERCURY
+        meaning_th: "อารมณ์ร่าเริง ความช่างพูด"
+      - third_factor: VENUS
+        meaning_th: "ความสุขในความรักกับผู้หญิง"
+      - third_factor: MARS
+        meaning_th: "ความสุขในความรักกับผู้ชาย การกระทำที่สำเร็จ การเกิด ผลผลิต"
+      - third_factor: SATURN
+        meaning_th: "ความสุขหรือโชคดีผ่านการแยกจาก หรือด้านเกษตรกรรม"
+      - third_factor: URANUS
+        meaning_th: "โชคดีฉับพลัน ทรัพย์สินเพิ่มพูน"
+      - third_factor: NEPTUNE
+        meaning_th: "ความสูญเสีย การใช้จ่ายสุรุ่ยสุร่าย โชคที่ดูเหมือนจะมีแต่ไม่จริง"
+      - third_factor: PLUTO
+        meaning_th: "พัฒนาการที่โชคดีโดยทั่วไป"
+      - third_factor: CUPIDO
+        meaning_th: "ความสุขในชีวิตแต่งงาน"
+      - third_factor: HADES
+        meaning_th: "โชคในเคราะห์ร้าย เมื่อรวมกับอังคารคือการเสียพนัน"
+      - third_factor: ZEUS
+        meaning_th: "ความสุขในงานของตน การสร้างสรรค์ที่โชคดี"
+      - third_factor: KRONOS
+        meaning_th: "ความสุขผ่านผู้มีอำนาจ บิดา หัวหน้า"
+      - third_factor: APOLLON
+        meaning_th: "โชคที่ขยายตัว มวลชนที่โชคดี โชคและการเติบโตด้านการค้าอุตสาหกรรม"
+      - third_factor: ADMETOS
+        meaning_th: "การพักผ่อนและความสงบโดยทั่วไป ผลกำไรจากวัตถุดิบ"
+      - third_factor: VULKANUS
+        meaning_th: "การมองโลกในแง่ดีโดยทั่วไป ความสำเร็จอย่างมากในเรื่องทั่วไป"
+      - third_factor: POSEIDON
+        meaning_th: "สามัญสำนึกหรือเหตุผล"
+
+  - factors: [ARIES, SATURN]
+    keyword_en: "Separations."
+    entries:
+      - third_factor: M
+        meaning_th: "การถูกผู้อื่นทอดทิ้ง การตกเป็นเหยื่อของการถูกทอดทิ้ง ความยากลำบากในการติดต่อและปรับตัวเข้ากับผู้อื่น"
+      - third_factor: SUN
+        meaning_th: "วันแห่งการแยกจาก การกล่าวอำลา ความตาย"
+      - third_factor: A
+        meaning_th: "การแยกจากผู้อื่น"
+      - third_factor: MOON
+        meaning_th: "ชั่วโมงแห่งการจากลา การอำลาผู้หญิง"
+      - third_factor: NODE
+        meaning_th: "การอำลา"
+      - third_factor: MERCURY
+        meaning_th: "ความคิดหม่นหมอง ความสูญเสีย การถูกทอดทิ้ง"
+      - third_factor: VENUS
+        meaning_th: "การแยกจากในความรัก การแยกจากมารดา"
+      - third_factor: MARS
+        meaning_th: "ข่าวความตาย การหยุดงาน จุดจบของงาน ช่วงเวลาเลิกจ้าง"
+      - third_factor: JUPITER
+        meaning_th: "ข่าวความสูญเสีย การเปลี่ยนทรัพย์สิน การย้าย"
+      - third_factor: URANUS
+        meaning_th: "การจากลาอย่างฉับพลัน ความตายฉับพลัน"
+      - third_factor: NEPTUNE
+        meaning_th: "การแยกจากเพราะความเจ็บป่วย การกักตัว การสงสัยติดเชื้อ"
+      - third_factor: PLUTO
+        meaning_th: "พัฒนาการที่ช้าและถูกขัดขวาง เรื่องราวหยุดชะงัก จุดเริ่มต้นของการแยกจาก"
+      - third_factor: CUPIDO
+        meaning_th: "การหย่าร้าง"
+      - third_factor: HADES
+        meaning_th: "โรคระบาด การเลิกจ้างคนงานจำนวนมาก การหลบหนี ผู้ลี้ภัย การย้ายออกด้วยเหตุผลเศร้า"
+      - third_factor: ZEUS
+        meaning_th: "ที่ดินหรือบ้านที่สูญเสียจากไฟไหม้"
+      - third_factor: KRONOS
+        meaning_th: "การถูกกีดกัน การเลิกจ้าง การสูญเสียดินแดน การถูกขัดขวางจากเจ้าหน้าที่หรือผู้บังคับบัญชา"
+      - third_factor: APOLLON
+        meaning_th: "การแยกจากของมวลชน เรื่องการศึกษา"
+      - third_factor: ADMETOS
+        meaning_th: "การควบคุมยับยั้งโดยทั่วไป การขัดขวางและหยุดนิ่ง"
+      - third_factor: VULKANUS
+        meaning_th: "การขัดขวางหรืออุปสรรคโดยทั่วไป การถูกจับตามอง การกีดกัน"
+      - third_factor: POSEIDON
+        meaning_th: "การศึกษาสาธารณะ"
+
+  - factors: [ARIES, URANUS]
+    keyword_en: "Sudden events. Excitement."
+    # missing: ADMETOS (หาไม่พบใน OCR)
+    entries:
+      - third_factor: M
+        meaning_th: "การประสบเหตุการณ์อย่างฉับพลัน ความประหลาดใจ"
+      - third_factor: SUN
+        meaning_th: "เหตุการณ์ฉับพลันในวันนั้นหรือต่อร่างกาย ร่างกายตึงเครียด ประสาทเสีย"
+      - third_factor: A
+        meaning_th: "ประสบการณ์ฉับพลันกับผู้อื่น ความตื่นเต้นในสถานที่นั้น"
+      - third_factor: MOON
+        meaning_th: "ความวุ่นวายของประชาชน ประชาชนตกอยู่ในอันตราย ผู้หญิงที่ตื่นเต้นหรือประหลาดในที่สาธารณะ"
+      - third_factor: NODE
+        meaning_th: "การประสบหรือแบ่งปันประสบการณ์เหตุการณ์ฉับพลัน การเป็นพยาน"
+      - third_factor: MERCURY
+        meaning_th: "ข่าวโทรเลข ความคิดที่เกิดขึ้นฉับพลัน"
+      - third_factor: VENUS
+        meaning_th: "การแสดงความรักอย่างฉับพลัน"
+      - third_factor: MARS
+        meaning_th: "การกระทำที่หุนหันพลันแล่นไม่ระวัง อุบัติเหตุหรือการลอบทำร้ายชีวิต"
+      - third_factor: JUPITER
+        meaning_th: "โชคดีฉับพลัน ทรัพย์สินเพิ่มพูน เหตุการณ์สำคัญ"
+      - third_factor: SATURN
+        meaning_th: "เหตุการณ์ที่เกี่ยวข้องกับการแยกจาก การตายหรือหายไป"
+      - third_factor: NEPTUNE
+        meaning_th: "การเชื่อมโยงกับคนตาย ความตาย การเชื่อมโยงอย่างมีสติกับโลกหลังความตาย"
+      - third_factor: PLUTO
+        meaning_th: "การกลายพันธุ์ พัฒนาการแบบก้าวกระโดด"
+      - third_factor: CUPIDO
+        meaning_th: "การแต่งงานอย่างฉับพลัน"
+      - third_factor: HADES
+        meaning_th: "การถูกโจมตี ฆาตกรรม อุบัติเหตุร้ายแรง ความเศร้าจากเหตุการณ์ฉับพลัน"
+      - third_factor: ZEUS
+        meaning_th: "อันตรายจากไฟ พายุ การระเบิด"
+      - third_factor: KRONOS
+        meaning_th: "การรัฐประหาร เหตุการณ์ระดับรัฐหรือประเทศ กฤษฎีการัฐที่น่าประหลาดใจ"
+      - third_factor: APOLLON
+        meaning_th: "เหตุการณ์ฉับพลันที่ส่งผลต่อคนหมู่มาก โหราศาสตร์"
+      - third_factor: VULKANUS
+        meaning_th: "พลังที่ปรากฏขึ้นฉับพลัน พลังงานไฟฟ้า เหตุสุดวิสัย"
+      - third_factor: POSEIDON
+        meaning_th: "การโฆษณาชวนเชื่อ การปรากฏของแนวคิดใหม่อย่างฉับพลัน"
+
+  - factors: [ARIES, NEPTUNE]
+    keyword_en: "Disappointments. General poisoning. Blood poisoning. Daydreams."
+    # missing: MOON (หาไม่พบใน OCR)
+    entries:
+      - third_factor: M
+        meaning_th: "การถูกสาธารณะหลอกลวงหรือทำให้ผิดหวัง"
+      - third_factor: SUN
+        meaning_th: "ความอ่อนไหวของร่างกาย พิษในเลือด โรคทางเลือด"
+      - third_factor: A
+        meaning_th: "ความอ่อนไหวโดยทั่วไป ความไวต่อสภาพอากาศ เมื่อรวมกับยูเรนัส/เนปจูนคือความตายจากการบิน"
+      - third_factor: NODE
+        meaning_th: "การสลายของสายสัมพันธ์โดยทั่วไป ความผิดหวังหรือเรื่องไม่พึงใจผ่านสายสัมพันธ์"
+      - third_factor: MERCURY
+        meaning_th: "ความคิด ความไม่แน่นอน"
+      - third_factor: VENUS
+        meaning_th: "ความผิดหวังในความรัก ช่วงเวลาไม่ดีสำหรับการจับคู่"
+      - third_factor: MARS
+        meaning_th: "ความปั่นป่วนในความสัมพันธ์ทางเพศ การติดเชื้อ"
+      - third_factor: JUPITER
+        meaning_th: "ธุรกรรมเงินที่ฉ้อโกง"
+      - third_factor: SATURN
+        meaning_th: "ความสูญเสียจากการฉ้อโกง โรคระบาด จุดจบของความสัมพันธ์โรแมนติกหรือความฝันอันสวยงาม"
+      - third_factor: URANUS
+        meaning_th: "ความสูญเสียฉับพลันโดยทั่วไป เหตุการณ์ในจิตใต้สำนึกที่เชื่อมโยงกับโลกหลังความตาย"
+      - third_factor: PLUTO
+        meaning_th: "การเปลี่ยนแปลงที่ไม่มีใครสังเกตเห็น การเปลี่ยนแปลงใต้ผิว"
+      - third_factor: CUPIDO
+        meaning_th: "สภาพชีวิตแต่งงานที่สั่นคลอน การสลายของการรวมตัว ศิลปะที่หลับใหล"
+      - third_factor: HADES
+        meaning_th: "หายนะทางน้ำ น้ำท่วม โรคเลือดร้ายแรง สภาพอากาศแปรปรวน ความเศร้าจากความไม่แน่นอน"
+      - third_factor: ZEUS
+        meaning_th: "ความปั่นป่วนในธุรกิจรถไฟและโรงงานเครื่องจักร"
+      - third_factor: KRONOS
+        meaning_th: "ความยุ่งยากทางการทูต ผู้นำสร้างความผิดหวังแก่สาธารณชน"
+      - third_factor: APOLLON
+        meaning_th: "การเปลี่ยนแปลงที่แพร่กระจายไกล ความผิดหวังของมวลชน"
+      - third_factor: ADMETOS
+        meaning_th: "การก่อตัวของน้ำแข็ง สภาพที่เคยไม่แน่นอนกลับนิ่งลง"
+      - third_factor: VULKANUS
+        meaning_th: "ความผิดหวังครั้งใหญ่"
+      - third_factor: POSEIDON
+        meaning_th: "ควัน ไอระเหย ความคลั่งไคล้สุดโต่ง"
+
+  - factors: [ARIES, PLUTO]
+    keyword_en: "General changes, transformations, developments."
+    entries:
+      - third_factor: M
+        meaning_th: "พัฒนาการของตนเองถูกกำหนดทิศทางโดยการเปลี่ยนแปลงทั่วไป"
+      - third_factor: SUN
+        meaning_th: "การรับและดูดซึมสารอาหารของร่างกาย ความอยากอาหาร การย่อยอาหาร สภาพความเป็นอยู่ทางกาย"
+      - third_factor: A
+        meaning_th: "การเปลี่ยนแปลงทั่วไปส่งผลต่อสิ่งแวดล้อมของเจ้าของดวง"
+      - third_factor: MOON
+        meaning_th: "อิทธิพลของการเปลี่ยนแปลงทั่วไปต่อนิสัยและจิตใจ สิ่งแวดล้อมที่เป็นผู้หญิงของเจ้าของดวง"
+      - third_factor: NODE
+        meaning_th: "การเปลี่ยนแปลงทั่วไปในเรื่องสายสัมพันธ์ใหม่"
+      - third_factor: MERCURY
+        meaning_th: "การเปลี่ยนแปลงทั่วไปในแนวโน้มความคิด"
+      - third_factor: VENUS
+        meaning_th: "พัฒนาการที่สงบและกลมกลืน"
+      - third_factor: MARS
+        meaning_th: "แผนการ การวางแผนจัดระเบียบ งานเสริม กิจกรรมที่แตกแขนง"
+      - third_factor: JUPITER
+        meaning_th: "พัฒนาการและการเปลี่ยนแปลงที่โชคดี การเปลี่ยนแปลงด้านการเงิน"
+      - third_factor: SATURN
+        meaning_th: "พัฒนาการที่ช้าลงหรือถูกขัดขวาง พัฒนาการด้านเกษตรกรรม"
+      - third_factor: URANUS
+        meaning_th: "พัฒนาการและการเปลี่ยนแปลงด้านเทคนิค พัฒนาการที่น่าประหลาดใจปรากฏขึ้นฉับพลัน"
+      - third_factor: NEPTUNE
+        meaning_th: "การแก้พิษ พัฒนาการด้านแก๊ส พัฒนาการที่ไร้เป้าหมายและทิศทาง"
+      - third_factor: CUPIDO
+        meaning_th: "ประเพณี การถ่ายทอดทางพันธุกรรม การเติบโตของครอบครัวและชุมชน การเปลี่ยนมุมมองต่อศิลปะ"
+      - third_factor: HADES
+        meaning_th: "ความเสื่อมถอยโดยทั่วไป ความผิดจากการไม่ลงมือทำ"
+      - third_factor: ZEUS
+        meaning_th: "อาวุธใหม่ ความสามารถในการทำงานที่เพิ่มขึ้น"
+      - third_factor: KRONOS
+        meaning_th: "การเติบโตโดยทั่วไป การเปลี่ยนแปลงในรัฐบาล"
+      - third_factor: APOLLON
+        meaning_th: "พัฒนาการที่สงบสุข การเติบโตด้านวิทยาศาสตร์ การค้า และอุตสาหกรรม"
+      - third_factor: ADMETOS
+        meaning_th: "การเปลี่ยนแปลงเชิงลึก การเปลี่ยนสภาพจากรากฐาน"
+      - third_factor: VULKANUS
+        meaning_th: "พัฒนาการที่ปั่นป่วนและร้อนแรง"
+      - third_factor: POSEIDON
+        meaning_th: "การพัฒนาแนวคิดใหม่"
+
+  - factors: [ARIES, CUPIDO]
+    keyword_en: "Art. Corporations, sociability."
+    entries:
+      - third_factor: M
+        meaning_th: "ผู้มีส่วนร่วมในบริษัท ความโน้มเอียงสู่สังคมและศิลปะ"
+      - third_factor: SUN
+        meaning_th: "แขกที่ได้รับการต้อนรับ ผู้อำนวยการบริษัท เพื่อนร่วมงาน"
+      - third_factor: A
+        meaning_th: "หุ้นส่วนในกิจการหรือสมาคม"
+      - third_factor: MOON
+        meaning_th: "งานเทศกาลระดับชาติ สังคม"
+      - third_factor: NODE
+        meaning_th: "สายสัมพันธ์ทางสังคม การประชุมบริษัท ผู้มีส่วนร่วม"
+      - third_factor: MERCURY
+        meaning_th: "ความคิดเชิงศิลปะ ผู้ก่อตั้งสมาคม"
+      - third_factor: VENUS
+        meaning_th: "องค์กรทางสังคม ชมรมต่างๆ"
+      - third_factor: MARS
+        meaning_th: "สำนักงานทะเบียนสมรส การแต่งงาน"
+      - third_factor: JUPITER
+        meaning_th: "ธนาคาร สถาบันการเงิน"
+      - third_factor: SATURN
+        meaning_th: "การยุบสมาคม การหย่าร้าง"
+      - third_factor: URANUS
+        meaning_th: "เหตุการณ์ฉับพลันที่ไม่คาดคิดในบริษัท"
+      - third_factor: NEPTUNE
+        meaning_th: "การล่มสลายของบริษัท ธนาคารหรือสถาบันที่ฉ้อโกง องค์กรที่ถูกกดปราบ"
+      - third_factor: PLUTO
+        meaning_th: "ชุมชนที่กำลังก่อร่างสร้างตัว บริษัทพัฒนาขึ้น ศิลปะพัฒนาขึ้น"
+      - third_factor: HADES
+        meaning_th: "การล่มสลายของบริษัท ภาวะเศรษฐกิจตกต่ำ"
+      - third_factor: ZEUS
+        meaning_th: "การก่อตั้งบริษัทหรือชมรม"
+      - third_factor: KRONOS
+        meaning_th: "สถาบันการเงินขนาดใหญ่ ธนาคารแห่งชาติ บริษัทมหาชนใหญ่ มาตรฐานศิลปะสูงสุด"
+      - third_factor: APOLLON
+        meaning_th: "สมาคมที่แพร่หลายด้านวิทยาศาสตร์ การค้า อุตสาหกรรม ความสำเร็จทางศิลปะที่ยิ่งใหญ่"
+      - third_factor: ADMETOS
+        meaning_th: "บริษัทปิด ชุมชนเฉพาะกลุ่ม"
+      - third_factor: VULKANUS
+        meaning_th: "ชุมชนที่ทรงอิทธิพล พรรคการเมือง"
+      - third_factor: POSEIDON
+        meaning_th: "ชุมนุมทางศาสนา นิกายศาสนา"
+
+  - factors: [ARIES, HADES]
+    keyword_en: "General poverty. General misfortune. Coal mines. Tribulations."
+    # missing: MERCURY, CUPIDO, KRONOS (OCR เพี้ยนเกินกู้คืนได้อย่างมั่นใจ — ทั้งหมวดนี้คุณภาพ OCR แย่กว่าหมวดอื่นมาก)
+    entries:
+      - third_factor: M
+        meaning_th: "การทุกข์ในหน้าที่การงานเพราะความยากจนโดยทั่วไป"
+      - third_factor: SUN
+        meaning_th: "ภัยพิบัติ การยากจนลงจากสภาพความเป็นอยู่โดยทั่วไป"
+      - third_factor: A
+        meaning_th: "การยากจนลงเพราะสาธารณชนโดยรวม"
+      - third_factor: MOON
+        meaning_th: "จิตใจที่ถูกกดทับ ภาวะซึมเศร้าทางจิตใจ คนงานเหมือง"
+      - third_factor: NODE
+        meaning_th: "อิทธิพลของสถานสงเคราะห์คนยากไร้ การติดต่อกับคนยากจน"
+      - third_factor: VENUS
+        meaning_th: "ความรักหยาบคายโดยทั่วไป"
+      - third_factor: MARS
+        meaning_th: "ความโหดร้าย การกระทำหยาบคาย"
+      - third_factor: JUPITER
+        meaning_th: "ธุรกรรมการเงินที่สกปรก ไข้เขตร้อน ความสูญเสียเงินจากภัยพิบัติ"
+      - third_factor: SATURN
+        meaning_th: "ความตาย การจมหายไปในความลืมเลือน คนแปลกหน้า ผู้ลี้ภัย คนยากไร้ที่น่าสงสาร"
+      - third_factor: URANUS
+        meaning_th: "ความประมาทที่นำไปสู่การเสียชีวิต ความทุกข์ทรมาน ความกลัว"
+      - third_factor: NEPTUNE
+        meaning_th: "โรคร้ายแรงถึงชีวิต เมื่อรวมกับพฤหัสบดีคือมะเร็ง"
+      - third_factor: PLUTO
+        meaning_th: "การเปลี่ยนแปลงที่อาจเพิ่มความยากจนและโชคร้าย หรือเป็นโอกาสที่ดีขึ้น"
+      - third_factor: ZEUS
+        meaning_th: "เตาเผาศพ เตาไฟถ่านหิน"
+      - third_factor: APOLLON
+        meaning_th: "ความยากจนที่แพร่หลาย พื้นที่เหมืองถ่านหินขนาดใหญ่"
+      - third_factor: ADMETOS
+        meaning_th: "วัตถุดิบเปล่าเปลือย เศษวัสดุเก่า เมื่อรวมกับคิวปิโดคือพ่อค้าของเก่า"
+      - third_factor: VULKANUS
+        meaning_th: "ภัยพิบัติ โรคระบาด อาชญากรรมร้ายแรง ความโดดเดี่ยว"
+      - third_factor: POSEIDON
+        meaning_th: "ผู้กอบกู้ทางจิตวิญญาณ ความไม่รู้ การได้ความเข้าใจผ่านการขาดแคลนวัตถุ"
+
+  - factors: [ARIES, ZEUS]
+    keyword_en: "Laws of nature. Forces of matter. Conflagrations. Wars."
+    # missing: CUPIDO (บรรทัดปนกับ Hades ใน OCR แยกไม่ออก)
+    entries:
+      - third_factor: M
+        meaning_th: "ไฟ วิญญาณ การค้าเครื่องมือที่เกิดจากไฟ การถูกผลักดันด้วยพลังทางความคิดของตนเอง"
+      - third_factor: SUN
+        meaning_th: "พนักงานรถไฟ ผู้ดูแลเครื่องจักร การทำงานด้วยร่างกายโดยทั่วไป"
+      - third_factor: A
+        meaning_th: "การเสียชีวิตในเพลิงไหม้ การเสียชีวิตจากไฟ ความรุนแรง หรือแรงปะทะใหญ่"
+      - third_factor: MOON
+        meaning_th: "ผู้หญิงที่กระตือรือร้นจะทำสิ่งยิ่งใหญ่"
+      - third_factor: NODE
+        meaning_th: "สายสัมพันธ์กับอาวุธ เครื่องจักร หรือวัตถุไวไฟ"
+      - third_factor: MERCURY
+        meaning_th: "แรงกระตุ้นทั่วไปสู่งานทางความคิดหรือจิตวิญญาณ"
+      - third_factor: VENUS
+        meaning_th: "ช่วงเวลาผสมพันธุ์ การสร้างสิ่งสวยงามเพื่อสาธารณชน"
+      - third_factor: MARS
+        meaning_th: "อาวุธสงคราม ความวุ่นวายของสงคราม เครื่องพ่นไฟ การทำงานที่กระตือรือร้นโดยทั่วไป"
+      - third_factor: JUPITER
+        meaning_th: "การผลิตเหรียญ การสร้างสิ่งมีค่า งานที่สำเร็จโดยทั่วไป"
+      - third_factor: SATURN
+        meaning_th: "กิจกรรมที่มาพร้อมความสูญเสียมาก ความสูญเสียจากไฟ"
+      - third_factor: URANUS
+        meaning_th: "การทำงานที่เกิดขึ้นเองโดยทั่วไป การปะทุของไฟ การผลิตวัตถุระเบิด การค้นพบกฎธรรมชาติหรือเผชิญพลังธรรมชาติโดยไม่รู้จะทำอย่างไร"
+      - third_factor: NEPTUNE
+        meaning_th: "พลังงานที่สูญเปล่า การหยุดงานโดยทั่วไป ความร้อน ไอระเหย แก๊สติดไฟ หน่วยดับเพลิง"
+      - third_factor: HADES
+        meaning_th: "งานที่เจ็บปวดโดยทั่วไป การทำลายล้างจากไฟป่า ไฟที่เกิดจากฟ้าผ่า"
+      - third_factor: KRONOS
+        meaning_th: "การเป็นเจ้านายตัวเอง อุปกรณ์สงคราม สงครามที่รัฐบาลก่อขึ้น"
+      - third_factor: APOLLON
+        meaning_th: "วิทยาศาสตร์ธรรมชาติ การขยายตัวโดยถูกบังคับ"
+      - third_factor: ADMETOS
+        meaning_th: "ปัญหายากที่เริ่มต้นขึ้น การปะทุของแผ่นดิน แผ่นดินไหว"
+      - third_factor: VULKANUS
+        meaning_th: "พลังธรรมชาติอันยิ่งใหญ่ พลังธรรมชาติที่ถูกนำมาใช้"
+      - third_factor: POSEIDON
+        meaning_th: "ตรรกะ การพิสูจน์ งานหรือการสร้างสรรค์ทางปัญญาหรือจิตวิญญาณ"
+
+  - factors: [ARIES, KRONOS]
+    keyword_en: "Great events. The great powers (nations). Governments."
+    # missing: MOON, SATURN (หาไม่พบใน OCR)
+    entries:
+      - third_factor: M
+        meaning_th: "อำนาจมาก ความเป็นอิสระสูง"
+      - third_factor: SUN
+        meaning_th: "ความเป็นอิสระและอำนาจต่อคนหมู่มาก"
+      - third_factor: A
+        meaning_th: "คนรู้จักที่เป็นผู้หญิงอิสระ"
+      - third_factor: NODE
+        meaning_th: "การเข้าไปติดต่อกับกลุ่มผู้ปกครอง"
+      - third_factor: MERCURY
+        meaning_th: "กิจกรรมทางปัญญาหรือจิตวิญญาณเพื่อคนหมู่มาก"
+      - third_factor: VENUS
+        meaning_th: "การกุศลครั้งใหญ่ ขบวนการเพื่อสันติภาพ"
+      - third_factor: MARS
+        meaning_th: "อุตสาหกรรมเหมืองแร่และการถลุงโลหะ ความสำเร็จยิ่งใหญ่ของผู้นำ"
+      - third_factor: JUPITER
+        meaning_th: "ธุรกรรมการเงิน ธนาคาร ผู้นำที่ประสบความสำเร็จ"
+      - third_factor: HADES
+        meaning_th: "ที่ดินเกษตรขนาดใหญ่ ป่าไม้ คำสั่งอพยพและข้อห้ามผ่านอำนาจรัฐ"
+      - third_factor: URANUS
+        meaning_th: "เหตุการณ์ฉับพลันในกลุ่มผู้ปกครอง สถาบันด้านเทคนิค"
+      - third_factor: NEPTUNE
+        meaning_th: "การสูญเสียอำนาจ รัฐบาลที่ไม่ได้รับการยอมรับ"
+      - third_factor: PLUTO
+        meaning_th: "ความเชี่ยวชาญ ทักษะระดับสูง"
+      - third_factor: CUPIDO
+        meaning_th: "ผู้เชี่ยวชาญศิลปะที่คนจำนวนมากยอมรับ"
+      - third_factor: ZEUS
+        meaning_th: "ไฟไหม้ครั้งใหญ่ ความสำเร็จอันยิ่งใหญ่"
+      - third_factor: APOLLON
+        meaning_th: "การขยายตัวครั้งใหญ่ ผู้เชี่ยวชาญด้านวิทยาศาสตร์"
+      - third_factor: ADMETOS
+        meaning_th: "การโค่นล้มรัฐบาล ความลึกซึ้งอันยิ่งใหญ่ คลังวัตถุดิบขนาดใหญ่"
+      - third_factor: VULKANUS
+        meaning_th: "ประเทศมหาอำนาจ"
+      - third_factor: POSEIDON
+        meaning_th: "ความยิ่งใหญ่ทางปัญญาหรือจิตวิญญาณ วัฒนธรรมชั้นสูง ความรักในมนุษย์ ศักดิ์ศรีความเป็นมนุษย์"
+
+  - factors: [ARIES, APOLLON]
+    keyword_en: "Magnitudes. To spread. To extend on this earth. Science, commerce."
+    # missing: URANUS (หาไม่พบใน OCR)
+    entries:
+      - third_factor: M
+        meaning_th: "นักวิทยาศาสตร์ ความโหยหาสถานที่ไกล ขอบเขตทางความคิดที่กว้างไกล"
+      - third_factor: SUN
+        meaning_th: "ความสำเร็จ การดำรงตำแหน่งกิตติมศักดิ์"
+      - third_factor: A
+        meaning_th: "การเดินทางไปหลายที่ การรู้จักคนมากมาย ลูกค้าจำนวนมาก"
+      - third_factor: MOON
+        meaning_th: "มวลชน ผู้หญิงมากมาย จิตใจสงบ นิทานพื้นบ้าน"
+      - third_factor: NODE
+        meaning_th: "สายสัมพันธ์กับวิทยาศาสตร์และการค้า"
+      - third_factor: MERCURY
+        meaning_th: "การศึกษาภาษาต่างๆ นักภาษาศาสตร์ ช่างพูด การเขียนบทความวิทยาศาสตร์"
+      - third_factor: VENUS
+        meaning_th: "มิตรภาพมากมาย ดนตรีวิทยา"
+      - third_factor: MARS
+        meaning_th: "ยุทธศาสตร์ทหาร โรงเรียนนายร้อย ระบบเศรษฐศาสตร์การเมือง"
+      - third_factor: JUPITER
+        meaning_th: "โชคลาภมากมาย เหตุการณ์โชคดีหลายอย่างพร้อมกัน สถาบันการเงินขนาดใหญ่ ศาสตร์การเงิน"
+      - third_factor: SATURN
+        meaning_th: "ศิษย์ การสอน การศึกษาศาสตร์การสอน อุปสรรค เกษตรกรรม"
+      - third_factor: NEPTUNE
+        meaning_th: "มวลอากาศหรือน้ำ วิทยาศาสตร์ที่ยังไม่เป็นระบบ กำลังพัฒนาสู่ความเป็นระบบ"
+      - third_factor: PLUTO
+        meaning_th: "พัฒนาการด้านการค้าและวิทยาศาสตร์ การเปลี่ยนแปลง"
+      - third_factor: CUPIDO
+        meaning_th: "ศิลปวิทยา ความพยายามเพื่อสันติภาพ สมาคมสันติภาพ"
+      - third_factor: HADES
+        meaning_th: "ประวัติศาสตร์วิทยา การค้าของเก่า"
+      - third_factor: ZEUS
+        meaning_th: "สถาบันเทคนิค ผลงานสร้างสรรค์ทางวิทยาศาสตร์"
+      - third_factor: KRONOS
+        meaning_th: "ผู้เชี่ยวชาญวิทยาศาสตร์ มวลชนขนาดใหญ่"
+      - third_factor: ADMETOS
+        meaning_th: "การหยุดนิ่งโดยทั่วไป ความพึงพอใจทั่วไป จักรวาลวิทยา"
+      - third_factor: VULKANUS
+        meaning_th: "การขยายตัวด้วยแรง ความสำเร็จอันยิ่งใหญ่"
+      - third_factor: POSEIDON
+        meaning_th: "การเผยแพร่แนวคิด"
+
+  - factors: [ARIES, ADMETOS]
+    keyword_en: "Raw materials. Rest, standstill. Death on this earth. Resistance all around."
+    entries:
+      - third_factor: M
+        meaning_th: "การต่อต้านอย่างรุนแรงโดยทั่วไป ความอ่อนล้า จนมุม"
+      - third_factor: SUN
+        meaning_th: "ศพ คนแคระ ความหนักแน่น บุคลากรโดยทั่วไป"
+      - third_factor: A
+        meaning_th: "การต่อต้านอย่างรุนแรงจากผู้อื่น"
+      - third_factor: MOON
+        meaning_th: "ความตายมากมายในหมู่ผู้คน การต่อต้านอย่างแข็งกร้าวในที่สาธารณะ การตายของมารดา"
+      - third_factor: NODE
+        meaning_th: "สายสัมพันธ์ที่พักหรือแฝงอยู่ การอยู่ร่วมในวาระสุดท้าย ความยากลำบากในสายสัมพันธ์ทั่วไป"
+      - third_factor: MERCURY
+        meaning_th: "ภาษาที่ตายแล้ว การไว้ทุกข์ ความคิดเรื่องอุปสรรคและการต่อต้าน"
+      - third_factor: VENUS
+        meaning_th: "การไร้ความรู้สึก"
+      - third_factor: MARS
+        meaning_th: "การฆาตกรรม การต่อสู้ต้านทาน"
+      - third_factor: JUPITER
+        meaning_th: "โชคปานกลาง โชคดีด้านทรัพย์สิน การตายโดยไม่ทรมาน การเอาชนะความยากลำบากโดยทั่วไป"
+      - third_factor: SATURN
+        meaning_th: "การตายอย่างช้าๆ การต่อต้านเรื้อรัง ความสูญเสียและความยากลำบาก"
+      - third_factor: URANUS
+        meaning_th: "ความประหลาดใจจากความตายฉับพลันของผู้อื่น ซากปรักหักพัง ความตื่นเต้นจากอุปสรรคที่ปั่นป่วน"
+      - third_factor: NEPTUNE
+        meaning_th: "การทำมัมมี่ การรักษาสภาพศพ การหยุดการเน่าเปื่อย"
+      - third_factor: PLUTO
+        meaning_th: "การหยุดนิ่งและอุปสรรคต่อการเติบโตและพัฒนาการ"
+      - third_factor: CUPIDO
+        meaning_th: "ศิลปะที่ตายแล้ว บริษัทที่ไม่เคลื่อนไหว ทรัพย์สินบริษัท การตายในครอบครัว"
+      - third_factor: HADES
+        meaning_th: "การได้วัตถุดิบใหม่จากของเก่า จากดิน หรือจากถ่านหิน"
+      - third_factor: ZEUS
+        meaning_th: "ไฟใต้ดิน ลาวา การเริ่มลงมือทำงานยาก"
+      - third_factor: KRONOS
+        meaning_th: "ความสูงมาก เนินเขา ภูเขา ความตายหรือความยากลำบากในหมู่ผู้ปกครอง การแตกร้าวแบ่งแยกครั้งใหญ่"
+      - third_factor: APOLLON
+        meaning_th: "ความตายของมวลชน การพบวัตถุดิบจำนวนมาก ความยากลำบากทั่วไปด้านการค้า"
+      - third_factor: VULKANUS
+        meaning_th: "การตอกตรา การอัดแน่น อุปสรรคจากสภาพปัจจุบัน"
+      - third_factor: POSEIDON
+        meaning_th: "การศึกษา พัฒนาการ วัฒนธรรม การฝึกฝน อุปสรรคทางความคิด"
+
+  - factors: [ARIES, VULKANUS]
+    keyword_en: "Power, might. Forces."
+    entries:
+      - third_factor: M
+        meaning_th: "อำนาจและพลังของตนเอง การดูมีอิทธิพลหรือทรงพลัง การจัดการกับพลัง"
+      - third_factor: SUN
+        meaning_th: "ความแข็งแรงของร่างกาย ผู้ถืออำนาจและอิทธิพล"
+      - third_factor: A
+        meaning_th: "ผู้อื่นให้เรารู้สึกถึงพลังของพวกเขา การต้องรับมือกับคนรุนแรง การถูกกระทำรุนแรงจากผู้อื่น"
+      - third_factor: MOON
+        meaning_th: "คนรุนแรง ผู้หญิงที่รุนแรงหรือแข็งแรงมาก ผู้มีอิทธิพล ความตื่นเต้นในที่สาธารณะ"
+      - third_factor: NODE
+        meaning_th: "เกี่ยวข้องกับการกระทำที่รุนแรง"
+      - third_factor: MERCURY
+        meaning_th: "ความกระฉับกระเฉง ความมีชีวิตชีวา พลังทางความคิดและภาษา"
+      - third_factor: VENUS
+        meaning_th: "แรงดึงดูดใจ"
+      - third_factor: MARS
+        meaning_th: "กำลังอาวุธ"
+      - third_factor: JUPITER
+        meaning_th: "อำนาจทางการเงิน อำนาจและอิทธิพลผ่านทรัพย์สิน"
+      - third_factor: SATURN
+        meaning_th: "คุก การหยุดชะงัก"
+      - third_factor: URANUS
+        meaning_th: "พลังระเบิด พลังการเผาไหม้"
+      - third_factor: NEPTUNE
+        meaning_th: "การสูญเสียอำนาจ ความไร้พลัง อำนาจที่มาจากการหลอกลวง"
+      - third_factor: PLUTO
+        meaning_th: "แรงกดดันจากการเติบโต"
+      - third_factor: CUPIDO
+        meaning_th: "แรงกดดันของอำนาจจากสมาคม ชุมชน หรือพรรคการเมือง"
+      - third_factor: HADES
+        meaning_th: "ความใจร้าย ความต่ำทราม ความหยาบคาย"
+      - third_factor: ZEUS
+        meaning_th: "ไฟครั้งใหญ่ พลังที่ถูกกำหนดทิศทาง"
+      - third_factor: KRONOS
+        meaning_th: "การใช้อำนาจโดยเจ้าหน้าที่หรือผู้บังคับบัญชา อิทธิพลจากตำแหน่งสูง"
+      - third_factor: APOLLON
+        meaning_th: "อำนาจและอิทธิพลที่กว้างไกล ความสำเร็จอันยิ่งใหญ่ อำนาจผ่านความรู้ อำนาจทางการค้า"
+      - third_factor: ADMETOS
+        meaning_th: "การต่อต้านอันทรงพลัง ความมั่นคง ความอดทน"
+      - third_factor: POSEIDON
+        meaning_th: "พลังทางความคิด"
+
+  - factors: [ARIES, POSEIDON]
+    keyword_en: "Ghosts. Ideas. Spirit. Soul. Mind. Intellect."
+    entries:
+      - third_factor: M
+        meaning_th: "การผูกติดกับแนวคิดทั่วไปของยุคสมัย การยกระดับสู่จิตวิญญาณ"
+      - third_factor: SUN
+        meaning_th: "การทำให้แนวคิดของยุคสมัยปรากฏออกมา การตระหนักรู้"
+      - third_factor: A
+        meaning_th: "การติดต่อกับผู้มีจิตวิญญาณสูง"
+      - third_factor: MOON
+        meaning_th: "สื่อวิญญาณ ผู้หญิงที่ปรับจูนทางจิตวิญญาณ ผู้มีระดับความคิดสูง"
+      - third_factor: NODE
+        meaning_th: "ผูกพันกับสิ่งทางจิตวิญญาณ"
+      - third_factor: MERCURY
+        meaning_th: "แนวคิด"
+      - third_factor: VENUS
+        meaning_th: "กิจการทางศาสนาหรือความเชื่อ ตามแนวคิดต่อโลก"
+      - third_factor: MARS
+        meaning_th: "กิจการด้านศีลธรรม ทัศนคติทางความคิด"
+      - third_factor: JUPITER
+        meaning_th: "ความเข้าใจ เหตุผล และปัญญาที่โชคดี"
+      - third_factor: SATURN
+        meaning_th: "การศึกษา ศิษย์"
+      - third_factor: URANUS
+        meaning_th: "การรู้แจ้ง ความจริง ความสามารถรับรู้ที่เกิดขึ้นฉับพลัน"
+      - third_factor: NEPTUNE
+        meaning_th: "การเคลื่อนไหวทางความคิดที่ละเอียดอ่อน ความกระตือรือร้น"
+      - third_factor: PLUTO
+        meaning_th: "พัฒนาการทางความคิดหรือจิตวิญญาณโดยทั่วไป"
+      - third_factor: CUPIDO
+        meaning_th: "ทัศนคติทางความคิดและศาสนาที่ละเอียดอ่อนในการแต่งงาน ศิลปะ หรือชุมชน"
+      - third_factor: HADES
+        meaning_th: "จิตวิญญาณแห่งโบราณกาล หรือความต่ำทรามทางความคิด/จิตวิญญาณ"
+      - third_factor: ZEUS
+        meaning_th: "การพิสูจน์ ความเป็นผู้นำทางความคิด"
+      - third_factor: KRONOS
+        meaning_th: "ความเป็นผู้นำทางความคิดหรือปัญญา มาตรฐานทางจิตวิญญาณของยุคสมัย"
+      - third_factor: APOLLON
+        meaning_th: "อิสรภาพทางความคิดหรือจิตวิญญาณโดยทั่วไป"
+      - third_factor: ADMETOS
+        meaning_th: "สภาพทั่วไปด้านการศึกษาและวัฒนธรรม"
+      - third_factor: VULKANUS
+        meaning_th: "แนวคิดที่ทรงพลัง แนวคิดที่มีอิทธิพลสูง"

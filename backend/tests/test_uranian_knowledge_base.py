@@ -8,9 +8,11 @@ from __future__ import annotations
 from datetime import date, time
 
 import pytest
+import yaml
 
 from app.core.schema import BirthData
 from app.modules.uranian.engine import (
+    KB_DIR,
     PERSONAL_POINT_IDS,
     TNP_SWE_IDS,
     _dial90_orb,
@@ -179,6 +181,15 @@ def test_witte_pictures_kb_covers_all_twenty_one_meridian_base_pairs():
     assert {next(iter(pair - {"M"})) for pair in m_pairs} == all_ids - {"M"}
 
 
+def test_witte_pictures_kb_covers_all_twenty_aries_base_pairs():
+    # M+ARIES lives in the Meridian section already, so Aries's own section
+    # only needs the other 20 factors.
+    witte = _load_witte_pictures()
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    aries_pairs = {pair for pair in witte if "ARIES" in pair and "M" not in pair}
+    assert {next(iter(pair - {"ARIES"})) for pair in aries_pairs} == all_ids - {"ARIES", "M"}
+
+
 def test_witte_pictures_kb_third_factors_are_valid_and_distinct_from_the_pair():
     witte = _load_witte_pictures()
     all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
@@ -188,6 +199,15 @@ def test_witte_pictures_kb_third_factors_are_valid_and_distinct_from_the_pair():
             assert third_factor in all_ids
             assert third_factor not in pair
             assert meaning.strip()
+
+
+def test_witte_pictures_kb_has_no_duplicate_base_pairs():
+    data = yaml.safe_load((KB_DIR / "witte_pictures.yaml").read_text(encoding="utf-8"))
+    seen = set()
+    for base_pair in data["base_pairs"]:
+        key = frozenset(base_pair["factors"])
+        assert key not in seen, base_pair["factors"]
+        seen.add(key)
 
 
 # ---------- planetary picture detection (synthetic positions) ----------
@@ -264,6 +284,21 @@ def test_picture_finding_prefers_witte_exact_match_over_generic_glossary():
     finding = _picture_finding(picture)
     assert finding.weight == 0.95
     assert finding.meaning.startswith("อำนาจและอิทธิพลผ่านครอบครัวหรือชุมชน")
+
+
+def test_picture_finding_uses_witte_exact_match_for_a_non_m_base_pair():
+    # ARIES+JUPITER=MARS comes from the Aries section, not the Meridian one —
+    # confirms the lookup isn't hardcoded to M-containing pairs.
+    picture = {
+        "type": "type1",
+        "pair": ("ARIES", "JUPITER"),
+        "hit": "MARS",
+        "factors": frozenset({"ARIES", "JUPITER", "MARS"}),
+        "orb": 0.1,
+    }
+    finding = _picture_finding(picture)
+    assert finding.weight == 0.95
+    assert finding.meaning.startswith("ความสุขในความรักกับผู้ชาย")
 
 
 def test_picture_finding_ignores_witte_pictures_for_type2():
