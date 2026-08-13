@@ -184,9 +184,7 @@
       เช่นกัน — คงไว้เฉพาะภาพที่พึ่งพาตำแหน่งจริงของดวงชะตา) เพิ่ม unit test 11 เคสใน
       `test_uranian_solar_arc.py` (คำนวณ arc, directed positions, และภาพสังเคราะห์ครบทุก
       edge case ข้างต้น) — รวม 62 tests ผ่านหมด, ruff clean
-- [ ] **ยังไม่ได้ทำ**: ยังไม่ตัดสินใจว่าจะให้ผู้ใช้เลือก target date ยังไง (เพิ่มเข้า `/reading` เดิม
-      แบบ auto-forecast วันนี้, แยกเป็นฟีเจอร์ใหม่ให้เลือกวัน, หรืออื่นๆ) — solar_arc.py ยังไม่ถูกเรียก
-      จาก `calculate()`/`EngineResult`/endpoint ใดๆ ทั้งสิ้น
+- [x] **แก้ไข 2026-08-13 (Phase 12)**: ตัดสินใจแล้วและเชื่อมเข้าแอปจริงแล้ว — ดู Phase 12 ด้านล่าง
 - [x] **แก้ไข 2026-08-13**: ทำต่อ Transit + Station Points + Lunar Return + Relocation (บทที่ 11-12
       ใน `research/`) ตามที่ผู้ใช้ขอให้ครอบคลุมทุกหัวข้อในตาราง "ฟีเจอร์ที่ควรมีในระบบ" — ยังคง
       calculation-only เหมือน solar_arc.py (ยังไม่ต่อ endpoint/UI) สร้าง
