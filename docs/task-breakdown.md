@@ -402,5 +402,50 @@ Planetenbilder* ที่ CLAUDE.md/`planetary_pictures.yaml` เคยอ้า
       ตรงสถานะ (Meridian + Aries ครบ, เหลืออีก 20 หมวด)
 - [x] สร้างหน้าสรุปภาษาไทย (Artifact) แสดงทั้งหมวด Meridian และ Aries ให้ผู้ใช้ตรวจทานคำแปล พร้อม
       ช่องค้นหา — อัปเดต artifact เดิมแทนสร้างใหม่ (คง URL เดิม)
-- [ ] **ยังไม่ได้ทำ**: อีก 20 หมวดที่เหลือของหนังสือ (Sun, Ascendant, Moon, Node, ดาวเคราะห์/TNP อีก
-      16 ดวง — หน้า 44-255)
+- [x] **แก้ไข 2026-08-13 (Phase 17-18)**: ผู้ใช้สั่ง "ต่อจนจบเลยทุก planet ทุกจุด" — ทำหมวด Sun และ
+      Ascendant ต่อแล้ว ดู Phase 17/18 ด้านล่าง เหลืออีก 18 หมวด (Moon, Node, ดาวเคราะห์/TNP 16 ดวง)
+
+## Phase 17 — witte_pictures.yaml: หมวด Sun (คู่ที่ 3 จาก 22 หมวดของหนังสือ)
+
+ผู้ใช้สั่ง "ต่อจนจบเลยทุก planet ทุกจุด" — ทำหมวดถัดไปตามลำดับความสำคัญที่หนังสือระบุ (Meridian →
+Aries → **Sun** → Ascendant → Moon → Node → ดาวเคราะห์ 16 ดวง) ไฟล์ OCR ต้นฉบับยังอยู่ในเซสชัน
+เดียวกัน
+
+- [x] อ่านและสร้างประโยคภาษาอังกฤษที่สมเหตุสมผลใหม่จาก OCR ของหมวด Sun ทั้งหมด (SUN + อีก 19
+      ปัจจัยที่เหลือ — ไม่รวม M/ARIES เพราะ M+SUN และ ARIES+SUN อยู่ในหมวดก่อนหน้าแล้ว) — คู่
+      SUN+CUPIDO และ SUN+APOLLON OCR เสียหายจนตัวบ่งชี้ปัจจัยที่ 3 ("-XX" prefix) หายไปทั้งคู่ กลาย
+      เป็นประโยคร้อยเรียงต่อกันโดยไม่มี prefix บอกว่าประโยคไหนเป็นของปัจจัยใด — ไม่มีทางระบุลำดับได้
+      อย่างน่าเชื่อถือแม้จะเทียบตำแหน่งกับหมวดอื่น (ลำดับใน OCR ไม่คงที่เสมอไป) จึง **ข้ามทั้งคู่ปัจจัย
+      ไปเลยแทนการเดา** (บันทึกด้วย `# missing:` ในไฟล์ yaml) — ได้ 17/19 คู่ที่เหลือ เพิ่มเข้า
+      `witte_pictures.yaml` รวม 311 รายการใหม่ (1,109 รายการรวมทั้งไฟล์)
+- [x] `engine.py`: ไม่ต้องแก้โค้ดเพิ่ม — generic ตั้งแต่ Phase 15 รองรับ base pair ใดก็ได้อัตโนมัติ
+- [x] เพิ่ม unit test ใน `test_uranian_knowledge_base.py` ยืนยันไม่มี base pair ซ้ำ (M+SUN/ARIES+SUN
+      ไม่ถูกสร้างซ้ำ), ปัจจัยที่ 3 ถูกต้องทุกตัว — รวม **109 tests ผ่านหมด**, ruff clean
+- [x] พบและแก้บั๊ก YAML escaping: สคริปต์ generator เดิมใช้ `.replace("'", "\\'")` ซึ่งไม่ใช่ escape
+      sequence ที่ถูกต้องใน double-quoted YAML scalar (รองรับแค่ `\"` และ `\\`) — บั๊กแฝงอยู่ตั้งแต่
+      Phase 15/16 แต่ไม่เคยแสดงอาการเพราะไม่มี keyword ไหนมี apostrophe จนมาเจอในหมวด Ascendant (ดู
+      Phase 18) แก้โดยลบ `.replace("'", ...)` ออกจากทุกสคริปต์ generator
+
+## Phase 18 — witte_pictures.yaml: หมวด Ascendant (คู่ที่ 4 จาก 22 หมวดของหนังสือ)
+
+ทำหมวดถัดไปตามลำดับ (Meridian → Aries → Sun → **Ascendant** → Moon → Node → ดาวเคราะห์ 16 ดวง)
+
+- [x] อ่านและสร้างประโยคภาษาอังกฤษที่สมเหตุสมผลใหม่จาก OCR ของหมวด Ascendant ทั้งหมด (A + อีก 18
+      ปัจจัยที่เหลือ — ไม่รวม M/ARIES/SUN ที่อยู่ในหมวดก่อนหน้าแล้ว) — คู่ A+NODE, A+CUPIDO, A+ADMETOS
+      OCR เสียหายแบบเดียวกับ SUN+CUPIDO/SUN+APOLLON ใน Phase 17 (ตัวบ่งชี้ปัจจัยที่ 3 หายหมด) จึง
+      **ข้ามทั้ง 3 คู่** ตามนโยบายเดียวกัน — ได้ 15/18 คู่ที่เหลือ เพิ่มเข้า `witte_pictures.yaml`
+      รวม 294 รายการใหม่ (1,403 รายการรวมทั้งไฟล์)
+- [x] ระหว่างสร้างไฟล์พบบั๊ก YAML escaping (`ScannerError: found unknown escape character "'"`) ที่
+      รายการ "Ascendant plus Jupiter" (มี apostrophe ใน keyword_en ภาษาอังกฤษ) — revert ไฟล์กลับไป
+      commit ก่อนหน้าด้วย `git checkout`, แก้สคริปต์ generator ทั้ง 3 ตัว (aries/sun/ascendant),
+      regenerate ใหม่, ตรวจสอบไม่มี `\\'` หลงเหลือ, ต่อเข้าไฟล์และ validate ใหม่สำเร็จ — ไม่มีข้อมูล
+      สูญหายเพราะ Python source data (`ascendant_data.py`) ไม่เคยเสียหาย มีแค่ YAML fragment ที่
+      generate ใหม่เท่านั้น
+- [x] `engine.py`: ไม่ต้องแก้โค้ดเพิ่ม — generic ตั้งแต่ Phase 15
+- [x] เพิ่ม unit test ยืนยันไม่มี base pair ซ้ำ ปัจจัยที่ 3 ถูกต้องทุกตัว — รวม **109 tests ผ่านหมด**,
+      ruff clean, `ruff format --check` ผ่าน
+- [x] อัปเดต header comment ใน `witte_pictures.yaml` ให้ตรงสถานะ (Meridian/Aries/Sun/Ascendant ครบ
+      หรือเกือบครบ, 73 base pairs, 1,403 entries รวม)
+- [ ] **ยังไม่ได้ทำ**: อัปเดต `knowledge_base/uranian/README.md` ให้ตรงสถานะ Phase 17-18, regenerate
+      + republish artifact ให้รวมหมวด Sun/Ascendant, อีก 18 หมวดที่เหลือของหนังสือ (Moon, Node,
+      ดาวเคราะห์/TNP อีก 16 ดวง — หน้า 83-255)
