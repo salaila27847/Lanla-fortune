@@ -5,13 +5,10 @@ import BirthDataForm from "@/components/BirthDataForm";
 import CardDrawStep from "@/components/CardDrawStep";
 import ReadingResult from "@/components/ReadingResult";
 import {
-  getForecast,
   getReading,
-  hasForecastOptions,
   ReadingRequestError,
   type BirthData,
   type ForecastOptions,
-  type ForecastResponse,
   type SynthesisOutput,
 } from "@/lib/api";
 
@@ -22,7 +19,6 @@ export default function ReadingPage() {
   const [birthData, setBirthData] = useState<BirthData | null>(null);
   const [forecastOptions, setForecastOptions] = useState<ForecastOptions>({});
   const [result, setResult] = useState<SynthesisOutput | null>(null);
-  const [forecast, setForecast] = useState<ForecastResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isInputError, setIsInputError] = useState(false);
 
@@ -31,7 +27,6 @@ export default function ReadingPage() {
     setBirthData(null);
     setForecastOptions({});
     setResult(null);
-    setForecast(null);
     setErrorMessage("");
     setIsInputError(false);
   }
@@ -39,16 +34,11 @@ export default function ReadingPage() {
   async function fetchReading(data: BirthData) {
     setStep("loading");
     try {
-      const [reading, forecastResult] = await Promise.all([
-        getReading(data),
-        // Forecast add-ons are a separate, best-effort call — a failure
-        // here shouldn't block the main reading from showing.
-        hasForecastOptions(forecastOptions)
-          ? getForecast(data, forecastOptions).catch(() => null)
-          : Promise.resolve(null),
-      ]);
+      // Forecast options (if any) ride along in the same request, so the
+      // synthesized reading itself can weave in Solar Arc/Transit/Lunar
+      // Return/Relocation — see backend/app/main.py's ReadingRequest.
+      const reading = await getReading(data, forecastOptions);
       setResult(reading);
-      setForecast(forecastResult);
       setStep("result");
     } catch (err) {
       if (err instanceof ReadingRequestError && err.status === 422) {
@@ -116,9 +106,7 @@ export default function ReadingPage() {
         </div>
       )}
 
-      {step === "result" && result && (
-        <ReadingResult result={result} forecast={forecast} onRestart={restart} />
-      )}
+      {step === "result" && result && <ReadingResult result={result} onRestart={restart} />}
     </div>
   );
 }

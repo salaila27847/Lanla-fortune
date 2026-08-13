@@ -54,20 +54,6 @@ class CardDraw(BaseModel):
     reversed: bool = False
 
 
-class SynthesisOutput(BaseModel):
-    final_reading: str
-    convergent_themes: list[str]
-    divergent_notes: list[str]
-    per_engine_breakdown: dict[str, EngineResult]
-
-
-class ReadingRecord(BaseModel):
-    id: int
-    created_at: datetime
-    birth_data: BirthData
-    synthesis: SynthesisOutput
-
-
 class SolarArcRequest(BaseModel):
     target_date: date
 
@@ -87,6 +73,11 @@ class RelocationRequest(BaseModel):
 
 
 class ForecastRequest(BaseModel):
+    """Body for POST /api/forecast (standalone forecast lookup, no
+    reading/synthesis). POST /api/reading accepts the identical set of
+    optional sub-requests via ReadingRequest below, so a reading can
+    fold forecast data into its Gemini synthesis in the same call."""
+
     birth_data: BirthData
     solar_arc: SolarArcRequest | None = None
     transit: TransitRequest | None = None
@@ -124,3 +115,32 @@ class ForecastResponse(BaseModel):
     transit: TransitResult | None = None
     lunar_return: LunarReturnResult | None = None
     relocation: RelocationResult | None = None
+
+
+class ReadingRequest(BaseModel):
+    """Body for POST /api/reading. The optional forecast sub-requests are
+    the same shape as ForecastRequest — when any is present, the reading
+    endpoint computes that forecast data too and feeds it into
+    synthesize() alongside the 3 engines, so the reading's final_reading
+    can weave in Solar Arc/Transit/Lunar Return/Relocation."""
+
+    birth_data: BirthData
+    solar_arc: SolarArcRequest | None = None
+    transit: TransitRequest | None = None
+    lunar_return: LunarReturnRequest | None = None
+    relocation: RelocationRequest | None = None
+
+
+class SynthesisOutput(BaseModel):
+    final_reading: str
+    convergent_themes: list[str]
+    divergent_notes: list[str]
+    per_engine_breakdown: dict[str, EngineResult]
+    forecast: ForecastResponse | None = None
+
+
+class ReadingRecord(BaseModel):
+    id: int
+    created_at: datetime
+    birth_data: BirthData
+    synthesis: SynthesisOutput

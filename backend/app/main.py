@@ -17,12 +17,17 @@ from app.core.schema import (
     BirthData,
     ForecastRequest,
     ForecastResponse,
+    LunarReturnRequest,
     LunarReturnResult,
     PictureResult,
     ReadingRecord,
+    ReadingRequest,
+    RelocationRequest,
     RelocationResult,
+    SolarArcRequest,
     SolarArcResult,
     SynthesisOutput,
+    TransitRequest,
     TransitResult,
 )
 from app.db.models import Base, Reading, User
@@ -71,6 +76,51 @@ def _to_picture_result(picture: dict[str, Any]) -> PictureResult:
     )
 
 
+def _compute_forecast(
+    birth_data: BirthData,
+    solar_arc: SolarArcRequest | None,
+    transit: TransitRequest | None,
+    lunar_return: LunarReturnRequest | None,
+    relocation: RelocationRequest | None,
+) -> ForecastResponse:
+    """Shared by /api/reading and /api/forecast so the two endpoints
+    can't drift — each sub-request is independent and only computed
+    when present. transit_forecast() is given birth_data so Daily M/A
+    (and, through it, Transit Axes) are included automatically whenever
+    a transit forecast is requested."""
+    jd, known_time = _julian_day_ut(birth_data)
+    natal_positions = _compute_positions(jd, birth_data, known_time)
+
+    response = ForecastResponse()
+
+    if solar_arc:
+        arc = solar_arc_degrees(birth_data, solar_arc.target_date)
+        directed = directed_positions(natal_positions, arc)
+        pictures = find_directed_pictures(natal_positions, directed)
+        response.solar_arc = SolarArcResult(
+            arc_degrees=round(arc, 3),
+            pictures=[_to_picture_result(p) for p in pictures[:FORECAST_PICTURE_LIMIT]],
+        )
+
+    if transit:
+        pictures = transit_forecast(natal_positions, transit.target_date, birth_data=birth_data)
+        response.transit = TransitResult(
+            pictures=[_to_picture_result(p) for p in pictures[:FORECAST_PICTURE_LIMIT]]
+        )
+
+    if lunar_return:
+        return_at = find_lunar_return(natal_positions["MOON"], lunar_return.search_start)
+        response.lunar_return = LunarReturnResult(return_at=return_at)
+
+    if relocation:
+        if not known_time:
+            raise HTTPException(422, "ต้องทราบเวลาเกิดจึงจะคำนวณดวงย้ายถิ่นได้")
+        angles = relocated_angles(birth_data, relocation.latitude, relocation.longitude)
+        response.relocation = RelocationResult(ascendant=angles["A"], midheaven=angles["M"])
+
+    return response
+
+
 load_dotenv()
 
 
@@ -105,17 +155,26 @@ async def health() -> dict[str, str]:
 
 @app.post("/api/reading", response_model=SynthesisOutput)
 async def get_reading(
-    birth_data: BirthData,
+    request: ReadingRequest,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> SynthesisOutput:
+    birth_data = request.birth_data
+
     # Run all 3 engines concurrently — see CLAUDE.md performance requirement.
     uranian_result, tarot_result, oracle_result = await asyncio.gather(
         uranian_calculate(birth_data),
         tarot_draw(),
         oracle_draw(),
     )
-    result = await synthesize(uranian_result, tarot_result, oracle_result)
+
+    forecast_response: ForecastResponse | None = None
+    if request.solar_arc or request.transit or request.lunar_return or request.relocation:
+        forecast_response = _compute_forecast(
+            birth_data, request.solar_arc, request.transit, request.lunar_return, request.relocation
+        )
+
+    result = await synthesize(uranian_result, tarot_result, oracle_result, forecast_response)
 
     db.add(
         Reading(
@@ -156,38 +215,14 @@ async def get_forecast(
     _user: User = Depends(get_current_user),  # auth-gated like /api/reading; result isn't persisted
 ) -> ForecastResponse:
     """Uranian-only forecast add-ons (Solar Arc, Transit, Lunar Return,
-    Relocation) — raw picture tables, not run through Gemini synthesis.
-    Not persisted to reading history, unlike /api/reading."""
-    jd, known_time = _julian_day_ut(request.birth_data)
-    natal_positions = _compute_positions(jd, request.birth_data, known_time)
-
-    response = ForecastResponse()
-
-    if request.solar_arc:
-        arc = solar_arc_degrees(request.birth_data, request.solar_arc.target_date)
-        directed = directed_positions(natal_positions, arc)
-        pictures = find_directed_pictures(natal_positions, directed)
-        response.solar_arc = SolarArcResult(
-            arc_degrees=round(arc, 3),
-            pictures=[_to_picture_result(p) for p in pictures[:FORECAST_PICTURE_LIMIT]],
-        )
-
-    if request.transit:
-        pictures = transit_forecast(natal_positions, request.transit.target_date)
-        response.transit = TransitResult(
-            pictures=[_to_picture_result(p) for p in pictures[:FORECAST_PICTURE_LIMIT]]
-        )
-
-    if request.lunar_return:
-        return_at = find_lunar_return(natal_positions["MOON"], request.lunar_return.search_start)
-        response.lunar_return = LunarReturnResult(return_at=return_at)
-
-    if request.relocation:
-        if not known_time:
-            raise HTTPException(422, "ต้องทราบเวลาเกิดจึงจะคำนวณดวงย้ายถิ่นได้")
-        angles = relocated_angles(
-            request.birth_data, request.relocation.latitude, request.relocation.longitude
-        )
-        response.relocation = RelocationResult(ascendant=angles["A"], midheaven=angles["M"])
-
-    return response
+    Relocation) as raw picture tables — for a standalone lookup with no
+    tarot/oracle draw and no Gemini synthesis. Not persisted to reading
+    history, unlike /api/reading (which can also fold this same data
+    into its synthesized narrative — see ReadingRequest)."""
+    return _compute_forecast(
+        request.birth_data,
+        request.solar_arc,
+        request.transit,
+        request.lunar_return,
+        request.relocation,
+    )

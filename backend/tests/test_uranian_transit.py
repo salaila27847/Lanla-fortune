@@ -1,8 +1,6 @@
 """Tests for the transit/station/lunar-return/relocation module — see
-app/modules/uranian/transit.py for the techniques and their current
-scope (calculation-only, not wired into calculate()/EngineResult/any
-endpoint).
-"""
+app/modules/uranian/transit.py for the techniques it covers (wired into
+POST /api/forecast in app/main.py)."""
 
 from __future__ import annotations
 
@@ -70,6 +68,20 @@ def test_transit_positions_covers_nineteen_factors():
         assert 0.0 <= lon < 360.0, f"{factor} out of range: {lon}"
 
 
+def test_transit_positions_omits_daily_ma_without_birth_data():
+    positions = transit_positions(date(2026, 8, 13))
+    assert "A" not in positions
+    assert "M" not in positions
+
+
+def test_transit_positions_includes_daily_ma_with_birth_data():
+    positions = transit_positions(date(2026, 8, 13), birth_data=BIRTH_WITH_TIME)
+    jd = swe.julday(2026, 8, 13, 12.0)
+    _, expected_ascmc = swe.houses(jd, BIRTH_WITH_TIME.latitude, BIRTH_WITH_TIME.longitude, b"P")
+    assert positions["A"] == pytest.approx(expected_ascmc[0])
+    assert positions["M"] == pytest.approx(expected_ascmc[1])
+
+
 def test_transit_forecast_smoke_test_on_a_real_chart():
     jd, known_time = _julian_day_ut(BIRTH_WITH_TIME)
     natal_positions = _compute_positions(jd, BIRTH_WITH_TIME, known_time)
@@ -77,6 +89,18 @@ def test_transit_forecast_smoke_test_on_a_real_chart():
     for picture in pictures:
         assert picture["type"] in {"type1", "type2"}
         assert 0 <= picture["orb"] <= 1.0  # transit orb is tight
+
+
+def test_transit_axes_enabled_by_daily_ma_find_purely_transit_pictures():
+    # With Daily M/A included, a picture can be entirely "today's sky"
+    # (no radix or directed factor at all) as long as it involves today's
+    # M or A — this is the "Transit Axes" technique.
+    jd, known_time = _julian_day_ut(BIRTH_WITH_TIME)
+    natal_positions = _compute_positions(jd, BIRTH_WITH_TIME, known_time)
+    pictures = transit_forecast(natal_positions, date(2026, 8, 13), birth_data=BIRTH_WITH_TIME)
+    purely_transit = [p for p in pictures if all(f.startswith("t:") for f in p["factors"])]
+    assert len(purely_transit) > 0
+    assert all(any(f in {"t:A", "t:M"} for f in p["factors"]) for p in purely_transit)
 
 
 # ---------- find_transit_pictures (synthetic positions) ----------

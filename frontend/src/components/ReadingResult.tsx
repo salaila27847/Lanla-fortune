@@ -5,7 +5,6 @@ import type { ForecastResponse, PictureResult, SynthesisOutput } from "@/lib/api
 
 type Props = {
   result: SynthesisOutput;
-  forecast?: ForecastResponse | null;
   onRestart: () => void;
 };
 
@@ -16,6 +15,19 @@ const ENGINE_LABELS: Record<string, string> = {
 };
 
 type Tab = "overview" | "uranian" | "tarot" | "oracle" | "forecast";
+
+type ForecastSection = "solar_arc" | "transit" | "lunar_return" | "relocation";
+
+const FORECAST_SECTION_LABELS: Record<ForecastSection, string> = {
+  solar_arc: "Solar Arc",
+  transit: "Transit",
+  lunar_return: "Lunar Return",
+  relocation: "Relocation",
+};
+
+function availableForecastSections(forecast: ForecastResponse): ForecastSection[] {
+  return (Object.keys(FORECAST_SECTION_LABELS) as ForecastSection[]).filter((key) => forecast[key]);
+}
 
 function PictureTable({ pictures }: { pictures: PictureResult[] }) {
   if (pictures.length === 0) {
@@ -47,12 +59,96 @@ function PictureTable({ pictures }: { pictures: PictureResult[] }) {
   );
 }
 
-export default function ReadingResult({ result, forecast, onRestart }: Props) {
-  const [tab, setTab] = useState<Tab>("overview");
+function ForecastSectionContent({
+  section,
+  forecast,
+}: {
+  section: ForecastSection;
+  forecast: ForecastResponse;
+}) {
+  if (section === "solar_arc" && forecast.solar_arc) {
+    return (
+      <div className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Solar Arc — ส่วนโค้งสุริยะ {forecast.solar_arc.arc_degrees.toFixed(2)}°
+        </h3>
+        <PictureTable pictures={forecast.solar_arc.pictures} />
+      </div>
+    );
+  }
+  if (section === "transit" && forecast.transit) {
+    return (
+      <div className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Transit — ดาวโคจรผ่าน</h3>
+        <PictureTable pictures={forecast.transit.pictures} />
+      </div>
+    );
+  }
+  if (section === "lunar_return" && forecast.lunar_return) {
+    return (
+      <div className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          Lunar Return — จันทร์คืนตำแหน่งเกิด
+        </h3>
+        <p className="text-sm text-zinc-800 dark:text-zinc-200">
+          {new Date(forecast.lunar_return.return_at).toLocaleString("th-TH", {
+            dateStyle: "long",
+            timeStyle: "short",
+          })}
+        </p>
+      </div>
+    );
+  }
+  if (section === "relocation" && forecast.relocation) {
+    return (
+      <div className="flex flex-col gap-2">
+        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Relocation — ดวงย้ายถิ่น</h3>
+        <p className="text-sm text-zinc-800 dark:text-zinc-200">
+          ลัคนาใหม่ {forecast.relocation.ascendant.toFixed(2)}° · มิเดียมใหม่{" "}
+          {forecast.relocation.midheaven.toFixed(2)}°
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
 
-  const hasForecast = Boolean(
-    forecast && (forecast.solar_arc || forecast.transit || forecast.lunar_return || forecast.relocation),
+function ForecastTab({ forecast }: { forecast: ForecastResponse }) {
+  const sections = availableForecastSections(forecast);
+  const [active, setActive] = useState<ForecastSection>(sections[0]);
+
+  if (sections.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-6">
+      {sections.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">ข้ามไปดู:</span>
+          {sections.map((section) => (
+            <button
+              key={section}
+              type="button"
+              onClick={() => setActive(section)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                active === section
+                  ? "border-zinc-950 bg-zinc-950 text-zinc-50 dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-950"
+                  : "border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              }`}
+            >
+              {FORECAST_SECTION_LABELS[section]}
+            </button>
+          ))}
+        </div>
+      )}
+      <ForecastSectionContent section={active} forecast={forecast} />
+    </div>
   );
+}
+
+export default function ReadingResult({ result, onRestart }: Props) {
+  const [tab, setTab] = useState<Tab>("overview");
+  const forecast = result.forecast;
+  const hasForecast = Boolean(forecast && availableForecastSections(forecast).length > 0);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "ภาพรวม" },
@@ -152,51 +248,7 @@ export default function ReadingResult({ result, forecast, onRestart }: Props) {
           ),
       )}
 
-      {tab === "forecast" && forecast && (
-        <div className="flex flex-col gap-8">
-          {forecast.solar_arc && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                Solar Arc — ส่วนโค้งสุริยะ {forecast.solar_arc.arc_degrees.toFixed(2)}°
-              </h3>
-              <PictureTable pictures={forecast.solar_arc.pictures} />
-            </div>
-          )}
-
-          {forecast.transit && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Transit — ดาวโคจรผ่าน</h3>
-              <PictureTable pictures={forecast.transit.pictures} />
-            </div>
-          )}
-
-          {forecast.lunar_return && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                Lunar Return — จันทร์คืนตำแหน่งเกิด
-              </h3>
-              <p className="text-sm text-zinc-800 dark:text-zinc-200">
-                {new Date(forecast.lunar_return.return_at).toLocaleString("th-TH", {
-                  dateStyle: "long",
-                  timeStyle: "short",
-                })}
-              </p>
-            </div>
-          )}
-
-          {forecast.relocation && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                Relocation — ดวงย้ายถิ่น
-              </h3>
-              <p className="text-sm text-zinc-800 dark:text-zinc-200">
-                ลัคนาใหม่ {forecast.relocation.ascendant.toFixed(2)}° · มิเดียมใหม่{" "}
-                {forecast.relocation.midheaven.toFixed(2)}°
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      {tab === "forecast" && forecast && <ForecastTab forecast={forecast} />}
 
       <button
         type="button"
