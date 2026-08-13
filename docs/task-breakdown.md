@@ -209,10 +209,9 @@
         (แม่นถึงระดับ <0.01° เพราะดวงจันทร์ไม่มีทางถอยหลัง เดินหน้าทางเดียวเสมอ scan ทุก 6 ชม.
         ไม่มีทางพลาดจุดตัด)
       - `relocated_angles()` — คำนวณ A/M ใหม่จากพิกัดปลายทาง ใช้เวลาเกิด UTC เดิม
-      - **ยังไม่ทำ**: "Daily Meridian and Ascendant" (M/A ณ ปัจจุบัน คนละเทคนิคกับ relocation ที่เป็น
-        M/A ณ สถานที่อื่น) และ "Transit Axes" แบบเจาะจง (นอกเหนือจากที่ `find_transit_pictures`
-        ครอบคลุมโดยธรรมชาติอยู่แล้วเพราะปฏิบัติกับ transit เป็นแค่อีก layer หนึ่งใน Type I/II เดียวกัน)
       - เพิ่ม unit test 16 เคสใน `test_uranian_transit.py` — รวม 78 tests ผ่านหมด, ruff clean
+- [x] **แก้ไข 2026-08-13 (Phase 13)**: เพิ่ม "Daily Meridian and Ascendant" (M/A ณ ปัจจุบัน — คนละ
+      เทคนิคกับ relocation ที่เป็น M/A ณ สถานที่อื่น) และ "Transit Axes" — ดู Phase 13 ด้านล่าง
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ทดสอบผ่าน unit test + manual script เท่านั้น ยังไม่ได้ทดสอบ
       end-to-end ผ่าน `/api/reading` จริงที่มี `GEMINI_API_KEY` จริง (ข้อจำกัดเดิมจาก Phase 6/10)
 
@@ -220,7 +219,10 @@
 
 ผู้ใช้ตัดสินใจแล้ว (2026-08-13): เพิ่ม checkbox 4 ตัวในฟอร์มกรอกข้อมูลเกิด `/reading` เดิม
 (ไม่แยกหน้าใหม่) แต่ละตัวเปิด/ปิดฟิลด์ข้อมูลของตัวเอง และผลลัพธ์แสดงเป็น**ตารางดิบ** ไม่ผ่าน
-Gemini synthesis (ต่างจาก `/api/reading` ที่สังเคราะห์เป็นคำทำนายภาษา)
+Gemini synthesis (ต่างจาก `/api/reading` ที่สังเคราะห์เป็นคำทำนายภาษา) — **กลับคำตัดสินใจนี้แล้ว
+ใน Phase 13**: ผู้ใช้ขอให้การสังเคราะห์ผลต้องเอา Transit/Solar Arc/Relocation ไปด้วย ไม่ใช่แค่
+ตารางดิบแยกออกมา — ตารางดิบยังคงแสดงอยู่ (เป็น tab "การพยากรณ์ล่วงหน้า" ที่ `ReadingResult.tsx`)
+แต่ตอนนี้ Gemini เห็นข้อมูลชุดเดียวกันด้วยและทอเข้าไปใน `final_reading`
 
 - [x] Backend: เพิ่ม schema (`ForecastRequest`/`ForecastResponse` + sub-request/result ต่อเทคนิค)
       ใน `app/core/schema.py`, เพิ่ม `POST /api/forecast` ใน `main.py` — auth-gated แบบเดียวกับ
@@ -252,5 +254,66 @@ Gemini synthesis (ต่างจาก `/api/reading` ที่สังเค�
       Arc/Transit/Lunar Return จริงจาก backend local (bypass login ชั่วคราวเพราะ sandbox นี้ทำ
       Google OAuth จริงไม่ได้ — revert กลับหมดแล้วก่อนจบงาน ยืนยันด้วย `git diff` ว่าไฟล์ auth
       กลับสู่สภาพเดิม), `npm run build`/`npm run lint` ผ่าน, backend 87 tests ผ่าน, ruff clean
-- [ ] **ยังไม่ทำ**: การจำกัด (rate limit) หรือแคชผลลัพธ์ forecast, relocation ยังใช้กรอกพิกัดเอง
-      (ไม่มี autocomplete ค้นหาสถานที่แบบช่องกรอกที่เกิดเดิม)
+- [x] **แก้ไข 2026-08-13 (Phase 13)**: relocation มี autocomplete ค้นหาสถานที่แล้วเหมือนช่อง
+      สถานที่เกิด — ดู Phase 13 ด้านล่าง
+- [ ] **ยังไม่ทำ**: การจำกัด (rate limit) หรือแคชผลลัพธ์ forecast
+
+## Phase 13 — Daily M/A + Transit Axes, สังเคราะห์ forecast เข้า Gemini, relocation autocomplete, ปุ่มข้าม
+
+ผู้ใช้ขอ 4 อย่างพร้อมกัน (2026-08-13): (1) คำนวณ Daily M/A + Transit Axes ให้ครบตามที่ Phase 11
+เหลือไว้ (2) แก้ช่อง relocation ให้มี autocomplete เหมือนช่อง "สถานที่เกิด" (3) เพิ่มปุ่มข้ามให้ดูผล
+พยากรณ์ล่วงหน้าทีละแบบได้ (4) **กลับคำตัดสินใจ Phase 12**: การสังเคราะห์ผลของ Gemini ต้องเอา
+Transit/Solar Arc/Lunar Return/Relocation ไปพิจารณาด้วย ไม่ใช่แค่แสดงตารางดิบแยกจากคำทำนาย
+
+- [x] Backend: `transit_positions()` รับ `birth_data` เพิ่ม (optional) — ถ้าส่งมา คำนวณ Ascendant/
+      Midheaven ณ วันเวลาที่ระบุ (สถานที่เกิดเดิม) เพิ่มเป็นปัจจัย `A`/`M` ในชุดตำแหน่ง transit
+      นี่คือ "Daily M/A" (ตรงข้ามกับ relocation ที่ตรึงเวลาเกิดแต่เปลี่ยนสถานที่ — Daily M/A ตรึง
+      สถานที่เกิดแต่เปลี่ยนเวลาเป็นวันปัจจุบัน) เพิ่ม `DAILY_ANGLE_BASES = {"A", "M"}` ใน
+      `transit.py` ให้ `_has_reference_personal_point()` นับ `t:A`/`t:M` เป็นจุดอ้างอิงส่วนตัวได้
+      ด้วย (ปกติปัจจัยที่กำลัง transit ไม่นับเป็น personal point เพราะเป็นดาวที่กำลังเคลื่อนที่ แต่ Daily
+      M/A เป็นข้อยกเว้น เพราะเป็นมุมอ้างอิงคงที่ของวันนั้น ไม่ใช่ดาวเคราะห์) — เมื่อมี Daily M/A แล้ว
+      **Transit Axes** (ภาพที่สร้างจากท้องฟ้าวันนี้ล้วนๆ รวม Daily M/A โดยไม่ต้องมีปัจจัย radix/directed
+      เลย) เกิดขึ้นได้เองผ่าน `find_transit_pictures()` เดิมโดยไม่ต้องเขียนฟังก์ชันแยก — เพิ่ม unit
+      test 3 เคสยืนยัน (มี/ไม่มี Daily M/A, Transit Axes ล้วนๆ หา picture เจอจริง) — รวม 81 tests
+- [x] Backend: **กลับคำตัดสินใจ Phase 12** — รวม `/api/reading` กับความสามารถของ `/api/forecast`
+      เข้าด้วยกัน: เพิ่ม `ReadingRequest` (`birth_data` + `solar_arc`/`transit`/`lunar_return`/
+      `relocation` optional เหมือน `ForecastRequest`) เป็น body ใหม่ของ `POST /api/reading`
+      (เดิมรับ `BirthData` ตรงๆ) — endpoint คำนวณ forecast (ถ้ามีการเลือก) ผ่าน `_compute_forecast()`
+      ที่ดึงมาเป็นฟังก์ชันร่วมให้ `/api/reading`/`/api/forecast` ใช้ร่วมกัน (กันโค้ดสองจุดเพี้ยนออก
+      จากกัน) แล้วส่ง `ForecastResponse` เข้า `synthesize()` เป็น argument ที่ 4 (optional) —
+      `SynthesisOutput` เพิ่ม field `forecast: ForecastResponse | None` เก็บผลไว้ให้ frontend แสดง
+      ตารางดิบต่อได้เหมือนเดิม แม้จะสังเคราะห์เป็นคำทำนายไปแล้วก็ตาม — `/api/forecast` (standalone,
+      ไม่ synthesize, ไม่บันทึกประวัติ) ยังอยู่เหมือนเดิมสำหรับกรณีอยากได้ตารางดิบอย่างเดียว
+- [x] Backend: `master_interpreter.py` — `synthesize()` รับ `forecast` เป็น argument ที่ 4
+      (optional) ใส่เข้า payload ที่ส่งให้ Gemini เป็น key `"forecast"` เพิ่มกฎข้อ 4 ใน
+      `SYSTEM_PROMPT` บอกให้พิจารณา forecast เป็น "ชั้นจังหวะเวลา" เสริม ด้วยหลัก 3 ขั้นตอนเดียวกัน
+      (จุดร่วม/ความขัดแย้ง/เติมเต็ม) — `_fallback_synthesis()` เพิ่ม `_forecast_summary_lines()`
+      สรุปผล forecast แบบข้อความสั้นต่อท้าย `final_reading` เวลา Gemini ใช้งานไม่ได้
+- [x] Backend: อัปเดต test suite ทั้งหมดให้ตรงกับ request shape ใหม่ (`json={"birth_data": ...}`
+      แทน `json=BIRTH_DATA` ตรงๆ), เพิ่ม test ยืนยันว่า `/api/reading` พร้อม forecast option คืน
+      `forecast` ใน response และบันทึกลง history ถูกต้อง, เพิ่ม test จับ payload ที่ส่งให้ Gemini
+      client จริง (fake) ว่ามี/ไม่มี key `"forecast"` ตรงตามที่ควร — รวม **96 tests ผ่านหมด**, ruff
+      clean
+- [x] Frontend: สร้าง `frontend/src/lib/usePlaceSearch.ts` (custom hook) ดึง logic ค้นหาสถานที่
+      แบบ debounce 600ms ที่เดิมอยู่เฉพาะช่อง "สถานที่เกิด" ออกมาใช้ร่วมกันได้ — `BirthDataForm.tsx`
+      เปลี่ยนทั้งช่อง "สถานที่เกิด" และช่อง relocation ให้ใช้ hook เดียวกัน ทำให้ relocation ได้
+      dropdown ผลค้นหาจริง + auto-fill ละติจูด/ลองจิจูด เหมือนช่องสถานที่เกิดทุกประการ (เดิม
+      relocation กรอกพิกัดเองล้วนๆ)
+- [x] Frontend: `lib/api.ts` ลบ `getForecast()`/`hasForecastOptions()` ออก (ไม่ต้องยิง 2 endpoint
+      แยกกันอีกต่อไป) — `getReading(birthData, forecastOptions)` ยิง `/api/reading` ครั้งเดียว
+      ส่ง `{ birth_data, ...forecastOptions }` ตรงกับ `ReadingRequest` ใหม่ `SynthesisOutput` type
+      เพิ่ม `forecast: ForecastResponse | null` — `reading/page.tsx` ตัด state/การเรียกแยกของ
+      forecast ออก เหลือ `getReading()` เรียกเดียว
+      `ReadingResult.tsx` เพิ่ม `ForecastTab` component: ถ้ามี forecast มากกว่า 1 หมวด (เช่น Solar
+      Arc + Transit) จะโชว์แถบปุ่ม "ข้ามไปดู: Solar Arc / Transit / Lunar Return / Relocation" ให้
+      คลิกสลับดูทีละหมวดแทนการเลื่อนดูทั้งหมด (ถ้ามีแค่หมวดเดียวไม่โชว์แถบปุ่ม เพราะไม่มีอะไรให้ข้าม)
+- [x] ทดสอบแล้ว: backend 96 tests ผ่าน, `ruff check`/`ruff format --check` สะอาด, frontend
+      `npm run build`/`npm run lint` ผ่าน, ยืนยันผ่านเบราว์เซอร์ (Playwright, bypass login ชั่วคราว
+      เหมือน Phase 12 แล้ว revert กลับหมดก่อนจบงาน) ว่า flow ทั้งหมดทำงานถูกต้องจนถึงหน้าผลลัพธ์
+      พร้อม forecast tab — การค้นหาสถานที่ของช่อง relocation ยืนยันด้วยโค้ดว่าใช้ mechanism เดียวกัน
+      กับช่องสถานที่เกิดที่ยืนยันแล้วว่าใช้งานได้จริง (ทดสอบ live network call ผ่าน dropdown จริงใน
+      sandbox นี้ไม่ได้ เพราะ browser ที่ควบคุมด้วย Playwright ไม่ผ่าน proxy ของ sandbox ไปยัง
+      Nominatim ได้ — เป็นข้อจำกัดของสภาพแวดล้อมทดสอบ ไม่ใช่บั๊กของโค้ด)
+- [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: คุณภาพจริงของการสังเคราะห์ forecast โดย Gemini (มี key จริง)
+      ยังทดสอบไม่ได้ในนี้ เหมือนข้อจำกัดเดิมของ Phase 6/10 — ทดสอบได้แค่ path fallback กับ payload
+      shape ที่ถูกต้อง

@@ -58,12 +58,28 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
 
 ไม่มี hardcode เนื้อหาความหมายในโค้ด engine ทั้งหมดโหลดจากไฟล์ YAML ข้างต้น
 
+## `app/modules/uranian/{solar_arc,transit}.py` — forecast (ไม่บังคับ, ไม่มี KB ของตัวเอง)
+
+ต่างจาก natal engine ข้างบน 2 โมดูลนี้**ไม่มีไฟล์ knowledge base แยก** — ใช้ label ของปัจจัย/คู่ปัจจัย
+ตรงๆ (เช่น `r:SUN / d:VENUS = t:JUPITER`) ไม่ผ่าน `planetary_pictures.yaml`/`axis_meanings.yaml`
+เพราะเนื้อหาที่มีอยู่อิงชุดปัจจัยเดี่ยว ไม่ได้ครอบคลุมทุก combination ข้าม 3 ชั้น (radix/directed/transit)
+ที่เป็นไปได้ — ผลลัพธ์แสดงเป็นตารางดิบที่หน้า `/reading` (tab "การพยากรณ์ล่วงหน้า") และส่งเข้า Gemini
+synthesis ให้ตีความรวมกับ 3 engine หลัก (ดู `docs/data-schema.md` หัวข้อ Forecast, `master_interpreter.py`):
+
+- `solar_arc.py`: Solar Arc Directions — `progressed_sun_longitude()`, `solar_arc_degrees()`,
+  `directed_positions()`, `find_directed_pictures()`
+- `transit.py`: Transit จริง ณ วันที่เลือก (`transit_positions()`, `find_transit_pictures()`,
+  orb แคบ 1°), Station Points (`daily_speed()`, `find_stations_in_range()`), Lunar Return
+  (`find_lunar_return()`, bisection search), Relocation (`relocated_angles()`), Daily M/A
+  (`transit_positions(birth_data=...)` เพิ่ม Ascendant/Midheaven ของวันนั้นที่สถานที่เกิดเดิม) และ
+  Transit Axes (เกิดขึ้นเองจาก `find_transit_pictures()` เมื่อมี Daily M/A โดยไม่ต้องมีปัจจัย
+  radix/directed เลย)
+
 ## ยังไม่ได้ทำ (สืบทอดจาก handoff package)
 
 - `axis_meanings.yaml` มีแค่แกน M — แกน A, Sun, Moon, Node ยังไม่ได้ถอดความเป็น YAML
   (เนื้อหามีอยู่แล้วใน `research/uranian-delineation-axes.md`)
 - ไม่มี `house_meanings` — engine นี้ยังไม่คำนวณว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่
   (เนื้อหามีอยู่แล้วใน `research/uranian-delineation-axes.md` หัวข้อ 7)
-- ไม่มี solar arc / transit forecast — มี pseudocode ใน `research/uranian-engine-schema.md`
-  และเทคนิคใน `research/uranian-solar-arc-transits-advanced.md` แต่ยังไม่ implement
 - `planetary_pictures.yaml` เป็นการคัดสรร 50 คู่ ไม่ใช่ชุดสมบูรณ์ตามต้นฉบับ
+- forecast (`solar_arc.py`/`transit.py`) ไม่มี rate limit หรือแคชผลลัพธ์
