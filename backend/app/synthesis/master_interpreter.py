@@ -1,23 +1,33 @@
 """Master Interpreter — the synthesis layer ("หัวหน้าทีมหลัก").
 
-Takes the 3 engines' EngineResult objects — plus, optionally, forecast
-data (Solar Arc/Transit/Lunar Return/Relocation, from app/modules/uranian/
-solar_arc.py and transit.py) — and asks Gemini to cross-reference them
-into one reading. The rules below are load-bearing — do not soften or
-remove them when editing the prompt:
+Takes whichever of the 3 engines' EngineResult objects the user chose to
+run (see CLAUDE.md — each discipline is independently skippable now) —
+plus, optionally, forecast data (Solar Arc/Transit/Lunar Return/
+Relocation, from app/modules/uranian/solar_arc.py and transit.py) and an
+oracle_question the user typed before drawing — and asks Gemini to
+cross-reference them into one reading. The rules below are load-bearing
+— do not soften or remove them when editing the prompt:
 
   1. No personal bias — interpret only from the raw findings passed in.
   2. No user history — never reference anything outside this session's
      input (see CLAUDE.md, PRD.md section 4.4).
   3. Three-step method — convergence, then divergence, then
      complementary framing (see PRD.md section 4.4) — extended to weigh
-     forecast data as a fourth, timing-focused layer when present.
+     forecast data as a fourth, timing-focused layer when present, and
+     skipped in favor of a focused single-discipline reading when only
+     one engine ran.
 
 If the Gemini call fails or times out (Phase 6 QA requirement), synthesize()
 falls back to _fallback_synthesis(), which builds a SynthesisOutput directly
 from the engines' own themes/summaries (and forecast's own picture labels)
 — plain set overlap for convergence, no invented interpretation, so it
 never violates rule 1 above either.
+
+synthesize_followup() handles the separate "ask more" flow on the result
+screen (POST /api/reading/follow-up): a newly-drawn oracle EngineResult
+plus a follow-up question, synthesized as a priority continuation of a
+previous SynthesisOutput the client already has — never data pulled back
+from stored /history (same "no user history" rule, see FollowUpRequest).
 """
 
 from __future__ import annotations
@@ -39,16 +49,42 @@ SYSTEM_PROMPT = """\
 กฎที่ต้องปฏิบัติตามอย่างเคร่งครัด:
 1. ห้ามใส่ความเห็นส่วนตัวหรือความเชื่อของคุณเอง ตีความจากข้อมูลดิบที่ได้รับเท่านั้น
 2. ห้ามอ้างอิงข้อมูลใดๆ นอกเหนือจากที่ส่งมาในข้อความนี้ (ไม่มีประวัติผู้ใช้)
-3. วิเคราะห์ตามลำดับ 3 ขั้นตอนเสมอ:
-   ก) หาจุดร่วม (convergence) — ประเด็นที่ศาสตร์ต่างๆ ชี้ไปทางเดียวกัน
-   ข) จัดการความขัดแย้ง (divergence) — อธิบายอย่างสมเหตุสมผล ไม่เลือกทิ้งศาสตร์ใดศาสตร์หนึ่ง
-   ค) เติมเต็มมุมที่ขาด (complementary) — แต่ละศาสตร์เสริมมุมที่อีกศาสตร์ไม่ครอบคลุมอย่างไร
+3. ข้อความที่ส่งมาจะมีเฉพาะ key ของศาสตร์ที่ผู้ใช้เลือกใช้เท่านั้น (uranian/tarot/oracle — อาจมีแค่
+   1 หรือ 2 ใน 3 key นี้ เพราะผู้ใช้ข้ามศาสตร์ที่ไม่ต้องการได้) ห้ามอ้างถึงศาสตร์ที่ไม่มี key ส่งมา
+   เลยแม้แต่น้อย:
+   - ถ้ามีมากกว่า 1 ศาสตร์: วิเคราะห์ตามลำดับ 3 ขั้นตอนเสมอ
+     ก) หาจุดร่วม (convergence) — ประเด็นที่ศาสตร์ต่างๆ ที่ส่งมาชี้ไปทางเดียวกัน
+     ข) จัดการความขัดแย้ง (divergence) — อธิบายอย่างสมเหตุสมผล ไม่เลือกทิ้งศาสตร์ใดศาสตร์หนึ่ง
+     ค) เติมเต็มมุมที่ขาด (complementary) — แต่ละศาสตร์เสริมมุมที่อีกศาสตร์ไม่ครอบคลุมอย่างไร
+   - ถ้ามีศาสตร์เดียว: ไม่ต้องหาจุดร่วม/ความขัดแย้ง (convergent_themes/divergent_notes ปล่อยว่างได้)
+     ให้ตีความศาสตร์นั้นแบบเจาะลึกแทน
 4. ข้อความที่ส่งมาอาจมี key "forecast" เพิ่มเติมนอกเหนือจาก uranian/tarot/oracle — เป็นผล
    คำนวณ Solar Arc / Transit / Lunar Return / Relocation ล่วงหน้า (Uranian planetary
-   pictures ที่ขับเคลื่อนด้วยเวลาหรือสถานที่ต่างจากตอนเกิด) ถ้ามี key นี้ ให้นำมาพิจารณาร่วมกับ
-   3 ศาสตร์หลักเป็น "ชั้นจังหวะเวลา" เสริม — ใช้หลัก 3 ขั้นตอนเดียวกัน (จุดร่วม/ความขัดแย้ง/เติมเต็ม)
-   แต่ครอบคลุมทุกส่วนของ forecast ที่ส่งมาด้วย ไม่ใช่แค่ 3 ศาสตร์หลัก ถ้าไม่มี key "forecast" มาเลย
-   ให้วิเคราะห์แค่ 3 ศาสตร์หลักตามปกติ
+   pictures ที่ขับเคลื่อนด้วยเวลาหรือสถานที่ต่างจากตอนเกิด) ถ้ามี key นี้ ให้นำมาพิจารณาร่วมด้วย
+   เป็น "ชั้นจังหวะเวลา" เสริม โดยใช้หลักการเดียวกันกับข้อ 3 ถ้าไม่มี key "forecast" มาเลย ไม่ต้องพูดถึง
+5. ข้อความที่ส่งมาอาจมี key "oracle_question" — คำถามที่ผู้ใช้พิมพ์ไว้ก่อนจั่วไพ่ออราเคิลโดยเฉพาะ
+   (มักมาคู่กับกรณีที่ใช้ไพ่ออราเคิลศาสตร์เดียว) ถ้ามี key นี้ ให้ใช้เป็นบริบทหลักในการตีความไพ่ออราเคิล
+   และตอบคำถามนั้นให้ตรงประเด็นที่สุด
+
+ตอบกลับเป็น JSON เท่านั้น ตรงตาม schema:
+{
+  "final_reading": "...",
+  "convergent_themes": ["..."],
+  "divergent_notes": ["..."]
+}
+ห้ามมีข้อความอื่นนอกเหนือจาก JSON"""
+
+FOLLOWUP_SYSTEM_PROMPT = """\
+คุณคือหัวหน้าทีมนักพยากรณ์มืออาชีพคนเดิมที่เพิ่งให้คำทำนายไปแล้วในเซสชันนี้ ตอนนี้ผู้ใช้ถามคำถาม
+เพิ่มเติมและจั่วไพ่ออราเคิลชุดใหม่มาเพื่อตอบคำถามนี้โดยเฉพาะ
+กฎที่ต้องปฏิบัติตามอย่างเคร่งครัด:
+1. ห้ามใส่ความเห็นส่วนตัวหรือความเชื่อของคุณเอง ตีความจากข้อมูลดิบที่ได้รับเท่านั้น
+2. ห้ามอ้างอิงข้อมูลใดๆ นอกเหนือจากที่ส่งมาในข้อความนี้ (ไม่มีประวัติผู้ใช้จากภายนอกเซสชันนี้) —
+   ข้อความจะมี key "previous_reading" ซึ่งเป็นคำทำนายฉบับก่อนหน้าในเซสชันเดียวกันนี้เท่านั้น ไม่ใช่
+   ประวัติเก่าที่ดึงมาจากที่อื่น ใช้ได้เพื่อความต่อเนื่องเท่านั้น
+3. ให้ความสำคัญกับ "new_oracle_cards" (ไพ่ออราเคิลชุดใหม่) เป็นหลักในการตอบ "question" —
+   ใช้ "previous_reading" เป็นบริบทประกอบเพื่อให้คำทำนายต่อเนื่องกัน ไม่ใช่หัวข้อหลัก
+4. เขียน final_reading ให้ต่อเนื่องเป็นธรรมชาติจากคำทำนายฉบับก่อนหน้า ไม่ใช่เริ่มต้นใหม่ทั้งหมด
 
 ตอบกลับเป็น JSON เท่านั้น ตรงตาม schema:
 {
@@ -80,21 +116,29 @@ class _LLMSynthesis(BaseModel):
 
 
 async def synthesize(
-    uranian: EngineResult,
-    tarot: EngineResult,
-    oracle: EngineResult,
+    uranian: EngineResult | None = None,
+    tarot: EngineResult | None = None,
+    oracle: EngineResult | None = None,
     forecast: ForecastResponse | None = None,
+    oracle_question: str | None = None,
 ) -> SynthesisOutput:
+    # Only the disciplines the user actually chose end up in the payload —
+    # ReadingRequest already guarantees at least one is present (see
+    # schema.py's _validate_engine_selection).
+    engines: dict[str, EngineResult] = {
+        name: result
+        for name, result in (("uranian", uranian), ("tarot", tarot), ("oracle", oracle))
+        if result is not None
+    }
+
     client = genai.Client()  # reads GEMINI_API_KEY (or GOOGLE_API_KEY) from env
     model = os.environ.get("SYNTHESIS_MODEL", "gemini-3.5-flash")
 
-    payload = {
-        "uranian": uranian.model_dump(),
-        "tarot": tarot.model_dump(),
-        "oracle": oracle.model_dump(),
-    }
+    payload: dict[str, object] = {name: result.model_dump() for name, result in engines.items()}
     if forecast is not None:
         payload["forecast"] = forecast.model_dump(mode="json")
+    if oracle_question:
+        payload["oracle_question"] = oracle_question
 
     try:
         response = await client.aio.models.generate_content(
@@ -121,14 +165,65 @@ async def synthesize(
             final_reading=parsed.final_reading,
             convergent_themes=parsed.convergent_themes,
             divergent_notes=parsed.divergent_notes,
-            per_engine_breakdown={"uranian": uranian, "tarot": tarot, "oracle": oracle},
+            per_engine_breakdown=engines,
             forecast=forecast,
+            oracle_question=oracle_question,
         )
     except (errors.APIError, TypeError, ValueError) as exc:
         # TypeError covers the genai SDK's own "missing/invalid API key"
         # failure, which it raises before ever making a request.
         logger.warning("Synthesis via Gemini failed, falling back to raw engine summary: %s", exc)
-        return _fallback_synthesis(uranian, tarot, oracle, forecast)
+        return _fallback_synthesis(uranian, tarot, oracle, forecast, oracle_question)
+
+
+async def synthesize_followup(
+    previous: SynthesisOutput,
+    oracle: EngineResult,
+    question: str,
+) -> SynthesisOutput:
+    """The "ask more" flow (POST /api/reading/follow-up) — a fresh oracle
+    draw takes priority, synthesized as a continuation of `previous`
+    (this session's current reading, passed back by the client — see
+    FollowUpRequest) rather than a from-scratch reading."""
+    client = genai.Client()
+    model = os.environ.get("SYNTHESIS_MODEL", "gemini-3.5-flash")
+
+    payload = {
+        "previous_reading": previous.final_reading,
+        "question": question,
+        "new_oracle_cards": oracle.model_dump(),
+    }
+
+    try:
+        response = await client.aio.models.generate_content(
+            model=model,
+            contents=json.dumps(payload, ensure_ascii=False),
+            config=types.GenerateContentConfig(
+                system_instruction=FOLLOWUP_SYSTEM_PROMPT,
+                max_output_tokens=4096,
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+                response_mime_type="application/json",
+                response_schema=_LLMSynthesis,
+                http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
+            ),
+        )
+        parsed = response.parsed
+        if not isinstance(parsed, _LLMSynthesis):
+            raise TypeError(f"Gemini returned no valid parsed output (got {parsed!r})")
+
+        return SynthesisOutput(
+            final_reading=parsed.final_reading,
+            convergent_themes=parsed.convergent_themes,
+            divergent_notes=parsed.divergent_notes,
+            per_engine_breakdown={**previous.per_engine_breakdown, "oracle": oracle},
+            forecast=previous.forecast,
+            oracle_question=question,
+        )
+    except (errors.APIError, TypeError, ValueError) as exc:
+        logger.warning(
+            "Follow-up synthesis via Gemini failed, falling back to raw oracle summary: %s", exc
+        )
+        return _fallback_followup(previous, oracle, question)
 
 
 def _forecast_summary_lines(forecast: ForecastResponse) -> list[str]:
@@ -157,12 +252,17 @@ def _forecast_summary_lines(forecast: ForecastResponse) -> list[str]:
 
 
 def _fallback_synthesis(
-    uranian: EngineResult,
-    tarot: EngineResult,
-    oracle: EngineResult,
+    uranian: EngineResult | None = None,
+    tarot: EngineResult | None = None,
+    oracle: EngineResult | None = None,
     forecast: ForecastResponse | None = None,
+    oracle_question: str | None = None,
 ) -> SynthesisOutput:
-    engines = {"uranian": uranian, "tarot": tarot, "oracle": oracle}
+    engines: dict[str, EngineResult] = {
+        name: result
+        for name, result in (("uranian", uranian), ("tarot", tarot), ("oracle", oracle))
+        if result is not None
+    }
 
     theme_counts: dict[str, int] = {}
     for result in engines.values():
@@ -177,11 +277,13 @@ def _fallback_synthesis(
     ]
 
     final_reading = (
-        "ระบบสังเคราะห์คำทำนายอัตโนมัติไม่พร้อมใช้งานชั่วคราว นี่คือสรุปผลดิบจากทั้ง 3 ศาสตร์แทน:\n\n"
+        "ระบบสังเคราะห์คำทำนายอัตโนมัติไม่พร้อมใช้งานชั่วคราว นี่คือสรุปผลดิบจากศาสตร์ที่เลือกแทน:\n\n"
         + "\n\n".join(
             f"{_ENGINE_LABELS_TH[name]}: {result.summary}" for name, result in engines.items()
         )
     )
+    if oracle_question:
+        final_reading += f"\n\nคำถามที่ถาม: {oracle_question}"
     if forecast is not None:
         forecast_lines = _forecast_summary_lines(forecast)
         if forecast_lines:
@@ -193,4 +295,25 @@ def _fallback_synthesis(
         divergent_notes=divergent_notes,
         per_engine_breakdown=engines,
         forecast=forecast,
+        oracle_question=oracle_question,
+    )
+
+
+def _fallback_followup(
+    previous: SynthesisOutput,
+    oracle: EngineResult,
+    question: str,
+) -> SynthesisOutput:
+    final_reading = (
+        previous.final_reading + "\n\n---\n\nระบบสังเคราะห์คำทำนายอัตโนมัติไม่พร้อมใช้งานชั่วคราว "
+        "นี่คือคำถามเพิ่มเติมและผลดิบจากไพ่ออราเคิลชุดใหม่แทน:\n\n"
+        f"คำถามที่ถาม: {question}\n\nไพ่ออราเคิล: {oracle.summary}"
+    )
+    return SynthesisOutput(
+        final_reading=final_reading,
+        convergent_themes=previous.convergent_themes,
+        divergent_notes=previous.divergent_notes,
+        per_engine_breakdown={**previous.per_engine_breakdown, "oracle": oracle},
+        forecast=previous.forecast,
+        oracle_question=question,
     )

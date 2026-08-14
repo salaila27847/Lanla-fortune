@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import get_current_user
 from app.core.schema import (
     BirthData,
+    FollowUpRequest,
     ForecastRequest,
     ForecastResponse,
     LunarReturnRequest,
@@ -42,7 +43,7 @@ from app.modules.uranian.solar_arc import (
     solar_arc_degrees,
 )
 from app.modules.uranian.transit import find_lunar_return, relocated_angles, transit_forecast
-from app.synthesis.master_interpreter import synthesize
+from app.synthesis.master_interpreter import synthesize, synthesize_followup
 
 FORECAST_PICTURE_LIMIT = 30  # a "raw table" view, wider than the natal engine's top-10 reading cap
 
@@ -161,25 +162,66 @@ async def get_reading(
 ) -> SynthesisOutput:
     birth_data = request.birth_data
 
-    # Run all 3 engines concurrently — see CLAUDE.md performance requirement.
-    uranian_result, tarot_result, oracle_result = await asyncio.gather(
-        uranian_calculate(birth_data),
-        tarot_draw(),
-        oracle_draw(),
-    )
+    # Run only the engines the user actually chose, concurrently — see
+    # CLAUDE.md performance requirement + the per-discipline skip buttons
+    # (ReadingRequest guarantees at least one of these 3 is present).
+    tasks: dict[str, Any] = {}
+    if birth_data is not None:
+        tasks["uranian"] = uranian_calculate(birth_data)
+    if request.tarot is not None:
+        tasks["tarot"] = tarot_draw(request.tarot.spread)
+    if request.oracle is not None:
+        tasks["oracle"] = oracle_draw(count=request.oracle.card_count)
+
+    results = await asyncio.gather(*tasks.values())
+    engine_results = dict(zip(tasks.keys(), results, strict=True))
 
     forecast_response: ForecastResponse | None = None
-    if request.solar_arc or request.transit or request.lunar_return or request.relocation:
+    if birth_data is not None and (
+        request.solar_arc or request.transit or request.lunar_return or request.relocation
+    ):
         forecast_response = _compute_forecast(
             birth_data, request.solar_arc, request.transit, request.lunar_return, request.relocation
         )
 
-    result = await synthesize(uranian_result, tarot_result, oracle_result, forecast_response)
+    result = await synthesize(
+        uranian=engine_results.get("uranian"),
+        tarot=engine_results.get("tarot"),
+        oracle=engine_results.get("oracle"),
+        forecast=forecast_response,
+        oracle_question=request.oracle.question if request.oracle else None,
+    )
 
     db.add(
         Reading(
             user_id=user.id,
-            birth_data=birth_data.model_dump(mode="json"),
+            birth_data=birth_data.model_dump(mode="json") if birth_data is not None else None,
+            synthesis_output=result.model_dump(mode="json"),
+        )
+    )
+    await db.commit()
+
+    return result
+
+
+@app.post("/api/reading/follow-up", response_model=SynthesisOutput)
+async def get_reading_followup(
+    request: FollowUpRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> SynthesisOutput:
+    """The "ask more" flow on the result screen: draws a fresh, randomly
+    sized (3-9) batch of oracle cards and synthesizes them as a priority
+    continuation of `request.previous` — the reading the client already
+    has in this session (see FollowUpRequest; never reads stored
+    /history, per CLAUDE.md's "no user history" rule)."""
+    oracle_result = await oracle_draw(count=request.oracle_count)
+    result = await synthesize_followup(request.previous, oracle_result, request.question)
+
+    db.add(
+        Reading(
+            user_id=user.id,
+            birth_data=None,
             synthesis_output=result.model_dump(mode="json"),
         )
     )

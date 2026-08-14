@@ -18,7 +18,12 @@ from app.core.schema import (
     SolarArcResult,
 )
 from app.synthesis import master_interpreter
-from app.synthesis.master_interpreter import _fallback_synthesis, synthesize
+from app.synthesis.master_interpreter import (
+    _fallback_followup,
+    _fallback_synthesis,
+    synthesize,
+    synthesize_followup,
+)
 
 
 def _make_result(engine: str, themes: list[str], summary: str = "summary") -> EngineResult:
@@ -251,3 +256,114 @@ async def test_synthesize_omits_forecast_from_payload_when_absent(monkeypatch):
     payload = json.loads(captured_contents["value"])
     assert "forecast" not in payload
     assert result.forecast is None
+
+
+def test_fallback_with_only_one_engine_present():
+    oracle = _make_result("oracle", ["ก"], summary="O summary")
+
+    result = _fallback_synthesis(oracle=oracle)
+
+    assert result.per_engine_breakdown == {"oracle": oracle}
+    assert result.convergent_themes == []
+    assert "O summary" in result.final_reading
+
+
+def test_fallback_includes_oracle_question_when_present():
+    oracle = _make_result("oracle", [], summary="O summary")
+
+    result = _fallback_synthesis(oracle=oracle, oracle_question="ความรักจะเป็นอย่างไร")
+
+    assert result.oracle_question == "ความรักจะเป็นอย่างไร"
+    assert "ความรักจะเป็นอย่างไร" in result.final_reading
+
+
+@pytest.mark.asyncio
+async def test_synthesize_with_only_oracle_engine_omits_other_keys_from_payload(monkeypatch):
+    captured_contents = {}
+
+    class _FakeModelsCapturing:
+        async def generate_content(self, *args, **kwargs):
+            captured_contents["value"] = kwargs["contents"]
+            fake_parsed = master_interpreter._LLMSynthesis(
+                final_reading="ok", convergent_themes=[], divergent_notes=[]
+            )
+            return _FakeResponse(fake_parsed)
+
+    class _FakeAioCapturing:
+        def __init__(self):
+            self.models = _FakeModelsCapturing()
+
+    class _FakeGenAIClientCapturing:
+        def __init__(self, *args, **kwargs):
+            self.aio = _FakeAioCapturing()
+
+    monkeypatch.setattr(master_interpreter.genai, "Client", _FakeGenAIClientCapturing)
+
+    oracle = _make_result("oracle", ["ก"])
+
+    result = await synthesize(oracle=oracle, oracle_question="วันนี้จะเป็นอย่างไร")
+
+    payload = json.loads(captured_contents["value"])
+    assert set(payload.keys()) == {"oracle", "oracle_question"}
+    assert result.per_engine_breakdown == {"oracle": oracle}
+    assert result.oracle_question == "วันนี้จะเป็นอย่างไร"
+
+
+@pytest.mark.asyncio
+async def test_synthesize_followup_uses_gemini_and_merges_new_oracle_into_breakdown(monkeypatch):
+    previous_oracle = _make_result("oracle", ["เก่า"], summary="old oracle summary")
+    previous = master_interpreter.SynthesisOutput(
+        final_reading="คำทำนายเดิม",
+        convergent_themes=[],
+        divergent_notes=[],
+        per_engine_breakdown={"oracle": previous_oracle},
+    )
+    new_oracle = _make_result("oracle", ["ใหม่"], summary="new oracle summary")
+
+    fake_parsed = master_interpreter._LLMSynthesis(
+        final_reading="ต่อเนื่องจากเดิม", convergent_themes=[], divergent_notes=[]
+    )
+    monkeypatch.setattr(master_interpreter.genai, "Client", _make_fake_client(fake_parsed))
+
+    result = await synthesize_followup(previous, new_oracle, "แล้วเรื่องงานล่ะ")
+
+    assert result.final_reading == "ต่อเนื่องจากเดิม"
+    assert result.per_engine_breakdown == {"oracle": new_oracle}
+    assert result.oracle_question == "แล้วเรื่องงานล่ะ"
+
+
+@pytest.mark.asyncio
+async def test_synthesize_followup_falls_back_when_gemini_call_fails(monkeypatch):
+    monkeypatch.setattr(master_interpreter.genai, "Client", _FakeGenAIClient)
+
+    previous = master_interpreter.SynthesisOutput(
+        final_reading="คำทำนายเดิม",
+        convergent_themes=[],
+        divergent_notes=[],
+        per_engine_breakdown={},
+    )
+    new_oracle = _make_result("oracle", ["ใหม่"], summary="new oracle summary")
+
+    result = await synthesize_followup(previous, new_oracle, "แล้วเรื่องงานล่ะ")
+
+    assert "คำทำนายเดิม" in result.final_reading
+    assert "new oracle summary" in result.final_reading
+    assert result.oracle_question == "แล้วเรื่องงานล่ะ"
+
+
+def test_fallback_followup_appends_new_oracle_to_previous_reading():
+    previous = master_interpreter.SynthesisOutput(
+        final_reading="คำทำนายเดิม",
+        convergent_themes=["x"],
+        divergent_notes=[],
+        per_engine_breakdown={},
+    )
+    new_oracle = _make_result("oracle", [], summary="new oracle summary")
+
+    result = _fallback_followup(previous, new_oracle, "คำถามเพิ่มเติม")
+
+    assert result.final_reading.startswith("คำทำนายเดิม")
+    assert "new oracle summary" in result.final_reading
+    assert result.convergent_themes == ["x"]
+    assert result.per_engine_breakdown == {"oracle": new_oracle}
+    assert result.oracle_question == "คำถามเพิ่มเติม"

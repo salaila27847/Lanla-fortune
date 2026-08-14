@@ -90,18 +90,31 @@ class ForecastResponse(BaseModel):
 
 ## ReadingRequest (body ของ `POST /api/reading`) / ForecastRequest (body ของ `POST /api/forecast`)
 
-รูปร่างเดียวกันทุกประการ — `birth_data` บังคับ ส่วน forecast sub-request ทั้ง 4 ไม่บังคับและเลือก
-ได้อิสระต่อกัน (ไม่เลือกเลยก็ได้) `/api/reading` คำนวณ forecast ที่เลือกแล้วส่งเข้า `synthesize()`
-ด้วย (ดูหัวข้อถัดไป) ส่วน `/api/forecast` คืนแค่ตารางดิบ ไม่สังเคราะห์ ไม่บันทึกประวัติ — ใช้เมื่อ
-อยากได้ผลลัพธ์แบบตารางอย่างเดียวโดยไม่ต้องจั่วไพ่/เรียก Gemini
+**แก้ไข 2026-08-14**: `ReadingRequest` ไม่บังคับ `birth_data` อีกต่อไป — ผู้ใช้กดข้ามได้ทีละศาสตร์
+(ปุ่มข้ามที่หน้า `/reading`) ตอนนี้ `birth_data`/`tarot`/`oracle` เป็น optional อิสระต่อกันทั้ง 3
+ตัว การมี/ไม่มีแต่ละ field คือสิ่งที่บอก backend ว่าจะรันเอนจินไหนบ้าง — ต้องมีอย่างน้อย 1 ใน 3
+เสมอ (validate ด้วย `model_validator`) `ForecastRequest` (ของ `/api/forecast` เดี่ยวๆ) ยังคงบังคับ
+`birth_data` เหมือนเดิมเพราะเป็น Uranian-only endpoint
 
 ```python
+class TarotRequest(BaseModel):
+    spread: str = "three_card"   # id จาก backend/app/knowledge_base/tarot/spreads.yaml
+
+class OracleRequest(BaseModel):
+    card_count: int              # ge=3, le=9 — สุ่มจากระบบเสมอ (ไม่ใช่ผู้ใช้เลือก)
+    question: str | None = None  # บังคับก็ต่อเมื่อ oracle เป็นศาสตร์เดียวที่เลือก (ไม่มี birth_data/tarot)
+
 class ReadingRequest(BaseModel):
-    birth_data: BirthData
+    birth_data: BirthData | None = None
+    tarot: TarotRequest | None = None
+    oracle: OracleRequest | None = None
     solar_arc: SolarArcRequest | None = None
     transit: TransitRequest | None = None
     lunar_return: LunarReturnRequest | None = None
     relocation: RelocationRequest | None = None
+    # model_validator บังคับ: (1) มีอย่างน้อย 1 ใน birth_data/tarot/oracle
+    # (2) forecast sub-request ต้องมาคู่กับ birth_data เสมอ
+    # (3) oracle-only (ไม่มี birth_data และ tarot) ต้องมี oracle.question
 
 class ForecastRequest(BaseModel):
     birth_data: BirthData
@@ -111,23 +124,44 @@ class ForecastRequest(BaseModel):
     relocation: RelocationRequest | None = None
 ```
 
+## FollowUpRequest (body ของ `POST /api/reading/follow-up`) — แก้ไข 2026-08-14
+
+Flow "ถามเพิ่ม" ที่หน้าแสดงผล: ผู้ใช้พิมพ์คำถามต่อ ระบบสุ่มไพ่ออราเคิลชุดใหม่ 3-9 ใบให้เปิด แล้ว
+สังเคราะห์ต่อเนื่องจากคำทำนายเดิม โดยให้น้ำหนักกับไพ่ชุดใหม่เป็นหลัก — client ส่ง `SynthesisOutput`
+ที่ตัวเองมีอยู่แล้วกลับมาตรงๆ (ข้อมูลในเซสชันนี้ ไม่ใช่ดึงจาก `/history` — ยังคงกฎ "ห้ามใช้ประวัติ
+ผู้ใช้" ในข้อ 1)
+
+```python
+class FollowUpRequest(BaseModel):
+    previous: SynthesisOutput    # ผลลัพธ์ล่าสุดที่ client มีอยู่แล้วในเซสชันนี้
+    question: str                # min_length=1
+    oracle_count: int            # ge=3, le=9 — สุ่มจากระบบเสมอ
+```
+
 ## SynthesisOutput (output สุดท้ายจาก Master Interpreter)
 
 ```python
 class SynthesisOutput(BaseModel):
     final_reading: str                  # คำทำนายฉบับสมบูรณ์ — ถ้ามี forecast จะทอเนื้อหาเข้าไปด้วย
-    convergent_themes: list[str]        # จุดที่ 3 ศาสตร์เห็นตรงกัน
+    convergent_themes: list[str]        # จุดที่แต่ละศาสตร์ที่เลือกใช้เห็นตรงกัน (ว่างได้ถ้าใช้ศาสตร์เดียว)
     divergent_notes: list[str]          # จุดที่ขัดแย้งกัน พร้อมคำอธิบาย
-    per_engine_breakdown: dict[str, EngineResult]  # ผลดิบของแต่ละศาสตร์ ให้ผู้ใช้ตรวจสอบที่มาได้
+    per_engine_breakdown: dict[str, EngineResult]  # เฉพาะศาสตร์ที่ผู้ใช้เลือกใช้จริง (1-3 key)
     forecast: ForecastResponse | None = None  # ผลดิบของ forecast ที่เลือก (ถ้ามี) — เก็บไว้ให้
                                                # frontend แสดงตารางต่อ แม้จะสังเคราะห์เข้า
                                                # final_reading ไปแล้วก็ตาม
+    oracle_question: str | None = None  # คำถามที่ขับเคลื่อนการอ่านไพ่ออราเคิลรอบนี้ (ตอนเลือก
+                                         # oracle ศาสตร์เดียว หรือจาก /api/reading/follow-up)
 ```
 
 **หมายเหตุ (แก้ไข 2026-08-13)**: เดิม (Phase 12) ตั้งใจให้ forecast เป็นตารางดิบล้วนๆ ไม่ผ่าน
 Gemini synthesis — ผู้ใช้กลับคำตัดสินใจนี้ใน Phase 13 ให้ `synthesize()` รับ `forecast` เป็น
 argument ที่ 4 (optional) แล้วนำไปพิจารณาร่วมกับ 3 engine หลักด้วย ดู `master_interpreter.py`
 `SYSTEM_PROMPT` ข้อ 4
+
+**หมายเหตุ (แก้ไข 2026-08-14)**: `synthesize()` รับ `uranian`/`tarot`/`oracle` เป็น `EngineResult |
+None` ทั้ง 3 ตัวแล้ว (เดิมบังคับทั้ง 3) — เฉพาะตัวที่ไม่ใช่ `None` เท่านั้นที่เข้า payload ที่ส่งให้
+Gemini และปรากฏใน `per_engine_breakdown` ผลลัพธ์ ถ้าเหลือศาสตร์เดียวหลังข้าม `SYSTEM_PROMPT` จะสั่ง
+ให้ตีความเจาะลึกศาสตร์นั้นแทนขั้นตอน convergence/divergence ปกติ — ดู `master_interpreter.py` ข้อ 3
 
 ## User / Reading (persistence — Postgres/Neon prod, SQLite dev, ดู `backend/app/db/models.py`)
 
@@ -144,10 +178,12 @@ class User(Base):
     created_at: datetime
 
 class Reading(Base):
-    id: int                  # primary key
-    user_id: int             # FK -> users.id
-    birth_data: dict          # BirthData.model_dump(mode="json") ทั้งก้อน
-    synthesis_output: dict    # SynthesisOutput.model_dump(mode="json") ทั้งก้อน
+    id: int                       # primary key
+    user_id: int                  # FK -> users.id
+    birth_data: dict | None       # BirthData.model_dump(mode="json") — None ถ้าข้ามยูเรเนียน
+                                   # (oracle-only, tarot+oracle, หรือมาจาก /api/reading/follow-up
+                                   # ซึ่งไม่มี birth data เลย) — แก้ไข 2026-08-14
+    synthesis_output: dict         # SynthesisOutput.model_dump(mode="json") ทั้งก้อน
     created_at: datetime
 ```
 
@@ -157,7 +193,7 @@ class Reading(Base):
 class ReadingRecord(BaseModel):
     id: int
     created_at: datetime
-    birth_data: BirthData
+    birth_data: BirthData | None = None  # แก้ไข 2026-08-14 — ดูหมายเหตุที่ Reading ด้านบน
     synthesis: SynthesisOutput
 ```
 
@@ -166,4 +202,9 @@ class ReadingRecord(BaseModel):
 - **ไพ่ทาโรต์ (แก้ไข 2026-08-12)**: ตรวจสอบทุก repo ในบัญชี GitHub ที่ใช้งานแล้ว ไม่พบไฟล์อ้างอิงจากโปรเจกต์
   Destiny Matrix ตามที่ระบุไว้เดิม ผู้ใช้ยืนยันให้เขียนความหมายทั้ง 78 ใบขึ้นใหม่ทั้งหมดโดยอิงฐานความหมาย
   สากล (Rider-Waite-Smith) แทน — ดู `backend/app/knowledge_base/tarot/README.md`
+- **เลย์เอาท์ไพ่ทาโรต์ (แก้ไข 2026-08-14)**: `spreads.yaml` มี 5 แบบให้ผู้ใช้เลือกที่หน้า `/reading`
+  แล้ว (เดิมมีแค่ single_card/three_card) — เพิ่ม situation_advice (3 ใบ), relationship_five
+  (5 ใบ), celtic_cross (10 ใบ) ตาม PRD ข้อ 4.2 ที่ระบุไว้ตั้งแต่แรกว่าต้องรองรับหลาย spread
+  frontend เก็บ id/ตำแหน่ง/จำนวนใบชุดเดียวกันไว้ที่ `frontend/src/lib/tarotSpreads.ts` (ต้อง sync
+  มือกับ YAML นี้เพราะ backend ตัดไพ่ตามลำดับ position ที่ zip กับ card ที่สุ่มได้)
 - Knowledge base ทุกไฟล์เก็บเป็น YAML ใน `backend/app/knowledge_base/{uranian,tarot,oracle}/` แยกโฟลเดอร์ตามศาสตร์

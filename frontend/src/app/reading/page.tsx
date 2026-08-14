@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import BirthDataForm from "@/components/BirthDataForm";
+import TarotSpreadPicker from "@/components/TarotSpreadPicker";
+import OracleQuestionForm from "@/components/OracleQuestionForm";
 import CardDrawStep from "@/components/CardDrawStep";
 import ReadingResult from "@/components/ReadingResult";
+import { randomOracleCount } from "@/lib/random";
 import {
   getReading,
   ReadingRequestError,
@@ -11,13 +14,32 @@ import {
   type ForecastOptions,
   type SynthesisOutput,
 } from "@/lib/api";
+import type { TarotSpreadInfo } from "@/lib/tarotSpreads";
 
-type Step = "birth-data" | "tarot" | "oracle" | "loading" | "result" | "error";
+type Step =
+  | "birth-data"
+  | "tarot-spread"
+  | "tarot-draw"
+  | "oracle-question"
+  | "oracle-draw"
+  | "loading"
+  | "result"
+  | "error";
 
 export default function ReadingPage() {
   const [step, setStep] = useState<Step>("birth-data");
+
   const [birthData, setBirthData] = useState<BirthData | null>(null);
   const [forecastOptions, setForecastOptions] = useState<ForecastOptions>({});
+  const [uranianSkipped, setUranianSkipped] = useState(false);
+
+  const [tarotSpread, setTarotSpread] = useState<TarotSpreadInfo | null>(null);
+  const [tarotSkipped, setTarotSkipped] = useState(false);
+
+  const [oracleQuestion, setOracleQuestion] = useState<string | null>(null);
+  const [oracleCount, setOracleCount] = useState<number | null>(null);
+  const [oracleSkipped, setOracleSkipped] = useState(false);
+
   const [result, setResult] = useState<SynthesisOutput | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isInputError, setIsInputError] = useState(false);
@@ -26,18 +48,45 @@ export default function ReadingPage() {
     setStep("birth-data");
     setBirthData(null);
     setForecastOptions({});
+    setUranianSkipped(false);
+    setTarotSpread(null);
+    setTarotSkipped(false);
+    setOracleQuestion(null);
+    setOracleCount(null);
+    setOracleSkipped(false);
     setResult(null);
     setErrorMessage("");
     setIsInputError(false);
   }
 
-  async function fetchReading(data: BirthData) {
+  // Oracle is the only discipline that always has a card count (system
+  // randomized, 3-9) — but whether it also needs a question first depends
+  // on whether it's the *only* discipline in play (both others skipped).
+  function enterOracleStage(skippedUranian: boolean, skippedTarot: boolean) {
+    if (skippedUranian && skippedTarot) {
+      setStep("oracle-question");
+    } else {
+      setOracleCount(randomOracleCount());
+      setStep("oracle-draw");
+    }
+  }
+
+  async function fetchReading(skipOracle: boolean) {
+    setOracleSkipped(skipOracle);
     setStep("loading");
     try {
-      // Forecast options (if any) ride along in the same request, so the
-      // synthesized reading itself can weave in Solar Arc/Transit/Lunar
-      // Return/Relocation — see backend/app/main.py's ReadingRequest.
-      const reading = await getReading(data, forecastOptions);
+      const reading = await getReading({
+        ...(uranianSkipped ? {} : { birth_data: birthData as BirthData, ...forecastOptions }),
+        ...(tarotSkipped ? {} : { tarot: { spread: (tarotSpread as TarotSpreadInfo).id } }),
+        ...(skipOracle
+          ? {}
+          : {
+              oracle: {
+                card_count: oracleCount as number,
+                ...(oracleQuestion ? { question: oracleQuestion } : {}),
+              },
+            }),
+      });
       setResult(reading);
       setStep("result");
     } catch (err) {
@@ -52,6 +101,10 @@ export default function ReadingPage() {
     }
   }
 
+  // Oracle can only be skipped when at least one other discipline is
+  // already in play — otherwise there would be nothing left to read.
+  const oracleIsSkippable = !(uranianSkipped && tarotSkipped);
+
   return (
     <div className="flex flex-1 flex-col justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
       {step === "birth-data" && (
@@ -59,37 +112,72 @@ export default function ReadingPage() {
           onSubmit={(data, options) => {
             setBirthData(data);
             setForecastOptions(options);
-            setStep("tarot");
+            setUranianSkipped(false);
+            setStep("tarot-spread");
+          }}
+          onSkip={() => {
+            setBirthData(null);
+            setForecastOptions({});
+            setUranianSkipped(true);
+            setStep("tarot-spread");
           }}
         />
       )}
 
-      {step === "tarot" && (
-        <CardDrawStep
-          title="จั่วไพ่ทาโรต์"
-          subtitle="ตั้งสมาธิและแตะไพ่ที่รู้สึกดึงดูดใจ"
-          cardCount={3}
-          nextLabel="ถัดไป: จั่วไพ่ออราเคิล"
-          onComplete={() => setStep("oracle")}
+      {step === "tarot-spread" && (
+        <TarotSpreadPicker
+          onSelect={(spread) => {
+            setTarotSpread(spread);
+            setTarotSkipped(false);
+            setStep("tarot-draw");
+          }}
+          onSkip={() => {
+            setTarotSkipped(true);
+            enterOracleStage(uranianSkipped, true);
+          }}
         />
       )}
 
-      {step === "oracle" && (
+      {step === "tarot-draw" && tarotSpread && (
+        <CardDrawStep
+          title={`จั่วไพ่ทาโรต์ — ${tarotSpread.name_th}`}
+          subtitle="ตั้งสมาธิและแตะไพ่ที่รู้สึกดึงดูดใจทีละใบ"
+          cardCount={tarotSpread.positions.length}
+          positionLabels={tarotSpread.positions}
+          nextLabel="ถัดไป"
+          onComplete={() => enterOracleStage(uranianSkipped, false)}
+        />
+      )}
+
+      {step === "oracle-question" && (
+        <OracleQuestionForm
+          title="คำถามของคุณคืออะไร?"
+          subtitle="พิมพ์คำถามที่อยากให้ไพ่ออราเคิลตอบ ก่อนเริ่มจั่วไพ่"
+          submitLabel="ถัดไป: จั่วไพ่ออราเคิล"
+          onSubmit={(question) => {
+            setOracleQuestion(question);
+            setOracleCount(randomOracleCount());
+            setStep("oracle-draw");
+          }}
+        />
+      )}
+
+      {step === "oracle-draw" && oracleCount && (
         <CardDrawStep
           title="จั่วไพ่ออราเคิล"
-          subtitle="แตะไพ่ 1 ใบเพื่อรับข้อความนำทาง"
-          cardCount={1}
+          subtitle={`ระบบสุ่มไพ่ออราเคิล ${oracleCount} ใบให้คุณเปิดทีละใบ`}
+          cardCount={oracleCount}
           nextLabel="ดูคำทำนาย"
-          onComplete={() => birthData && fetchReading(birthData)}
+          onComplete={() => fetchReading(false)}
+          onSkip={oracleIsSkippable ? () => fetchReading(true) : undefined}
+          skipLabel="ข้ามไพ่ออราเคิล"
         />
       )}
 
       {step === "loading" && (
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950 dark:border-zinc-700 dark:border-t-zinc-50" />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            กำลังสังเคราะห์คำทำนายจากทั้ง 3 ศาสตร์...
-          </p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">กำลังสังเคราะห์คำทำนาย...</p>
         </div>
       )}
 
@@ -98,7 +186,7 @@ export default function ReadingPage() {
           <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
           <button
             type="button"
-            onClick={() => (isInputError ? restart() : birthData && fetchReading(birthData))}
+            onClick={() => (isInputError ? restart() : fetchReading(oracleSkipped))}
             className="rounded-full bg-zinc-950 px-6 py-2.5 text-sm font-medium text-zinc-50 dark:bg-zinc-50 dark:text-zinc-950"
           >
             {isInputError ? "แก้ไขข้อมูล" : "ลองใหม่"}

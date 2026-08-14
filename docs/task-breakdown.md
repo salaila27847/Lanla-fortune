@@ -515,3 +515,69 @@ pair, third factor ถูกต้อง, ไม่มี meaning ว่าง) 
       ทั้งเล่ม, 226/231 คู่, 4,400 รายการ, ระบุ 5 คู่ที่ขาดทั้งคู่ไว้ชัดเจน)
 - [x] อัปเดต `knowledge_base/uranian/README.md` ให้ตรงสถานะจบทั้งเล่มแล้ว — ดูหัวข้อ README ด้านล่าง
 - [x] regenerate + republish review artifact ให้ครอบคลุมทั้ง 22 หมวด — ดูลิงก์ในข้อความสรุปงาน
+
+## Phase 34 — ปุ่มข้ามทีละศาสตร์, เลือกเลย์เอาท์ไพ่ทาโรต์, สุ่มจำนวนไพ่ออราเคิล 3-9, flow "ถามเพิ่ม"
+
+ผู้ใช้ขอ 4 อย่างพร้อมกัน (2026-08-14): (1) ปุ่มข้ามให้ใช้ 1-2 ใน 3 ศาสตร์ก็ได้ ไม่บังคับครบ 3 (2)
+ไพ่ทาโรต์เลือกเลย์เอาท์ได้หลายแบบ ไม่ตายตัวที่ 3 ใบ (3) ไพ่ออราเคิล: ถ้าใช้ศาสตร์เดียว (ข้ามอีก 2)
+ต้องถามคำถามก่อนแล้วค่อยสุ่มจำนวนไพ่ (3-9) ให้เปิด, ถ้าใช้ร่วมกับศาสตร์อื่นสุ่มจำนวนได้เลยไม่ต้องถาม
+(4) หน้าผลลัพธ์เพิ่มช่อง "ถามเพิ่ม" — เปิดไพ่ออราเคิลชุดใหม่ (สุ่ม 3-9 อีกเช่นกัน) แล้วสังเคราะห์ต่อ
+เนื่องจากคำทำนายเดิม โดยให้น้ำหนักไพ่ชุดใหม่เป็นหลัก
+
+- [x] Backend: `schema.py` — `ReadingRequest.birth_data`/`tarot`/`oracle` เป็น optional อิสระต่อกัน
+      ทั้ง 3 (เดิม `birth_data` บังคับ) เพิ่ม `TarotRequest{spread}`, `OracleRequest{card_count:
+      ge=3,le=9, question}` และ `model_validator` บังคับ (1) มีอย่างน้อย 1 ใน 3 (2) forecast
+      sub-request ต้องมาคู่กับ birth_data (3) oracle-only (ไม่มี birth_data และ tarot) ต้องมี
+      oracle.question — เพิ่ม `SynthesisOutput.oracle_question`, `FollowUpRequest{previous:
+      SynthesisOutput, question, oracle_count}`, `ReadingRecord.birth_data` เป็น optional
+- [x] Backend: `knowledge_base/tarot/spreads.yaml` เพิ่ม 3 เลย์เอาท์ใหม่ (เดิมมีแค่ 2):
+      situation_advice (3 ใบ), relationship_five (5 ใบ), celtic_cross (10 ใบ) — engine.py เดิม
+      generic รองรับอยู่แล้ว ไม่ต้องแก้โค้ด (ตาม PRD 4.2 ที่ระบุไว้ตั้งแต่แรกว่าต้องรองรับหลาย spread)
+- [x] Backend: `master_interpreter.py` — `synthesize()` รับ `uranian`/`tarot`/`oracle` เป็น
+      `EngineResult | None` ทั้ง 3 (เดิมบังคับทั้ง 3) เฉพาะตัวที่ไม่ None เข้า payload/
+      `per_engine_breakdown` — `SYSTEM_PROMPT` เพิ่มกฎ: ถ้าเหลือศาสตร์เดียวให้ตีความเจาะลึกแทน
+      convergence/divergence ปกติ, ถ้ามี `oracle_question` ให้ใช้เป็นบริบทหลัก — เพิ่ม
+      `synthesize_followup()` + `FOLLOWUP_SYSTEM_PROMPT` + `_fallback_followup()` สำหรับ flow
+      "ถามเพิ่ม" (`POST /api/reading/follow-up`) ให้ไพ่ออราเคิลชุดใหม่เป็นหลัก ต่อเนื่องจาก
+      `previous.final_reading`
+- [x] Backend: `db/models.py` — `Reading.birth_data` เป็น nullable (oracle-only และ follow-up
+      reading ไม่มี birth data) — `main.py`: `/api/reading` รันเฉพาะ engine ที่มี field ส่งมา
+      (`asyncio.gather` แบบ dynamic ตาม dict ของ task ที่เลือก) เพิ่ม endpoint ใหม่
+      `POST /api/reading/follow-up` (จั่วไพ่ออราเคิลจำนวนตามที่ client ส่งมา + เรียก
+      `synthesize_followup()` + บันทึกลง history เหมือน `/api/reading`)
+- [x] Backend: อัปเดต test suite ทั้งหมดให้ตรงกับ request shape ใหม่ เพิ่ม test: engine เดียว/หลาย
+      engine ใน `synthesize()`/`_fallback_synthesis()`, `synthesize_followup()`/
+      `_fallback_followup()`, validation 422 (ไม่เลือกศาสตร์เลย, forecast ไม่มี birth_data,
+      oracle-only ไม่มีคำถาม, oracle card_count นอกช่วง 3-9), เลย์เอาท์ทาโรต์ใหม่ทั้ง 3 แบบคืนจำนวน
+      ใบถูกต้อง, `/api/reading/follow-up` บันทึก history ด้วย birth_data เป็น null — รวม
+      **128 tests ผ่านหมด**, ruff clean
+- [x] Frontend: เพิ่มปุ่มข้าม — `BirthDataForm` ("ข้ามยูเรเนียน"), `TarotSpreadPicker` (component
+      ใหม่ แสดง 5 เลย์เอาท์ให้เลือก + "ข้ามไพ่ทาโรต์"), `CardDrawStep` เพิ่ม prop `onSkip`/
+      `skipLabel` (ใช้กับขั้นไพ่ออราเคิลตอน combined mode เท่านั้น — ซ่อนถ้าข้ามอีก 2 ศาสตร์ไปแล้ว
+      เพื่อบังคับให้เหลืออย่างน้อย 1 ศาสตร์เสมอ) + prop `positionLabels` โชว์ชื่อตำแหน่งใต้การ์ดแต่ละ
+      ใบ — เพิ่ม `OracleQuestionForm` (component ใหม่ ใช้ทั้งตอนเริ่ม oracle-only และ flow "ถามเพิ่ม")
+      — `reading/page.tsx` เขียน state machine ใหม่ทั้งหมด: birth-data(skip)→tarot-spread(skip)→
+      tarot-draw→oracle-question(เฉพาะ standalone)/oracle-draw(skip ได้ถ้าไม่ standalone)→
+      loading→result — จำนวนไพ่ออราเคิลสุ่มด้วย `randomOracleCount()` (`lib/random.ts`, 3-9)
+      ก่อนเข้า `CardDrawStep` เสมอ (ฝั่ง client สุ่มเพื่อโชว์ก่อน แล้วส่ง count เดียวกันให้ backend
+      จั่วจริง)
+- [x] Frontend: `lib/tarotSpreads.ts` (const `TAROT_SPREADS` ใหม่ — sync มือกับ
+      `spreads.yaml`, ดูหมายเหตุใน data-schema.md), `lib/api.ts` เปลี่ยน `getReading()` รับ
+      `ReadingSubmission` เดียว (`birth_data`/`tarot`/`oracle` optional ตรงกับ `ReadingRequest`
+      ใหม่) แทนพารามิเตอร์แยก เพิ่ม `getFollowUpReading()`, `SynthesisOutput.oracle_question`
+- [x] Frontend: `ReadingResult.tsx` — tab เอนจินสร้างจาก `Object.keys(per_engine_breakdown)`
+      ที่มีจริงเท่านั้น (เดิม hardcode 3 tab เสมอ) โชว์ `oracle_question` เป็น quote block บน tab
+      ออราเคิลถ้ามี — เพิ่มช่อง "มีคำถามเพิ่มเติมไหม?" ท้ายหน้า: พิมพ์คำถาม → สุ่มจำนวนไพ่ → เปิดไพ่ผ่าน
+      `CardDrawStep` เดิม → เรียก `getFollowUpReading()` → แทนที่ `activeResult` (state ในตัว
+      component เอง ไม่กระทบ prop `result` เดิม) ทำซ้ำได้เรื่อยๆ ในหน้าเดียวโดยไม่ reload
+- [x] Frontend: `app/api/reading/follow-up/route.ts` (BFF proxy ใหม่ รูปแบบเดียวกับ
+      `app/api/reading/route.ts`), `history/page.tsx` แสดง fallback ("คำถาม: ..." หรือ "ไม่ใช้
+      ข้อมูลวันเกิด") แทน `birth_data.place` เมื่อ `birth_data` เป็น null
+- [x] ทดสอบผ่านเบราว์เซอร์จริงแล้ว (Playwright, bypass login ชั่วคราวเหมือน Phase 12/13 แล้ว revert
+      กลับหมดก่อนจบงาน — ยืนยันด้วย `git diff frontend/src/auth.ts` ว่างเปล่า): สถานการณ์ที่ 1
+      (ข้ามยูเรเนียน+ทาโรต์ทั้งคู่ → ต้องถามคำถามก่อนสุ่มไพ่ → เปิดไพ่ครบ → ผลลัพธ์มีแค่ tab
+      ภาพรวม/ออราเคิล → ใช้ flow "ถามเพิ่ม" สำเร็จ สังเคราะห์ต่อเนื่องจริง) และสถานการณ์ที่ 2 (กรอกวัน
+      เกิดจริง + เลือกเลย์เอาท์กากบาทเซลติก 10 ใบจั่วครบ + กดข้ามไพ่ออราเคิลตอน combined mode →
+      ผลลัพธ์มีแค่ tab ภาพรวม/ยูเรเนียน/ทาโรต์ ไม่มี tab ออราเคิล) ทั้งสองผ่านหมด รวมถึงหน้า
+      `/history` แสดง fallback label ถูกต้องเมื่อ `birth_data` เป็น null — `npm run build`/
+      `npm run lint`/`tsc --noEmit` ผ่าน, backend 128 tests ผ่าน, ruff clean

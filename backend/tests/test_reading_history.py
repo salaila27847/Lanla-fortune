@@ -18,20 +18,58 @@ BIRTH_DATA = {
     "timezone": "Asia/Bangkok",
 }
 
+PREVIOUS_SYNTHESIS = {
+    "final_reading": "คำทำนายฉบับก่อนหน้า",
+    "convergent_themes": [],
+    "divergent_notes": [],
+    "per_engine_breakdown": {
+        "oracle": {
+            "engine": "oracle",
+            "summary": "s",
+            "themes": ["t"],
+            "raw_findings": [{"label": "l", "meaning": "m", "weight": 0.5}],
+            "confidence": 0.5,
+        }
+    },
+    "forecast": None,
+    "oracle_question": None,
+}
+
 
 def _auth_headers(user_id: str, email: str, secret: str = "test-internal-secret") -> dict:
     return {"X-Internal-Secret": secret, "X-User-Id": user_id, "X-User-Email": email}
 
 
 async def _fake_synthesize(
-    uranian: EngineResult, tarot: EngineResult, oracle: EngineResult, forecast=None
+    uranian: EngineResult | None = None,
+    tarot: EngineResult | None = None,
+    oracle: EngineResult | None = None,
+    forecast=None,
+    oracle_question: str | None = None,
 ):
+    engines = {
+        name: result
+        for name, result in (("uranian", uranian), ("tarot", tarot), ("oracle", oracle))
+        if result is not None
+    }
     return SynthesisOutput(
         final_reading="fake reading",
         convergent_themes=["x"],
         divergent_notes=[],
-        per_engine_breakdown={"uranian": uranian, "tarot": tarot, "oracle": oracle},
+        per_engine_breakdown=engines,
         forecast=forecast,
+        oracle_question=oracle_question,
+    )
+
+
+async def _fake_synthesize_followup(previous: SynthesisOutput, oracle: EngineResult, question: str):
+    return SynthesisOutput(
+        final_reading="fake follow-up reading",
+        convergent_themes=[],
+        divergent_notes=[],
+        per_engine_breakdown={**previous.per_engine_breakdown, "oracle": oracle},
+        forecast=previous.forecast,
+        oracle_question=question,
     )
 
 
@@ -40,6 +78,7 @@ def _mock_synthesize(monkeypatch):
     # Tests shouldn't hit the real Gemini API — same spirit as
     # test_master_interpreter_fallback.py's monkeypatching of genai.Client.
     monkeypatch.setattr(main_module, "synthesize", _fake_synthesize)
+    monkeypatch.setattr(main_module, "synthesize_followup", _fake_synthesize_followup)
 
 
 async def test_missing_internal_secret_is_unauthorized(client):
@@ -131,3 +170,80 @@ async def test_readings_ordered_newest_first(client):
 
     history = (await client.get("/api/readings", headers=_auth_headers("sub-a", "a@x.com"))).json()
     assert [r["birth_data"]["place"] for r in history] == ["Second", "First"]
+
+
+async def test_reading_requires_at_least_one_discipline(client):
+    res = await client.post("/api/reading", json={}, headers=_auth_headers("sub-a", "a@x.com"))
+    assert res.status_code == 422
+
+
+async def test_reading_forecast_option_without_birth_data_is_rejected(client):
+    res = await client.post(
+        "/api/reading",
+        json={"tarot": {"spread": "three_card"}, "solar_arc": {"target_date": "2026-08-13"}},
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 422
+
+
+async def test_reading_oracle_only_requires_a_question(client):
+    res = await client.post(
+        "/api/reading",
+        json={"oracle": {"card_count": 5}},
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 422
+
+
+async def test_reading_oracle_card_count_out_of_range_is_rejected(client):
+    res = await client.post(
+        "/api/reading",
+        json={"oracle": {"card_count": 2, "question": "จะเป็นอย่างไร"}},
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 422
+
+
+async def test_reading_tarot_and_oracle_only_persists_null_birth_data(client):
+    res = await client.post(
+        "/api/reading",
+        json={
+            "tarot": {"spread": "celtic_cross"},
+            "oracle": {"card_count": 5},
+        },
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert set(body["per_engine_breakdown"].keys()) == {"tarot", "oracle"}
+
+    history = (await client.get("/api/readings", headers=_auth_headers("sub-a", "a@x.com"))).json()
+    assert history[0]["birth_data"] is None
+
+
+async def test_reading_oracle_only_with_question_includes_it_in_response(client):
+    res = await client.post(
+        "/api/reading",
+        json={"oracle": {"card_count": 4, "question": "ความรักของฉันจะเป็นอย่างไร"}},
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert set(body["per_engine_breakdown"].keys()) == {"oracle"}
+    assert body["oracle_question"] == "ความรักของฉันจะเป็นอย่างไร"
+
+
+async def test_reading_follow_up_persists_with_null_birth_data(client):
+    res = await client.post(
+        "/api/reading/follow-up",
+        json={"previous": PREVIOUS_SYNTHESIS, "question": "แล้วเรื่องงานล่ะ", "oracle_count": 5},
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["final_reading"] == "fake follow-up reading"
+    assert body["oracle_question"] == "แล้วเรื่องงานล่ะ"
+
+    history = (await client.get("/api/readings", headers=_auth_headers("sub-a", "a@x.com"))).json()
+    assert history[0]["birth_data"] is None
+    assert history[0]["synthesis"]["final_reading"] == "fake follow-up reading"

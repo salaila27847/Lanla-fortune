@@ -24,9 +24,10 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 type Props = {
   onSubmit: (birthData: BirthData, forecastOptions: ForecastOptions) => void;
+  onSkip: () => void;
 };
 
-export default function BirthDataForm({ onSubmit }: Props) {
+export default function BirthDataForm({ onSubmit, onSkip }: Props) {
   const [date, setDate] = useState("");
   const [knowsTime, setKnowsTime] = useState(true);
   const [time, setTime] = useState("12:00");
@@ -378,7 +379,14 @@ export default function BirthDataForm({ onSubmit }: Props) {
         type="submit"
         className="mt-2 rounded-full bg-zinc-950 px-6 py-3 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
       >
-        ถัดไป: จั่วไพ่ทาโรต์
+        ถัดไป
+      </button>
+      <button
+        type="button"
+        onClick={onSkip}
+        className="mx-auto text-sm text-zinc-500 underline-offset-2 hover:underline dark:text-zinc-400"
+      >
+        ข้ามยูเรเนียน (ไม่ใช้ข้อมูลวันเกิด)
       </button>
     </form>
   );
