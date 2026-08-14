@@ -581,3 +581,30 @@ pair, third factor ถูกต้อง, ไม่มี meaning ว่าง) 
       ผลลัพธ์มีแค่ tab ภาพรวม/ยูเรเนียน/ทาโรต์ ไม่มี tab ออราเคิล) ทั้งสองผ่านหมด รวมถึงหน้า
       `/history` แสดง fallback label ถูกต้องเมื่อ `birth_data` เป็น null — `npm run build`/
       `npm run lint`/`tsc --noEmit` ผ่าน, backend 128 tests ผ่าน, ruff clean
+
+## Phase 35 — production fixes: DB pool pre-ping, Gemini retry, สลับโมเดล synthesis
+
+หลัง Phase 34 ขึ้น production จริง เจอ 3 ปัญหาต่อเนื่องกัน แก้ทีละ PR:
+
+- [x] **PR #16**: `backend/app/db/session.py` — `create_async_engine()` เพิ่ม `pool_pre_ping=True`,
+      `pool_recycle=300` แก้ `asyncpg.InterfaceError: connection is closed` ที่เกิดตอน Neon
+      (serverless Postgres) ตัด idle connection ทิ้งฝั่งเซิร์ฟเวอร์ แล้ว pool ยังถือ connection ตายอยู่
+- [x] **PR #17**: production log โชว์ `/api/reading/follow-up` fallback ทันทีตอนเจอ Gemini
+      `503 UNAVAILABLE` ("high demand... please try again later") ทั้งที่ error message เองบอกให้ลอง
+      ใหม่ — ดึง logic เรียก Gemini ออกมาเป็น `_generate_synthesis()` ใช้ร่วมกันทั้ง `synthesize()`/
+      `synthesize_followup()` เพิ่ม retry สูงสุด 3 ครั้งพร้อม backoff สำหรับ status ที่ retry แล้วน่าจะ
+      หาย (429/500/502/503/504) ก่อนค่อย fallback — พร้อมปิด `automatic_function_calling` ใน config
+      (ไม่ได้ใช้ tools อยู่แล้ว) ซึ่งบังเอิญไปเงียบ warning "Direct use of automatic function calling
+      (AFC)..." ที่ SDK log ทุก process ด้วย — รวม 132 tests ผ่าน (เพิ่ม 4 test ครอบคลุม retry)
+- [x] **PR ล่าสุด**: retry ที่เพิ่งแก้ช่วยกรณี error ชั่วคราวได้ แต่ production ดันเจอ
+      `429 RESOURCE_EXHAUSTED` รัว ๆ แทน — สาเหตุคือ `gemini-3.5-flash` มี free-tier quota แค่ 20
+      request/วัน (`generativelanguage.googleapis.com/generate_content_free_tier_requests`) ทำให้
+      แทบทุกคำทำนายจริงตกไป fallback หมด (retry ช่วยไม่ได้เพราะโควต้ารายวัน ไม่ใช่ error ชั่วคราว) —
+      ผู้ใช้ตัดสินใจสลับโมเดลเป็น `gemini-2.5-flash-lite` แทน (quota หลวมกว่ามาก) เปลี่ยนที่
+      `render.yaml` (`SYNTHESIS_MODEL` เป็น literal `value:` ที่ Blueprint คุมอยู่ — แก้ผ่าน dashboard
+      ตรง ๆ ไม่ได้เพราะ sync รอบหน้าจะทับกลับ ต้องแก้ในโค้ดแทน) พร้อม sync ค่าเดียวกันใน
+      `backend/.env.example` และ fallback default ใน `master_interpreter.py` ทั้ง 2 จุด (`synthesize()`/
+      `synthesize_followup()`) — อัปเดต `README.md`/`docs/PRD.md`/`CLAUDE.md` ให้ตรงกันด้วย
+- [ ] **ยังไม่ยืนยัน**: ต้องรอผู้ใช้ทดสอบ production จริงหลัง deploy ว่า `gemini-2.5-flash-lite`
+      ทำให้ได้คำทำนายจาก AI จริงแทน fallback text หรือไม่ (ตัวเลข quota ที่อ้างอิงมาจาก blog
+      aggregator ไม่ใช่เอกสารทางการของ Google โดยตรง)
