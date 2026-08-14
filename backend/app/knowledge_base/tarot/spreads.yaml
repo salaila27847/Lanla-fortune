@@ -1,12 +1,14 @@
 spreads:
   - id: single_card
     name_th: "ไพ่ใบเดียว"
+    description_th: "คำตอบตรงประเด็น เหมาะกับคำถามที่ต้องการโฟกัสเดียว"
     positions:
       - id: focus
         label_th: "คำตอบ"
 
   - id: three_card
     name_th: "อดีต-ปัจจุบัน-อนาคต"
+    description_th: "ภาพรวมสถานการณ์ตามช่วงเวลา"
     positions:
       - id: past
         label_th: "อดีต"
@@ -14,3 +16,54 @@ spreads:
         label_th: "ปัจจุบัน"
       - id: future
         label_th: "อนาคต"
+
+  - id: situation_advice
+    name_th: "สถานการณ์-อุปสรรค-คำแนะนำ"
+    description_th: "เจาะปัญหาตรงหน้าและแนวทางแก้ไข"
+    positions:
+      - id: situation
+        label_th: "สถานการณ์"
+      - id: obstacle
+        label_th: "อุปสรรค"
+      - id: advice
+        label_th: "คำแนะนำ"
+
+  - id: relationship_five
+    name_th: "ความสัมพันธ์ 5 ใบ"
+    description_th: "มุมมองความสัมพันธ์ระหว่างคุณกับอีกฝ่าย"
+    positions:
+      - id: self
+        label_th: "คุณ"
+      - id: other
+        label_th: "อีกฝ่าย"
+      - id: connection
+        label_th: "ความสัมพันธ์ตอนนี้"
+      - id: challenge
+        label_th: "ความท้าทาย"
+      - id: outlook
+        label_th: "แนวโน้ม"
+
+  - id: celtic_cross
+    name_th: "กากบาทเซลติก"
+    description_th: "เจาะลึกภาพรวมชีวิตแบบครบทุกมิติ (10 ใบ)"
+    positions:
+      - id: present
+        label_th: "สถานการณ์ปัจจุบัน"
+      - id: challenge
+        label_th: "อุปสรรค"
+      - id: foundation
+        label_th: "รากฐาน / อดีตไกล"
+      - id: recent_past
+        label_th: "อดีตใกล้"
+      - id: crown
+        label_th: "เป้าหมาย / จุดสูงสุด"
+      - id: near_future
+        label_th: "อนาคตอันใกล้"
+      - id: self
+        label_th: "ตัวคุณเอง"
+      - id: environment
+        label_th: "สิ่งแวดล้อมรอบตัว"
+      - id: hopes_fears
+        label_th: "ความหวังและความกลัว"
+      - id: outcome
+        label_th: "ผลลัพธ์สุดท้าย"

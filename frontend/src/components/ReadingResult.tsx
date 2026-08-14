@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { ForecastResponse, PictureResult, SynthesisOutput } from "@/lib/api";
+import CardDrawStep from "@/components/CardDrawStep";
+import { randomOracleCount } from "@/lib/random";
+import {
+  getFollowUpReading,
+  type ForecastResponse,
+  type PictureResult,
+  type SynthesisOutput,
+} from "@/lib/api";
 
 type Props = {
   result: SynthesisOutput;
@@ -13,6 +20,8 @@ const ENGINE_LABELS: Record<string, string> = {
   tarot: "ไพ่ทาโรต์",
   oracle: "ไพ่ออราเคิล",
 };
+
+const ENGINES = ["uranian", "tarot", "oracle"] as const;
 
 type Tab = "overview" | "uranian" | "tarot" | "oracle" | "forecast";
 
@@ -145,18 +154,51 @@ function ForecastTab({ forecast }: { forecast: ForecastResponse }) {
   );
 }
 
+type FollowUpStage = "idle" | "drawing" | "loading";
+
 export default function ReadingResult({ result, onRestart }: Props) {
+  const [activeResult, setActiveResult] = useState(result);
   const [tab, setTab] = useState<Tab>("overview");
-  const forecast = result.forecast;
+
+  const [followUpStage, setFollowUpStage] = useState<FollowUpStage>("idle");
+  const [followUpQuestion, setFollowUpQuestion] = useState("");
+  const [followUpCardCount, setFollowUpCardCount] = useState(0);
+  const [followUpError, setFollowUpError] = useState("");
+
+  const forecast = activeResult.forecast;
   const hasForecast = Boolean(forecast && availableForecastSections(forecast).length > 0);
+  const engineTabs = ENGINES.filter((engine) => activeResult.per_engine_breakdown[engine]);
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "ภาพรวม" },
-    { id: "uranian", label: ENGINE_LABELS.uranian },
-    { id: "tarot", label: ENGINE_LABELS.tarot },
-    { id: "oracle", label: ENGINE_LABELS.oracle },
+    ...engineTabs.map((engine) => ({ id: engine as Tab, label: ENGINE_LABELS[engine] })),
     ...(hasForecast ? [{ id: "forecast" as const, label: "การพยากรณ์ล่วงหน้า" }] : []),
   ];
+
+  function startFollowUpDraw() {
+    if (!followUpQuestion.trim()) return;
+    setFollowUpError("");
+    setFollowUpCardCount(randomOracleCount());
+    setFollowUpStage("drawing");
+  }
+
+  async function submitFollowUp() {
+    setFollowUpStage("loading");
+    try {
+      const updated = await getFollowUpReading({
+        previous: activeResult,
+        question: followUpQuestion.trim(),
+        oracle_count: followUpCardCount,
+      });
+      setActiveResult(updated);
+      setTab("overview");
+      setFollowUpQuestion("");
+      setFollowUpStage("idle");
+    } catch {
+      setFollowUpError("ไม่สามารถถามเพิ่มเติมได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
+      setFollowUpStage("idle");
+    }
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
@@ -180,16 +222,16 @@ export default function ReadingResult({ result, onRestart }: Props) {
       {tab === "overview" && (
         <div className="flex flex-col gap-6">
           <p className="whitespace-pre-line text-base leading-8 text-zinc-800 dark:text-zinc-200">
-            {result.final_reading}
+            {activeResult.final_reading}
           </p>
 
-          {result.convergent_themes.length > 0 && (
+          {activeResult.convergent_themes.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                จุดร่วมของ 3 ศาสตร์
+                จุดร่วมของแต่ละศาสตร์
               </h3>
               <div className="flex flex-wrap gap-2">
-                {result.convergent_themes.map((theme) => (
+                {activeResult.convergent_themes.map((theme) => (
                   <span
                     key={theme}
                     className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
@@ -201,13 +243,13 @@ export default function ReadingResult({ result, onRestart }: Props) {
             </div>
           )}
 
-          {result.divergent_notes.length > 0 && (
+          {activeResult.divergent_notes.length > 0 && (
             <div>
               <h3 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                 จุดที่แต่ละศาสตร์มองต่างกัน
               </h3>
               <ul className="list-inside list-disc space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {result.divergent_notes.map((note, i) => (
+                {activeResult.divergent_notes.map((note, i) => (
                   <li key={i}>{note}</li>
                 ))}
               </ul>
@@ -216,15 +258,21 @@ export default function ReadingResult({ result, onRestart }: Props) {
         </div>
       )}
 
-      {(["uranian", "tarot", "oracle"] as const).map(
+      {ENGINES.map(
         (engine) =>
-          tab === engine && (
+          tab === engine &&
+          activeResult.per_engine_breakdown[engine] && (
             <div key={engine} className="flex flex-col gap-4">
+              {engine === "oracle" && activeResult.oracle_question && (
+                <p className="rounded-lg bg-zinc-100 px-3 py-2 text-sm italic text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                  คำถามที่ถาม: “{activeResult.oracle_question}”
+                </p>
+              )}
               <p className="text-base leading-7 text-zinc-800 dark:text-zinc-200">
-                {result.per_engine_breakdown[engine]?.summary}
+                {activeResult.per_engine_breakdown[engine]?.summary}
               </p>
               <div className="flex flex-wrap gap-2">
-                {result.per_engine_breakdown[engine]?.themes.map((theme) => (
+                {activeResult.per_engine_breakdown[engine]?.themes.map((theme) => (
                   <span
                     key={theme}
                     className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
@@ -234,7 +282,7 @@ export default function ReadingResult({ result, onRestart }: Props) {
                 ))}
               </div>
               <ul className="space-y-3">
-                {result.per_engine_breakdown[engine]?.raw_findings.map((finding, i) => (
+                {activeResult.per_engine_breakdown[engine]?.raw_findings.map((finding, i) => (
                   <li
                     key={i}
                     className="rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800"
@@ -249,6 +297,54 @@ export default function ReadingResult({ result, onRestart }: Props) {
       )}
 
       {tab === "forecast" && forecast && <ForecastTab forecast={forecast} />}
+
+      <div className="rounded-xl border border-zinc-200 p-5 dark:border-zinc-800">
+        <h3 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+          มีคำถามเพิ่มเติมไหม?
+        </h3>
+
+        {followUpStage === "idle" && (
+          <div className="flex flex-col gap-3">
+            <textarea
+              value={followUpQuestion}
+              onChange={(e) => setFollowUpQuestion(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="ถามต่อจากคำทำนายนี้..."
+              aria-label="คำถามเพิ่มเติม"
+              className="rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+            <button
+              type="button"
+              disabled={!followUpQuestion.trim()}
+              onClick={startFollowUpDraw}
+              className="mx-auto rounded-full bg-zinc-950 px-6 py-2.5 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
+            >
+              ถามเพิ่ม
+            </button>
+            {followUpError && (
+              <p className="text-center text-sm text-red-600 dark:text-red-400">{followUpError}</p>
+            )}
+          </div>
+        )}
+
+        {followUpStage === "drawing" && (
+          <CardDrawStep
+            title="จั่วไพ่ออราเคิลเพิ่มเติม"
+            subtitle={`ระบบสุ่มไพ่ออราเคิล ${followUpCardCount} ใบให้คุณเปิดทีละใบ`}
+            cardCount={followUpCardCount}
+            nextLabel="ดูคำทำนาย"
+            onComplete={submitFollowUp}
+          />
+        )}
+
+        {followUpStage === "loading" && (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950 dark:border-zinc-700 dark:border-t-zinc-50" />
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">กำลังสังเคราะห์คำทำนายเพิ่มเติม...</p>
+          </div>
+        )}
+      </div>
 
       <button
         type="button"

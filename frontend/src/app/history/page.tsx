@@ -47,7 +47,10 @@ export default async function HistoryPage() {
               >
                 <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm font-medium text-zinc-950 dark:text-zinc-50">
-                    {reading.birth_data.place}
+                    {reading.birth_data?.place ??
+                      (reading.synthesis.oracle_question
+                        ? `คำถาม: ${reading.synthesis.oracle_question}`
+                        : "ไม่ใช้ข้อมูลวันเกิด")}
                   </span>
                   <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     {formatDate(reading.created_at)}

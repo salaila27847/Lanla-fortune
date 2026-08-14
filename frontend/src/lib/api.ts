@@ -51,15 +51,32 @@ export type SynthesisOutput = {
   final_reading: string;
   convergent_themes: string[];
   divergent_notes: string[];
-  per_engine_breakdown: Record<string, EngineResult>;
+  per_engine_breakdown: Partial<Record<"uranian" | "tarot" | "oracle", EngineResult>>;
   forecast: ForecastResponse | null;
+  oracle_question?: string | null;
 };
 
 export type ReadingRecord = {
   id: number;
   created_at: string;
-  birth_data: BirthData;
+  birth_data: BirthData | null;
   synthesis: SynthesisOutput;
+};
+
+// Body shape for POST /api/reading — birth_data/tarot/oracle are each
+// independently optional, since the user can skip any 1 or 2 of the 3
+// disciplines (see backend/app/core/schema.py's ReadingRequest). At least
+// one of the three must be present, or the backend rejects with 422.
+export type ReadingSubmission = ForecastOptions & {
+  birth_data?: BirthData;
+  tarot?: { spread: string };
+  oracle?: { card_count: number; question?: string };
+};
+
+export type FollowUpSubmission = {
+  previous: SynthesisOutput;
+  question: string;
+  oracle_count: number;
 };
 
 export class ReadingRequestError extends Error {
@@ -91,14 +108,11 @@ async function extractErrorDetail(res: Response): Promise<string | undefined> {
   return undefined;
 }
 
-export async function getReading(
-  birthData: BirthData,
-  forecastOptions: ForecastOptions = {},
-): Promise<SynthesisOutput> {
-  const res = await fetch("/api/reading", {
+async function postReadingRequest(path: string, body: unknown): Promise<SynthesisOutput> {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ birth_data: birthData, ...forecastOptions }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -106,4 +120,14 @@ export async function getReading(
   }
 
   return res.json();
+}
+
+export async function getReading(submission: ReadingSubmission): Promise<SynthesisOutput> {
+  return postReadingRequest("/api/reading", submission);
+}
+
+export async function getFollowUpReading(
+  submission: FollowUpSubmission,
+): Promise<SynthesisOutput> {
+  return postReadingRequest("/api/reading/follow-up", submission);
 }

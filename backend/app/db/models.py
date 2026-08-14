@@ -33,7 +33,10 @@ class Reading(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    birth_data: Mapped[dict] = mapped_column(JSON)
+    # Nullable since a reading may skip Uranian entirely (oracle-only, or
+    # oracle+tarot with no birth data) — see CLAUDE.md's per-discipline
+    # skip buttons, and /api/reading/follow-up, which never has birth data.
+    birth_data: Mapped[dict | None] = mapped_column(JSON, nullable=True, default=None)
     synthesis_output: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
 

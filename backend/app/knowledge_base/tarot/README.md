@@ -14,8 +14,11 @@ major_arcana.yaml   ← 22 ใบ (0-21) — id, number, name_th, name_en,
 minor_arcana.yaml   ← 56 ใบ (4 ชุด x 14 อันดับ: ไม้เท้า/ถ้วย/ดาบ/เหรียญ,
                        เอซ-10, เพจ, อัศวิน, ควีน, คิง) — schema เดียวกับ major
                        เพิ่ม suit, suit_th, rank
-spreads.yaml        ← นิยามหน้าไพ่: single_card (1 ใบ), three_card
-                       (อดีต-ปัจจุบัน-อนาคต — ใช้เป็น default ของ engine)
+spreads.yaml        ← นิยามหน้าไพ่ 5 แบบให้ผู้ใช้เลือกที่หน้า /reading (แก้ไข 2026-08-14):
+                       single_card (1 ใบ), three_card (อดีต-ปัจจุบัน-อนาคต —
+                       ใช้เป็น default ของ engine), situation_advice
+                       (สถานการณ์-อุปสรรค-คำแนะนำ, 3 ใบ), relationship_five
+                       (ความสัมพันธ์ 5 ใบ), celtic_cross (กากบาทเซลติก, 10 ใบ)
 ```
 
 `app/modules/tarot/engine.py` โหลดทั้งสำรับ (78 ใบ) สุ่มจั่วตามจำนวนตำแหน่งใน spread ที่เลือก

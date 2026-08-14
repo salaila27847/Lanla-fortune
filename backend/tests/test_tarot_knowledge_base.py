@@ -35,6 +35,32 @@ def test_both_spreads_are_defined():
     assert [p["id"] for p in three["positions"]] == ["past", "present", "future"]
 
 
+@pytest.mark.parametrize(
+    ("spread_id", "expected_count"),
+    [
+        ("situation_advice", 3),
+        ("relationship_five", 5),
+        ("celtic_cross", 10),
+    ],
+)
+def test_additional_spreads_have_the_expected_position_count(spread_id, expected_count):
+    spread = _load_spread(spread_id)
+    assert len(spread["positions"]) == expected_count
+    position_ids = [p["id"] for p in spread["positions"]]
+    assert len(position_ids) == len(set(position_ids))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "spread_id",
+    ["situation_advice", "relationship_five", "celtic_cross"],
+)
+async def test_draw_with_each_additional_spread_returns_matching_card_count(spread_id):
+    spread = _load_spread(spread_id)
+    result = await draw(spread_type=spread_id)
+    assert len(result.raw_findings) == len(spread["positions"])
+
+
 @pytest.mark.asyncio
 async def test_default_draw_uses_three_card_spread():
     result = await draw()
