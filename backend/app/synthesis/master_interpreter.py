@@ -67,6 +67,9 @@ SYSTEM_PROMPT = """\
 5. ข้อความที่ส่งมาอาจมี key "oracle_question" — คำถามที่ผู้ใช้พิมพ์ไว้ก่อนจั่วไพ่ออราเคิลโดยเฉพาะ
    (มักมาคู่กับกรณีที่ใช้ไพ่ออราเคิลศาสตร์เดียว) ถ้ามี key นี้ ให้ใช้เป็นบริบทหลักในการตีความไพ่ออราเคิล
    และตอบคำถามนั้นให้ตรงประเด็นที่สุด
+6. ห้ามนำความหมายดิบของแต่ละ finding (ไพ่/ตำแหน่งดาว/picture) มาแปะต่อกันเฉย ๆ ทีละข้อ —
+   final_reading ต้องเป็นการสังเคราะห์ที่แปลความหมายดิบทั้งหมดให้เข้ากับบริบทของคำถามหรือสถานการณ์
+   ผู้ใช้ เป็นคำอธิบาย/คำแนะนำเดียวที่ลื่นไหลเป็นเนื้อเดียวกัน ไม่ใช่สรุปความหมายทีละใบ/ทีละจุดแยกกัน
 
 ตอบกลับเป็น JSON เท่านั้น ตรงตาม schema:
 {
@@ -87,6 +90,8 @@ FOLLOWUP_SYSTEM_PROMPT = """\
 3. ให้ความสำคัญกับ "new_oracle_cards" (ไพ่ออราเคิลชุดใหม่) เป็นหลักในการตอบ "question" —
    ใช้ "previous_reading" เป็นบริบทประกอบเพื่อให้คำทำนายต่อเนื่องกัน ไม่ใช่หัวข้อหลัก
 4. เขียน final_reading ให้ต่อเนื่องเป็นธรรมชาติจากคำทำนายฉบับก่อนหน้า ไม่ใช่เริ่มต้นใหม่ทั้งหมด
+5. ห้ามนำความหมายของไพ่แต่ละใบใน "new_oracle_cards" มาแปะต่อกันเฉย ๆ ทีละใบ — ต้องสังเคราะห์
+   ความหมายทั้งหมดให้เป็นคำตอบเดียวที่ตรงกับ "question" ไม่ใช่รายการความหมายแยกทีละใบ
 
 ตอบกลับเป็น JSON เท่านั้น ตรงตาม schema:
 {
@@ -136,12 +141,16 @@ async def _generate_synthesis(
     that and fall back to a non-LLM SynthesisOutput."""
     config = types.GenerateContentConfig(
         system_instruction=system_prompt,
-        max_output_tokens=4096,
-        # Structured JSON output doesn't need extended reasoning, and
-        # leaving this on AUTOMATIC (the model default) was silently
-        # eating the token budget on thinking before ever emitting
-        # the JSON, truncating it mid-string.
-        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        # Raised from 4096 alongside re-enabling thinking below — dynamic
+        # thinking needs headroom on top of the JSON output itself, or we
+        # hit the same silent truncation that -1/AUTOMATIC caused before.
+        max_output_tokens=8192,
+        # Dynamic thinking (-1, model decides how much to reason) — real
+        # synthesis of multiple raw findings into one answer needs it,
+        # versus thinking_budget=0 which produced shallow paraphrasing of
+        # each finding's meaning back-to-back instead (see SYSTEM_PROMPT
+        # rule 6 / FOLLOWUP_SYSTEM_PROMPT rule 5).
+        thinking_config=types.ThinkingConfig(thinking_budget=-1),
         response_mime_type="application/json",
         response_schema=_LLMSynthesis,
         http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
