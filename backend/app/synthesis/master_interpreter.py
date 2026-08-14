@@ -32,6 +32,7 @@ from stored /history (same "no user history" rule, see FollowUpRequest).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -102,6 +103,13 @@ _ENGINE_LABELS_TH = {
 
 SYNTHESIS_TIMEOUT_SECONDS = 20.0
 
+# Gemini's own 503 message ("high demand... please try again later") says
+# the fix is a retry, so transient 5xx/429 responses get a couple of quick
+# retries before we give up and fall back — see _generate_synthesis().
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+_MAX_ATTEMPTS = 3
+_RETRY_BACKOFF_SECONDS = 1.0
+
 
 class _LLMSynthesis(BaseModel):
     """Shape Gemini must produce — passed as response_schema so the SDK
@@ -113,6 +121,57 @@ class _LLMSynthesis(BaseModel):
     final_reading: str
     convergent_themes: list[str]
     divergent_notes: list[str]
+
+
+async def _generate_synthesis(
+    client: genai.Client, model: str, system_prompt: str, payload: dict[str, object]
+) -> _LLMSynthesis:
+    """Shared by synthesize() and synthesize_followup(): calls Gemini with
+    response_schema=_LLMSynthesis, retrying transient 5xx/429 errors with a
+    short backoff before giving up. Raises on a non-retryable error or once
+    attempts are exhausted — callers catch that and fall back to a non-LLM
+    SynthesisOutput."""
+    config = types.GenerateContentConfig(
+        system_instruction=system_prompt,
+        max_output_tokens=4096,
+        # Structured JSON output doesn't need extended reasoning, and
+        # leaving this on AUTOMATIC (the model default) was silently
+        # eating the token budget on thinking before ever emitting
+        # the JSON, truncating it mid-string.
+        thinking_config=types.ThinkingConfig(thinking_budget=0),
+        response_mime_type="application/json",
+        response_schema=_LLMSynthesis,
+        http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
+        # We never pass tools/function declarations, so the SDK's automatic
+        # function-calling wrapper has nothing to do here — disabling it
+        # also silences its one-time "direct use of AFC is not recommended"
+        # log warning, which otherwise fires on every process's first call.
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+    )
+    contents = json.dumps(payload, ensure_ascii=False)
+
+    for attempt in range(_MAX_ATTEMPTS):
+        try:
+            response = await client.aio.models.generate_content(
+                model=model, contents=contents, config=config
+            )
+            parsed = response.parsed
+            if not isinstance(parsed, _LLMSynthesis):
+                raise TypeError(f"Gemini returned no valid parsed output (got {parsed!r})")
+            return parsed
+        except errors.APIError as exc:
+            last_attempt = attempt == _MAX_ATTEMPTS - 1
+            if exc.code not in _RETRYABLE_STATUS_CODES or last_attempt:
+                raise
+            logger.warning(
+                "Gemini call failed with retryable error (attempt %d/%d), retrying: %s",
+                attempt + 1,
+                _MAX_ATTEMPTS,
+                exc,
+            )
+            await asyncio.sleep(_RETRY_BACKOFF_SECONDS * (attempt + 1))
+
+    raise AssertionError("unreachable — loop always returns or raises")
 
 
 async def synthesize(
@@ -141,25 +200,7 @@ async def synthesize(
         payload["oracle_question"] = oracle_question
 
     try:
-        response = await client.aio.models.generate_content(
-            model=model,
-            contents=json.dumps(payload, ensure_ascii=False),
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                max_output_tokens=4096,
-                # Structured JSON output doesn't need extended reasoning, and
-                # leaving this on AUTOMATIC (the model default) was silently
-                # eating the token budget on thinking before ever emitting
-                # the JSON, truncating it mid-string.
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
-                response_mime_type="application/json",
-                response_schema=_LLMSynthesis,
-                http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
-            ),
-        )
-        parsed = response.parsed
-        if not isinstance(parsed, _LLMSynthesis):
-            raise TypeError(f"Gemini returned no valid parsed output (got {parsed!r})")
+        parsed = await _generate_synthesis(client, model, SYSTEM_PROMPT, payload)
 
         return SynthesisOutput(
             final_reading=parsed.final_reading,
@@ -195,21 +236,7 @@ async def synthesize_followup(
     }
 
     try:
-        response = await client.aio.models.generate_content(
-            model=model,
-            contents=json.dumps(payload, ensure_ascii=False),
-            config=types.GenerateContentConfig(
-                system_instruction=FOLLOWUP_SYSTEM_PROMPT,
-                max_output_tokens=4096,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
-                response_mime_type="application/json",
-                response_schema=_LLMSynthesis,
-                http_options=types.HttpOptions(timeout=int(SYNTHESIS_TIMEOUT_SECONDS * 1000)),
-            ),
-        )
-        parsed = response.parsed
-        if not isinstance(parsed, _LLMSynthesis):
-            raise TypeError(f"Gemini returned no valid parsed output (got {parsed!r})")
+        parsed = await _generate_synthesis(client, model, FOLLOWUP_SYSTEM_PROMPT, payload)
 
         return SynthesisOutput(
             final_reading=parsed.final_reading,

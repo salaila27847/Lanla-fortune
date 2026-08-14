@@ -8,6 +8,7 @@ import json
 from datetime import datetime, timezone
 
 import pytest
+from google.genai import errors
 
 from app.core.schema import (
     EngineResult,
@@ -367,3 +368,107 @@ def test_fallback_followup_appends_new_oracle_to_previous_reading():
     assert result.convergent_themes == ["x"]
     assert result.per_engine_breakdown == {"oracle": new_oracle}
     assert result.oracle_question == "คำถามเพิ่มเติม"
+
+
+def _server_error(code: int = 503) -> errors.ServerError:
+    return errors.ServerError(code, {"error": {"message": "high demand", "status": "UNAVAILABLE"}})
+
+
+def _client_error(code: int = 400) -> errors.ClientError:
+    return errors.ClientError(
+        code, {"error": {"message": "bad request", "status": "INVALID_ARGUMENT"}}
+    )
+
+
+def _fake_client_with_call_log(behaviors: list):
+    """behaviors: list of exceptions to raise, or None to return a
+    successful parsed response, one per call to generate_content."""
+    calls = {"count": 0, "configs": []}
+
+    class _FakeModelsSequenced:
+        async def generate_content(self, *args, **kwargs):
+            calls["configs"].append(kwargs["config"])
+            behavior = behaviors[calls["count"]]
+            calls["count"] += 1
+            if behavior is not None:
+                raise behavior
+            fake_parsed = master_interpreter._LLMSynthesis(
+                final_reading="recovered", convergent_themes=[], divergent_notes=[]
+            )
+            return _FakeResponse(fake_parsed)
+
+    class _FakeAioSequenced:
+        def __init__(self):
+            self.models = _FakeModelsSequenced()
+
+    class _FakeGenAIClientSequenced:
+        def __init__(self, *args, **kwargs):
+            self.aio = _FakeAioSequenced()
+
+    return _FakeGenAIClientSequenced, calls
+
+
+def _mock_sleep(monkeypatch, record: list | None = None):
+    async def _fake_sleep(seconds):
+        if record is not None:
+            record.append(seconds)
+
+    monkeypatch.setattr(master_interpreter.asyncio, "sleep", _fake_sleep)
+
+
+@pytest.mark.asyncio
+async def test_synthesize_retries_retryable_error_then_succeeds(monkeypatch):
+    sleep_calls: list = []
+    _mock_sleep(monkeypatch, record=sleep_calls)
+    client_cls, calls = _fake_client_with_call_log([_server_error(503), None])
+    monkeypatch.setattr(master_interpreter.genai, "Client", client_cls)
+
+    oracle = _make_result("oracle", ["ก"])
+
+    result = await synthesize(oracle=oracle)
+
+    assert result.final_reading == "recovered"
+    assert calls["count"] == 2
+    assert len(sleep_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_synthesize_falls_back_after_exhausting_retries_on_persistent_5xx(monkeypatch):
+    _mock_sleep(monkeypatch)
+    client_cls, calls = _fake_client_with_call_log(
+        [_server_error(503), _server_error(503), _server_error(503)]
+    )
+    monkeypatch.setattr(master_interpreter.genai, "Client", client_cls)
+
+    oracle = _make_result("oracle", ["ก"], summary="O summary")
+
+    result = await synthesize(oracle=oracle)
+
+    assert "ไม่พร้อมใช้งานชั่วคราว" in result.final_reading
+    assert calls["count"] == master_interpreter._MAX_ATTEMPTS
+
+
+@pytest.mark.asyncio
+async def test_synthesize_does_not_retry_non_retryable_client_error(monkeypatch):
+    _mock_sleep(monkeypatch)
+    client_cls, calls = _fake_client_with_call_log([_client_error(400)])
+    monkeypatch.setattr(master_interpreter.genai, "Client", client_cls)
+
+    oracle = _make_result("oracle", ["ก"], summary="O summary")
+
+    result = await synthesize(oracle=oracle)
+
+    assert "ไม่พร้อมใช้งานชั่วคราว" in result.final_reading
+    assert calls["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_generate_synthesis_disables_automatic_function_calling(monkeypatch):
+    client_cls, calls = _fake_client_with_call_log([None])
+    monkeypatch.setattr(master_interpreter.genai, "Client", client_cls)
+
+    oracle = _make_result("oracle", ["ก"])
+
+    await synthesize(oracle=oracle)
+
+    assert calls["configs"][0].automatic_function_calling.disable is True
