@@ -51,7 +51,12 @@ DATABASE_URL, _connect_args = _normalize_async_url(
     os.environ.get("DATABASE_URL") or "sqlite:///./dev.db"
 )
 
-engine = create_async_engine(DATABASE_URL, connect_args=_connect_args)
+engine = create_async_engine(
+    DATABASE_URL,
+    connect_args=_connect_args,
+    pool_pre_ping=True,
+    pool_recycle=300,
+)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 
