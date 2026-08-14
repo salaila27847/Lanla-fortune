@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+import httpx
 import pytest
 from google.genai import errors
 
@@ -472,3 +473,56 @@ async def test_generate_synthesis_disables_automatic_function_calling(monkeypatc
     await synthesize(oracle=oracle)
 
     assert calls["configs"][0].automatic_function_calling.disable is True
+
+
+@pytest.mark.asyncio
+async def test_synthesize_retries_httpx_timeout_then_succeeds(monkeypatch):
+    sleep_calls: list = []
+    _mock_sleep(monkeypatch, record=sleep_calls)
+    client_cls, calls = _fake_client_with_call_log([httpx.ReadTimeout("timed out"), None])
+    monkeypatch.setattr(master_interpreter.genai, "Client", client_cls)
+
+    oracle = _make_result("oracle", ["ก"])
+
+    result = await synthesize(oracle=oracle)
+
+    assert result.final_reading == "recovered"
+    assert calls["count"] == 2
+    assert len(sleep_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_synthesize_falls_back_after_exhausting_retries_on_persistent_timeout(monkeypatch):
+    _mock_sleep(monkeypatch)
+    client_cls, calls = _fake_client_with_call_log(
+        [httpx.ReadTimeout("timed out")] * master_interpreter._MAX_ATTEMPTS
+    )
+    monkeypatch.setattr(master_interpreter.genai, "Client", client_cls)
+
+    oracle = _make_result("oracle", ["ก"], summary="O summary")
+
+    result = await synthesize(oracle=oracle)
+
+    assert "ไม่พร้อมใช้งานชั่วคราว" in result.final_reading
+    assert "O summary" in result.final_reading
+    assert calls["count"] == master_interpreter._MAX_ATTEMPTS
+
+
+@pytest.mark.asyncio
+async def test_synthesize_followup_recovers_from_httpx_timeout(monkeypatch):
+    _mock_sleep(monkeypatch)
+    client_cls, calls = _fake_client_with_call_log([httpx.ReadTimeout("timed out"), None])
+    monkeypatch.setattr(master_interpreter.genai, "Client", client_cls)
+
+    previous = master_interpreter.SynthesisOutput(
+        final_reading="คำทำนายเดิม",
+        convergent_themes=[],
+        divergent_notes=[],
+        per_engine_breakdown={},
+    )
+    new_oracle = _make_result("oracle", ["ใหม่"], summary="new oracle summary")
+
+    result = await synthesize_followup(previous, new_oracle, "แล้วเรื่องงานล่ะ")
+
+    assert result.final_reading == "recovered"
+    assert calls["count"] == 2
