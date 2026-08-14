@@ -191,7 +191,7 @@ async def synthesize(
     }
 
     client = genai.Client()  # reads GEMINI_API_KEY (or GOOGLE_API_KEY) from env
-    model = os.environ.get("SYNTHESIS_MODEL", "gemini-3.5-flash")
+    model = os.environ.get("SYNTHESIS_MODEL", "gemini-2.5-flash-lite")
 
     payload: dict[str, object] = {name: result.model_dump() for name, result in engines.items()}
     if forecast is not None:
@@ -227,7 +227,7 @@ async def synthesize_followup(
     (this session's current reading, passed back by the client — see
     FollowUpRequest) rather than a from-scratch reading."""
     client = genai.Client()
-    model = os.environ.get("SYNTHESIS_MODEL", "gemini-3.5-flash")
+    model = os.environ.get("SYNTHESIS_MODEL", "gemini-2.5-flash-lite")
 
     payload = {
         "previous_reading": previous.final_reading,

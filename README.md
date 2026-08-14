@@ -50,7 +50,7 @@ Lanla-fortune/
       Tarot (RWS 78 ใบ), Oracle (deck กำหนดเอง "ลานลาออราเคิล" 88 ใบ)
 - [x] Uranian forecast (ไม่บังคับ, เลือกเปิดที่ฟอร์ม): Solar Arc Directions, Transit (รวม Station
       Points, Lunar Return, Relocation, Daily M/A, Transit Axes)
-- [x] Master Interpreter สังเคราะห์ผลผ่าน Gemini API (`gemini-3.5-flash`) — รวม forecast เข้าไป
+- [x] Master Interpreter สังเคราะห์ผลผ่าน Gemini API (`gemini-2.5-flash-lite`) — รวม forecast เข้าไป
       ด้วยถ้าผู้ใช้เลือกเปิด ไม่ใช่แค่ 3 engine หลัก (มี fallback ถ้า Gemini ใช้งานไม่ได้)
 - [x] ระบบสมาชิก: Google Sign-In (NextAuth.js v5) บังคับล็อกอินก่อนใช้ `/reading`/`/history`,
       บันทึกประวัติคำทำนายผูกกับ user ทุกครั้งอัตโนมัติ (Postgres/Neon prod, SQLite dev)
