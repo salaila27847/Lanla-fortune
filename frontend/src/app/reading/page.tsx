@@ -7,6 +7,7 @@ import OracleQuestionForm from "@/components/OracleQuestionForm";
 import CardDrawStep from "@/components/CardDrawStep";
 import ReadingResult from "@/components/ReadingResult";
 import { randomOracleCount } from "@/lib/random";
+import { ORACLE_DECK_SIZE, TAROT_DECK_SIZE } from "@/lib/deckSizes";
 import {
   getReading,
   ReadingRequestError,
@@ -143,6 +144,8 @@ export default function ReadingPage() {
           title={`จั่วไพ่ทาโรต์ — ${tarotSpread.name_th}`}
           subtitle="ตั้งสมาธิและแตะไพ่ที่รู้สึกดึงดูดใจทีละใบ"
           cardCount={tarotSpread.positions.length}
+          deckSize={TAROT_DECK_SIZE}
+          rows={3}
           positionLabels={tarotSpread.positions}
           nextLabel="ถัดไป"
           onComplete={() => enterOracleStage(uranianSkipped, false)}
@@ -165,8 +168,10 @@ export default function ReadingPage() {
       {step === "oracle-draw" && oracleCount && (
         <CardDrawStep
           title="จั่วไพ่ออราเคิล"
-          subtitle={`ระบบสุ่มไพ่ออราเคิล ${oracleCount} ใบให้คุณเปิดทีละใบ`}
+          subtitle={`ระบบสุ่มไพ่ออราเคิล ${oracleCount} ใบให้คุณเลือกจากทั้งสำรับ`}
           cardCount={oracleCount}
+          deckSize={ORACLE_DECK_SIZE}
+          rows={4}
           nextLabel="ดูคำทำนาย"
           onComplete={() => fetchReading(false)}
           onSkip={oracleIsSkippable ? () => fetchReading(true) : undefined}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import CardDrawStep from "@/components/CardDrawStep";
 import { randomOracleCount } from "@/lib/random";
+import { ORACLE_DECK_SIZE } from "@/lib/deckSizes";
 import {
   getFollowUpReading,
   type ForecastResponse,
@@ -331,8 +332,10 @@ export default function ReadingResult({ result, onRestart }: Props) {
         {followUpStage === "drawing" && (
           <CardDrawStep
             title="จั่วไพ่ออราเคิลเพิ่มเติม"
-            subtitle={`ระบบสุ่มไพ่ออราเคิล ${followUpCardCount} ใบให้คุณเปิดทีละใบ`}
+            subtitle={`ระบบสุ่มไพ่ออราเคิล ${followUpCardCount} ใบให้คุณเลือกจากทั้งสำรับ`}
             cardCount={followUpCardCount}
+            deckSize={ORACLE_DECK_SIZE}
+            rows={4}
             nextLabel="ดูคำทำนาย"
             onComplete={submitFollowUp}
           />
