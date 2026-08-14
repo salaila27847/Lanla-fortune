@@ -20,13 +20,15 @@ axis_meanings.yaml         ← ความหมายเมื่อปัจ�
 witte_pictures.yaml        ← glossary ละเอียดกว่า axis_meanings.yaml อีกชั้น — คู่ปัจจัย + ปัจจัย
                             ที่ 3 ที่ตกกลาง = ความหมายเฉพาะ (เช่น M+SUN=ARIES ต่างจาก M+SUN=SATURN)
                             ถอดความจากตำรา "Rules for Planetary Pictures" ของ Witte ฉบับเต็มที่
-                            ผู้ใช้ส่งมาให้ (OCR คุณภาพต่ำ ต้องอ่านสร้างใหม่ทุกรายการ) — ตอนนี้มี 4
-                            หมวดครบ/เกือบครบ: Meridian (M + อีก 21 ปัจจัย, 412 รายการ), Aries
-                            (ARIES + อีก 20 ปัจจัย, 386 รายการ), Sun (SUN + อีก 17/19 ปัจจัย — ขาด
-                            SUN+CUPIDO/SUN+APOLLON เพราะ OCR เสียหมด, 311 รายการ), Ascendant (A +
-                            อีก 15/18 ปัจจัย — ขาด A+NODE/A+CUPIDO/A+ADMETOS ด้วยเหตุผลเดียวกัน,
-                            294 รายการ) — รวม **73 base pairs, 1,403 รายการ** ยังไม่ได้ทำอีก 18
-                            หมวดที่เหลือของหนังสือ (Moon, Node, ดาวเคราะห์/TNP อีก 16 ดวง)
+                            ผู้ใช้ส่งมาให้ (OCR คุณภาพต่ำ ต้องอ่านสร้างใหม่ทุกรายการ) — **ทำครบทั้ง
+                            22 หมวดของหนังสือแล้ว** (Meridian → Aries → Sun → Ascendant → Moon →
+                            Node → Mercury → Venus → Mars → Jupiter → Saturn → Uranus → Neptune →
+                            Pluto → Cupido → Hades → Zeus → Kronos → Apollon → Admetos → Vulkanus
+                            → Poseidon ตามลำดับที่หนังสือกำหนด) รวม **226 base pairs, 4,400
+                            รายการ** จาก 231 คู่ที่เป็นไปได้ทางทฤษฎี — 5 คู่ที่ขาดไปทั้งคู่
+                            (A+NODE, A+CUPIDO, A+ADMETOS, CUPIDO+SUN, APOLLON+SUN) ข้ามไปตั้งใจ
+                            เพราะ OCR เสียจนระบุตัวบ่งชี้ปัจจัยที่ 3 ไม่ได้เลย ดูรายละเอียดที่หัวข้อ
+                            "ยังไม่ได้ทำ" ด้านล่าง
 research/                  ← เอกสารวิจัยต้นทาง (ภาษาไทย, ถอดความจากตำรา ไม่ใช่คำแปลตรงตัว)
                             เก็บไว้เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (เช่น house_meanings,
                             factors principle/function/expression/manifestation)
@@ -65,8 +67,8 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
    เก็บเฉพาะภาพที่มีจุดส่วนตัว (Sun, Moon, M, A, Node, จุดอาริส) อย่างน้อยหนึ่งจุด แล้วหาความหมาย
    ตามลำดับความสำคัญนี้ (`_picture_finding` ใน `engine.py`):
    1. **Type I ที่ตรงกับ `witte_pictures.yaml` เป๊ะๆ** (คู่ปัจจัย + ปัจจัยที่ 3 ตรงกัน) — เจาะจงและ
-      authoritative ที่สุด (weight 0.95) ตอนนี้ครอบคลุมหมวด Meridian (M-pair), Aries (ARIES-pair),
-      Sun (SUN-pair) และ Ascendant (A-pair)
+      authoritative ที่สุด (weight 0.95) ครอบคลุมครบทั้ง 22 หมวดของหนังสือแล้ว (226/231 base pairs
+      ที่เป็นไปได้ — ดูรายละเอียดหัวข้อ `witte_pictures.yaml` ด้านบนและ "ยังไม่ได้ทำ" ด้านล่าง)
    2. ถ้าไม่เจอ ลอง `planetary_pictures.yaml` (คู่ปัจจัยทั่วไป ไม่แยกปัจจัยที่ 3, weight 0.75-0.85)
    3. ถ้ายังไม่เจอ ประกอบความหมายทั่วไปจาก keywords ของแต่ละปัจจัยแทน (weight 0.45-0.55)
 
@@ -101,16 +103,18 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
   equal-house อ้างอิงจาก M ไม่ใช่ Placidus ที่ `swe.houses()` คืนมาตรงๆ — ต้องคำนวณ house cusp
   เองจาก M ก่อน (ดู `research/` เอกสารบทที่ 4 เรื่อง 360°-dial/reflex house)
 - `planetary_pictures.yaml` เป็นการคัดสรร 50 คู่ ไม่ใช่ชุดสมบูรณ์ตามต้นฉบับ (แต่ `witte_pictures.yaml`
-  ครอบคลุมได้ละเอียดกว่ามากสำหรับ 4 หมวดที่ทำแล้ว — ดูด้านบน)
+  ครอบคลุมได้ละเอียดกว่ามากแล้วสำหรับเกือบทั้งเล่ม — ดูด้านล่าง)
 - `axis_meanings.yaml` แกน SUN ขาด Sun+Apollon และ Sun+Admetos (ต้นฉบับไม่ได้ระบุไว้), แกน ARIES
   ยังไม่มีเลย (ไม่มีเนื้อหาต้นฉบับให้ถอดความ)
-- `witte_pictures.yaml` มีแค่หมวด Meridian/Aries/Sun/Ascendant (73 คู่จากทั้งหมด ~231 คู่ที่เป็นไปได้
-  ในหนังสือ) — หมวด Moon/Node และดาวเคราะห์/TNP อีก 16 ดวงยังไม่ได้ทำ (ตำราต้นฉบับผู้ใช้ส่งมาเป็น
-  ไฟล์ scan+OCR ทั้งเล่ม ~255 หน้า — เก็บสำเนาไว้ในเซสชันที่แปลได้เท่านั้น ยังไม่ได้ก็อปปี้เข้า repo
-  เพราะไฟล์ใหญ่มาก 9,599 บรรทัด — ต้องขอผู้ใช้ส่งซ้ำถ้าจะทำหมวดถัดไปในเซสชันใหม่) บาง base pair ใน
-  4 หมวดที่ทำแล้วเองก็ขาดบางรายการเพราะ OCR กู้คืนไม่ได้ (ดู comment `# missing:` ในตัวไฟล์ yaml) —
-  หมวด Aries คุณภาพ OCR แย่กว่าหมวด Meridian อย่างชัดเจน โดยเฉพาะคู่ ARIES+HADES ที่กู้คืนได้แค่
-  ~17/20 รายการ — หมวด Sun (SUN+CUPIDO, SUN+APOLLON) และ Ascendant (A+NODE, A+CUPIDO, A+ADMETOS)
-  ข้ามทั้งคู่ปัจจัยไป 5 คู่รวมเพราะตัวบ่งชี้ปัจจัยที่ 3 ("-XX" prefix) หายไปจาก OCR ทั้งหมดจนไม่มี
-  ทางระบุลำดับรายการได้อย่างน่าเชื่อถือ
+- `witte_pictures.yaml` **ทำครบทั้ง 22 หมวดของหนังสือแล้ว** (Meridian → Aries → Sun → Ascendant →
+  Moon → Node → Mercury → Venus → Mars → Jupiter → Saturn → Uranus → Neptune → Pluto → Cupido →
+  Hades → Zeus → Kronos → Apollon → Admetos → Vulkanus → Poseidon ตามลำดับที่หนังสือกำหนด) รวม
+  **226 base pairs / 4,400 รายการ** จาก 231 คู่ที่เป็นไปได้ทางทฤษฎี (C(22,2)) — บาง base pair เอง
+  ก็ขาดบางรายการ third-factor เพราะ OCR กู้คืนไม่ได้ (ดู comment `# missing:` ต่อท้ายคู่นั้นในตัวไฟล์
+  yaml) — คุณภาพ OCR แย่ลงเรื่อยๆ ตามหลังเล่ม (ตามที่หนังสือเองเตือนไว้) โดยเฉพาะหมวด Neptune เป็นต้นไป
+  **5 คู่ที่ขาดไปทั้งคู่** (ไม่ใช่แค่บางรายการ) คือ A+NODE, A+CUPIDO, A+ADMETOS (หมวด Ascendant) และ
+  CUPIDO+SUN, APOLLON+SUN (หมวด Sun) — ข้ามไปตั้งใจตั้งแต่ตอนทำหมวดนั้นๆ เพราะตัวบ่งชี้ปัจจัยที่ 3
+  ("-XX" prefix) หายไปจาก OCR ทั้งหมดจนไม่มีทางระบุลำดับรายการได้อย่างน่าเชื่อถือ ยังไม่ได้ลองกลับไป
+  อ่าน raw OCR อีกครั้งเพื่อกู้คืน 5 คู่นี้ — ต้นฉบับ scan+OCR ดิบทั้งเล่ม (~255 หน้า, 9,599 บรรทัด)
+  เก็บไว้เฉพาะในเซสชันที่แปล ไม่ได้ก็อปปี้เข้า repo เพราะไฟล์ใหญ่มาก ต้องขอผู้ใช้ส่งซ้ำถ้าจะกลับไปแก้
 - forecast (`solar_arc.py`/`transit.py`) ไม่มี rate limit หรือแคชผลลัพธ์
