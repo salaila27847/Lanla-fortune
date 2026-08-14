@@ -605,6 +605,11 @@ pair, third factor ถูกต้อง, ไม่มี meaning ว่าง) 
       ตรง ๆ ไม่ได้เพราะ sync รอบหน้าจะทับกลับ ต้องแก้ในโค้ดแทน) พร้อม sync ค่าเดียวกันใน
       `backend/.env.example` และ fallback default ใน `master_interpreter.py` ทั้ง 2 จุด (`synthesize()`/
       `synthesize_followup()`) — อัปเดต `README.md`/`docs/PRD.md`/`CLAUDE.md` ให้ตรงกันด้วย
-- [ ] **ยังไม่ยืนยัน**: ต้องรอผู้ใช้ทดสอบ production จริงหลัง deploy ว่า `gemini-2.5-flash-lite`
-      ทำให้ได้คำทำนายจาก AI จริงแทน fallback text หรือไม่ (ตัวเลข quota ที่อ้างอิงมาจาก blog
-      aggregator ไม่ใช่เอกสารทางการของ Google โดยตรง)
+- [x] **แก้ไข 2026-08-14 (ต่อมา)**: ทดสอบ production จริงแล้ว `gemini-2.5-flash-lite` ใช้งานไม่ได้
+      เลย — Gemini ตอบ `404 NOT_FOUND`: "This model models/gemini-2.5-flash-lite is no longer
+      available to new users" (โมเดลถูกเลิกให้ผู้ใช้ใหม่แล้ว ไม่ใช่ปัญหา quota เหมือนรอบก่อน) —
+      ผู้ใช้ระบุให้เปลี่ยนเป็น `gemini-3.1-flash-lite` แทน แก้จุดเดียวกันทั้งหมด (`render.yaml`,
+      `backend/.env.example`, `master_interpreter.py` ทั้ง 2 จุด, `README.md`/`docs/PRD.md`/
+      `CLAUDE.md`)
+- [ ] **ยังไม่ยืนยัน**: ต้องรอผู้ใช้ทดสอบ production จริงหลัง deploy ว่า `gemini-3.1-flash-lite`
+      ใช้งานได้จริงและให้คำทำนายจาก AI จริงแทน fallback text หรือไม่

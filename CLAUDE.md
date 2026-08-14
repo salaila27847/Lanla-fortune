@@ -37,7 +37,7 @@
 | Database | PostgreSQL (dev: SQLite ผ่าน SQLAlchemy, prod: Neon) | โครงสร้างข้อมูลชัดเจน รองรับการขยาย — Neon เพราะ free tier ไม่ต้องผูกบัตรเครดิต |
 | Knowledge base | ไฟล์ YAML/JSON versioned ใน `backend/app/knowledge_base/` | ให้ "เจ้าหน้าที่ค้นคว้า" (คนจริง) แก้ไขได้โดยไม่แตะโค้ด, track ผ่าน git |
 | Frontend | Next.js 14+ (App Router), TypeScript, TailwindCSS | SSR ดี, ทำ 90° dial แบบ interactive และ animation จั่วไพ่ได้ลื่นด้วย Framer Motion |
-| Synthesis layer | `google-genai` Python SDK เรียก `gemini-2.5-flash-lite` | **แก้ไข 2026-08-12**: เปลี่ยนจาก Anthropic Claude API เป็น Gemini API ตามที่ผู้ใช้ตัดสินใจ — Gemini มี free tier จริง (rate-limited แต่ไม่ต้องผูกบัตรเครดิต) สอดคล้องกับ Render/Vercel/Neon ที่เลือกไว้แล้วเพราะเหตุผลเดียวกัน — **แก้ไข 2026-08-14**: เปลี่ยนโมเดลจาก `gemini-3.5-flash` เป็น `gemini-2.5-flash-lite` เพราะ `gemini-3.5-flash` เจอ free-tier quota ต่ำผิดปกติ (`generate_content_free_tier_requests` แค่ 20 request/วัน) ทำให้ทุกคำทำนายจริงตกไป fallback เกือบตลอด — `gemini-2.5-flash-lite` มี quota หลวมกว่ามาก (รายงานว่า ~1,500 req/วันสำหรับกลุ่ม Flash/Flash-Lite ตามเอกสาร Google ล่าสุด) |
+| Synthesis layer | `google-genai` Python SDK เรียก `gemini-3.1-flash-lite` | **แก้ไข 2026-08-12**: เปลี่ยนจาก Anthropic Claude API เป็น Gemini API ตามที่ผู้ใช้ตัดสินใจ — Gemini มี free tier จริง (rate-limited แต่ไม่ต้องผูกบัตรเครดิต) สอดคล้องกับ Render/Vercel/Neon ที่เลือกไว้แล้วเพราะเหตุผลเดียวกัน — **แก้ไข 2026-08-14**: เปลี่ยนโมเดลจาก `gemini-3.5-flash` เป็น `gemini-2.5-flash-lite` เพราะ `gemini-3.5-flash` เจอ free-tier quota ต่ำผิดปกติ (`generate_content_free_tier_requests` แค่ 20 request/วัน) ทำให้ทุกคำทำนายจริงตกไป fallback เกือบตลอด — `gemini-2.5-flash-lite` มี quota หลวมกว่ามาก (รายงานว่า ~1,500 req/วันสำหรับกลุ่ม Flash/Flash-Lite ตามเอกสาร Google ล่าสุด) — **แก้ไข 2026-08-14 (ต่อมา)**: `gemini-2.5-flash-lite` ใช้งานไม่ได้จริง — Gemini ตอบ `404 NOT_FOUND` ("This model models/gemini-2.5-flash-lite is no longer available to new users") เปลี่ยนเป็น `gemini-3.1-flash-lite` แทนตามที่ผู้ใช้ระบุ |
 | Auth/session | Google Sign-In (OAuth) ผ่าน NextAuth.js (Auth.js) ฝั่ง frontend | ผู้ใช้ตัดสินใจแล้ว (2026-08-12) — สมัคร/ล็อกอินง่าย ไม่ต้องจัดการรหัสผ่านเอง |
 | Deployment | Vercel (frontend) + Render (backend) + Neon (Postgres) | ผู้ใช้ตัดสินใจแล้ว (2026-08-12) — ทั้ง 3 บริการไม่ต้องผูกบัตรเครดิตเลย (ตรวจสอบราคาจริงแล้ว, ดูหัวข้อ 6) |
 
@@ -104,8 +104,9 @@
   — **แก้ไข 2026-08-14**: production จริงเจอ `429 RESOURCE_EXHAUSTED` เกือบทุกครั้งเพราะ
   `gemini-3.5-flash` มี free-tier quota แค่ 20 request/วัน (`generate_content_free_tier_requests`)
   — เปลี่ยนเป็น `gemini-2.5-flash-lite` แทน (quota หลวมกว่ามาก) ผ่าน `SYNTHESIS_MODEL` env var
-  (`render.yaml`/`backend/.env.example`) ยังใช้ `google-genai` SDK ตัวเดิม ไม่เปลี่ยน provider —
-  ต้องใช้
+  (`render.yaml`/`backend/.env.example`) — **แก้ไข 2026-08-14 (ต่อมา)**: `gemini-2.5-flash-lite`
+  ตอบ `404 NOT_FOUND` ("no longer available to new users") — เปลี่ยนเป็น `gemini-3.1-flash-lite`
+  แทนตามที่ผู้ใช้ระบุ ยังใช้ `google-genai` SDK ตัวเดิม ไม่เปลี่ยน provider — ต้องใช้
   `GEMINI_API_KEY` แทน `ANTHROPIC_API_KEY` (จาก [aistudio.google.com](https://aistudio.google.com))
   interface ของ `synthesize()` ใน `backend/app/synthesis/master_interpreter.py` ไม่เปลี่ยน —
   รับ 3 `EngineResult` แล้วคืน `SynthesisOutput` เหมือนเดิม เปลี่ยนแค่ตัว client/provider ข้างใน
