@@ -10,22 +10,28 @@
 
 ## 3. User flow หลัก
 
-1. ผู้ใช้กรอกข้อมูลเกิด (วัน เดือน ปี เวลา สถานที่เกิด — สำหรับคำนวณยูเรเนียน)
+0. ผู้ใช้ล็อกอินด้วย Google (บังคับก่อนใช้ `/reading`/`/history`)
+1. ผู้ใช้กรอกข้อมูลเกิด (วัน เดือน ปี เวลา สถานที่เกิด — สำหรับคำนวณยูเรเนียน) และเลือกเปิด/ปิด
+   forecast เสริมที่ต้องการ (Solar Arc/Transit/Lunar Return/Relocation — ไม่บังคับ, checkbox ต่อตัว
+   เปิดฟิลด์ของตัวเองเมื่อติ๊ก)
 2. ผู้ใช้ตั้งคำถามหรือเลือกหมวดคำถาม (การงาน/ความรัก/การเงิน/ทั่วไป)
 3. ผู้ใช้จั่วไพ่ทาโรต์ (เช่น 3 ใบ หรือ Celtic Cross) ผ่าน UI แบบ interactive
 4. ผู้ใช้จั่วไพ่ออราเคิล 1 ใบ (หรือตามชุดที่กำหนด)
-5. ระบบส่งข้อมูลทั้งหมดไปยัง 3 engine พร้อมกัน
-6. Master Interpreter รับผลดิบจากทั้ง 3 engine มาสังเคราะห์
-7. แสดงผลคำทำนายฉบับสมบูรณ์ พร้อมรายละเอียดแยกแต่ละศาสตร์ (ให้ผู้ใช้ดูที่มาได้)
+5. ระบบส่งข้อมูลทั้งหมดไปยัง 3 engine พร้อมกัน (และคำนวณ forecast ที่เลือกไว้)
+6. Master Interpreter รับผลดิบจากทั้ง 3 engine (และ forecast ถ้ามี) มาสังเคราะห์
+7. แสดงผลคำทำนายฉบับสมบูรณ์ พร้อมรายละเอียดแยกแต่ละศาสตร์ และ tab การพยากรณ์ล่วงหน้า (ถ้าเลือกไว้ —
+   มีปุ่มข้ามไปดูทีละแบบ) ให้ผู้ใช้ดูที่มาได้ทั้งหมด — ทุกครั้งที่ดูดวงสำเร็จจะบันทึกลงประวัติที่
+   `/history` อัตโนมัติ
 
 ## 4. ฟังก์ชันของแต่ละโมดูล
 
 ### 4.1 Uranian Engine
-- คำนวณตำแหน่งดาว 8 ดวงเสริม (Cupido, Hades, Zeus, Kronos, Apollon, Admetos, Vulcanus, Poseidon) และดาวหลัก
-- คำนวณ midpoint และตำแหน่งบน 90° dial
+- คำนวณตำแหน่งดาว 8 ดวงเสริม (Cupido, Hades, Zeus, Kronos, Apollon, Admetos, Vulcanus, Poseidon) และดาวหลัก (รวม 22 ปัจจัย — ดาวเคราะห์คลาสสิก 10 + ดาวเสริม 8 + Node (True Node) + จุดอาริส + Ascendant/Midheaven)
+- คำนวณ midpoint และตำแหน่งบน 90° dial หา planetary picture ทั้ง Type I และ Type II
 - จับคู่ configuration กับฐานความหมายใน knowledge base
-- Input: วันเวลาสถานที่เกิด + วันเวลาปัจจุบัน (transit)
-- Output: `EngineResult` (ดู data-schema.md)
+- **Forecast (ไม่บังคับ, เลือกเปิดทีละแบบที่ฟอร์ม `/reading`)**: Solar Arc Directions, Transit (รวม Station Points, Daily M/A, Transit Axes), Lunar Return, Relocation — ดู `backend/app/modules/uranian/{solar_arc,transit}.py`
+- Input: วันเวลาสถานที่เกิด + (ถ้าเลือก forecast) วันที่เป้าหมาย/พิกัดปลายทางสำหรับเทคนิคนั้นๆ
+- Output: `EngineResult` (ดู data-schema.md) + `ForecastResponse` ถ้ามีการเลือก forecast
 
 ### 4.2 Tarot Engine
 - สุ่มจั่วไพ่แบบ fair-random (ไม่ซ้ำใบในกองเดียวกัน)
@@ -39,12 +45,16 @@
 - Output: `EngineResult`
 
 ### 4.4 Master Interpreter (Synthesis Layer)
-- รับ `EngineResult` จากทั้ง 3 engine
+- รับ `EngineResult` จากทั้ง 3 engine + `ForecastResponse` เพิ่มเติมถ้าผู้ใช้เลือกเปิด Solar
+  Arc/Transit/Lunar Return/Relocation ที่ฟอร์ม (ไม่บังคับ)
 - เรียก Gemini API (`gemini-3.5-flash`) พร้อม prompt ที่ระบุกฎตายตัว:
   - ห้ามใส่ bias ส่วนตัว
   - ห้ามอ้างอิงข้อมูลนอกเหนือจากที่ส่งเข้าไปในเซสชันนี้
   - ต้องทำ 3 ขั้นตอน: หาจุดร่วม (convergence) → จัดการความขัดแย้ง (divergence) → เติมเต็มมุมที่ขาด (complementary)
-- Output: คำทำนายฉบับสมบูรณ์ + คำอธิบายว่าแต่ละศาสตร์สนับสนุนข้อสรุปอย่างไร
+  - ถ้ามี forecast ส่งมาด้วย ให้พิจารณาเป็น "ชั้นจังหวะเวลา" เสริม ด้วยหลัก 3 ขั้นตอนเดียวกัน
+    ครอบคลุมทุกส่วนของ forecast ที่ส่งมา ไม่ใช่แค่ 3 ศาสตร์หลัก
+- Output: คำทำนายฉบับสมบูรณ์ (ทอ forecast เข้าไปด้วยถ้ามี) + คำอธิบายว่าแต่ละศาสตร์สนับสนุนข้อสรุป
+  อย่างไร + ตารางดิบของ forecast (ถ้ามี) ให้ผู้ใช้ข้ามไปดูทีละแบบได้ในหน้าผลลัพธ์
 
 ## 5. Non-functional requirements
 
@@ -55,6 +65,8 @@
 
 ## 6. Out of scope (เฟสนี้)
 
-- ระบบสมาชิก/ล็อกอิน
 - การชำระเงิน
 - แอปมือถือ native
+
+**หมายเหตุ (แก้ไข 2026-08-12)**: ระบบสมาชิก/ล็อกอิน implement แล้วด้วย Google Sign-In (NextAuth.js)
+และบังคับล็อกอินก่อนใช้ `/reading`/`/history` — ดู CLAUDE.md ข้อ 6 "ตัดสินใจแล้ว → ระบบสมาชิก"

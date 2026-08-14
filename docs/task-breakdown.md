@@ -162,9 +162,9 @@
       package + เทสต์ KB loading ใหม่) — รวม 51 tests ผ่านทั้งหมด, `ruff check`/`ruff format --check`
       สะอาด — ยืนยันด้วย manual run จริงว่า picture-finder เจอ Type I/II จริงและ match glossary
       ถูกต้อง (เช่น `Mars/Sun=Hades/Neptune` → "น้ำ การจมน้ำ การขาดอากาศหายใจ")
-- [ ] **ยังไม่ได้ทำ (เหมือนที่ package's README ระบุไว้เอง)**: `axis_meanings.yaml` มีแค่แกน M —
-      แกน A/Sun/Moon/Node ยังไม่ถอดความ; ไม่มี house_meanings (ยังไม่คำนวณเรือน); ไม่มี solar arc /
-      transit forecast — เนื้อหาต้นทางมีอยู่แล้วใน `research/` รอแปลงเป็น YAML/โค้ดต่อ
+- [x] **แก้ไข 2026-08-13 (Phase 14)**: `axis_meanings.yaml` ครบทั้ง 5 แกนแล้ว (M/A/Sun/Moon/Node)
+      — ดู Phase 14 ด้านล่าง — ยังไม่มี house_meanings (ยังไม่คำนวณเรือน) และยังไม่มี solar arc /
+      transit forecast ตอนที่เขียนบรรทัดนี้ครั้งแรก — ปัจจุบัน solar arc/transit ทำแล้วใน Phase 11-13
 - [x] **แก้ไข 2026-08-13**: ผู้ใช้เทียบผลลัพธ์ engine กับเว็บอ้างอิง 2 เว็บโดยใช้วันเกิดจริง —
       ดาวเคราะห์คลาสสิก, Ascendant/MC, และดาวเสริมทั้ง 8 ดวงตรงกับทั้ง 2 เว็บในระดับ <1 ลิปดา
       (ยืนยันว่า ephemeris/house/midpoint math ถูกต้อง) จุดเดียวที่ต่าง ~0.5° คือ Node เพราะ
@@ -184,9 +184,7 @@
       เช่นกัน — คงไว้เฉพาะภาพที่พึ่งพาตำแหน่งจริงของดวงชะตา) เพิ่ม unit test 11 เคสใน
       `test_uranian_solar_arc.py` (คำนวณ arc, directed positions, และภาพสังเคราะห์ครบทุก
       edge case ข้างต้น) — รวม 62 tests ผ่านหมด, ruff clean
-- [ ] **ยังไม่ได้ทำ**: ยังไม่ตัดสินใจว่าจะให้ผู้ใช้เลือก target date ยังไง (เพิ่มเข้า `/reading` เดิม
-      แบบ auto-forecast วันนี้, แยกเป็นฟีเจอร์ใหม่ให้เลือกวัน, หรืออื่นๆ) — solar_arc.py ยังไม่ถูกเรียก
-      จาก `calculate()`/`EngineResult`/endpoint ใดๆ ทั้งสิ้น
+- [x] **แก้ไข 2026-08-13 (Phase 12)**: ตัดสินใจแล้วและเชื่อมเข้าแอปจริงแล้ว — ดู Phase 12 ด้านล่าง
 - [x] **แก้ไข 2026-08-13**: ทำต่อ Transit + Station Points + Lunar Return + Relocation (บทที่ 11-12
       ใน `research/`) ตามที่ผู้ใช้ขอให้ครอบคลุมทุกหัวข้อในตาราง "ฟีเจอร์ที่ควรมีในระบบ" — ยังคง
       calculation-only เหมือน solar_arc.py (ยังไม่ต่อ endpoint/UI) สร้าง
@@ -211,10 +209,9 @@
         (แม่นถึงระดับ <0.01° เพราะดวงจันทร์ไม่มีทางถอยหลัง เดินหน้าทางเดียวเสมอ scan ทุก 6 ชม.
         ไม่มีทางพลาดจุดตัด)
       - `relocated_angles()` — คำนวณ A/M ใหม่จากพิกัดปลายทาง ใช้เวลาเกิด UTC เดิม
-      - **ยังไม่ทำ**: "Daily Meridian and Ascendant" (M/A ณ ปัจจุบัน คนละเทคนิคกับ relocation ที่เป็น
-        M/A ณ สถานที่อื่น) และ "Transit Axes" แบบเจาะจง (นอกเหนือจากที่ `find_transit_pictures`
-        ครอบคลุมโดยธรรมชาติอยู่แล้วเพราะปฏิบัติกับ transit เป็นแค่อีก layer หนึ่งใน Type I/II เดียวกัน)
       - เพิ่ม unit test 16 เคสใน `test_uranian_transit.py` — รวม 78 tests ผ่านหมด, ruff clean
+- [x] **แก้ไข 2026-08-13 (Phase 13)**: เพิ่ม "Daily Meridian and Ascendant" (M/A ณ ปัจจุบัน — คนละ
+      เทคนิคกับ relocation ที่เป็น M/A ณ สถานที่อื่น) และ "Transit Axes" — ดู Phase 13 ด้านล่าง
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: ทดสอบผ่าน unit test + manual script เท่านั้น ยังไม่ได้ทดสอบ
       end-to-end ผ่าน `/api/reading` จริงที่มี `GEMINI_API_KEY` จริง (ข้อจำกัดเดิมจาก Phase 6/10)
 
@@ -222,7 +219,10 @@
 
 ผู้ใช้ตัดสินใจแล้ว (2026-08-13): เพิ่ม checkbox 4 ตัวในฟอร์มกรอกข้อมูลเกิด `/reading` เดิม
 (ไม่แยกหน้าใหม่) แต่ละตัวเปิด/ปิดฟิลด์ข้อมูลของตัวเอง และผลลัพธ์แสดงเป็น**ตารางดิบ** ไม่ผ่าน
-Gemini synthesis (ต่างจาก `/api/reading` ที่สังเคราะห์เป็นคำทำนายภาษา)
+Gemini synthesis (ต่างจาก `/api/reading` ที่สังเคราะห์เป็นคำทำนายภาษา) — **กลับคำตัดสินใจนี้แล้ว
+ใน Phase 13**: ผู้ใช้ขอให้การสังเคราะห์ผลต้องเอา Transit/Solar Arc/Relocation ไปด้วย ไม่ใช่แค่
+ตารางดิบแยกออกมา — ตารางดิบยังคงแสดงอยู่ (เป็น tab "การพยากรณ์ล่วงหน้า" ที่ `ReadingResult.tsx`)
+แต่ตอนนี้ Gemini เห็นข้อมูลชุดเดียวกันด้วยและทอเข้าไปใน `final_reading`
 
 - [x] Backend: เพิ่ม schema (`ForecastRequest`/`ForecastResponse` + sub-request/result ต่อเทคนิค)
       ใน `app/core/schema.py`, เพิ่ม `POST /api/forecast` ใน `main.py` — auth-gated แบบเดียวกับ
@@ -254,5 +254,264 @@ Gemini synthesis (ต่างจาก `/api/reading` ที่สังเค�
       Arc/Transit/Lunar Return จริงจาก backend local (bypass login ชั่วคราวเพราะ sandbox นี้ทำ
       Google OAuth จริงไม่ได้ — revert กลับหมดแล้วก่อนจบงาน ยืนยันด้วย `git diff` ว่าไฟล์ auth
       กลับสู่สภาพเดิม), `npm run build`/`npm run lint` ผ่าน, backend 87 tests ผ่าน, ruff clean
-- [ ] **ยังไม่ทำ**: การจำกัด (rate limit) หรือแคชผลลัพธ์ forecast, relocation ยังใช้กรอกพิกัดเอง
-      (ไม่มี autocomplete ค้นหาสถานที่แบบช่องกรอกที่เกิดเดิม)
+- [x] **แก้ไข 2026-08-13 (Phase 13)**: relocation มี autocomplete ค้นหาสถานที่แล้วเหมือนช่อง
+      สถานที่เกิด — ดู Phase 13 ด้านล่าง
+- [ ] **ยังไม่ทำ**: การจำกัด (rate limit) หรือแคชผลลัพธ์ forecast
+
+## Phase 13 — Daily M/A + Transit Axes, สังเคราะห์ forecast เข้า Gemini, relocation autocomplete, ปุ่มข้าม
+
+ผู้ใช้ขอ 4 อย่างพร้อมกัน (2026-08-13): (1) คำนวณ Daily M/A + Transit Axes ให้ครบตามที่ Phase 11
+เหลือไว้ (2) แก้ช่อง relocation ให้มี autocomplete เหมือนช่อง "สถานที่เกิด" (3) เพิ่มปุ่มข้ามให้ดูผล
+พยากรณ์ล่วงหน้าทีละแบบได้ (4) **กลับคำตัดสินใจ Phase 12**: การสังเคราะห์ผลของ Gemini ต้องเอา
+Transit/Solar Arc/Lunar Return/Relocation ไปพิจารณาด้วย ไม่ใช่แค่แสดงตารางดิบแยกจากคำทำนาย
+
+- [x] Backend: `transit_positions()` รับ `birth_data` เพิ่ม (optional) — ถ้าส่งมา คำนวณ Ascendant/
+      Midheaven ณ วันเวลาที่ระบุ (สถานที่เกิดเดิม) เพิ่มเป็นปัจจัย `A`/`M` ในชุดตำแหน่ง transit
+      นี่คือ "Daily M/A" (ตรงข้ามกับ relocation ที่ตรึงเวลาเกิดแต่เปลี่ยนสถานที่ — Daily M/A ตรึง
+      สถานที่เกิดแต่เปลี่ยนเวลาเป็นวันปัจจุบัน) เพิ่ม `DAILY_ANGLE_BASES = {"A", "M"}` ใน
+      `transit.py` ให้ `_has_reference_personal_point()` นับ `t:A`/`t:M` เป็นจุดอ้างอิงส่วนตัวได้
+      ด้วย (ปกติปัจจัยที่กำลัง transit ไม่นับเป็น personal point เพราะเป็นดาวที่กำลังเคลื่อนที่ แต่ Daily
+      M/A เป็นข้อยกเว้น เพราะเป็นมุมอ้างอิงคงที่ของวันนั้น ไม่ใช่ดาวเคราะห์) — เมื่อมี Daily M/A แล้ว
+      **Transit Axes** (ภาพที่สร้างจากท้องฟ้าวันนี้ล้วนๆ รวม Daily M/A โดยไม่ต้องมีปัจจัย radix/directed
+      เลย) เกิดขึ้นได้เองผ่าน `find_transit_pictures()` เดิมโดยไม่ต้องเขียนฟังก์ชันแยก — เพิ่ม unit
+      test 3 เคสยืนยัน (มี/ไม่มี Daily M/A, Transit Axes ล้วนๆ หา picture เจอจริง) — รวม 81 tests
+- [x] Backend: **กลับคำตัดสินใจ Phase 12** — รวม `/api/reading` กับความสามารถของ `/api/forecast`
+      เข้าด้วยกัน: เพิ่ม `ReadingRequest` (`birth_data` + `solar_arc`/`transit`/`lunar_return`/
+      `relocation` optional เหมือน `ForecastRequest`) เป็น body ใหม่ของ `POST /api/reading`
+      (เดิมรับ `BirthData` ตรงๆ) — endpoint คำนวณ forecast (ถ้ามีการเลือก) ผ่าน `_compute_forecast()`
+      ที่ดึงมาเป็นฟังก์ชันร่วมให้ `/api/reading`/`/api/forecast` ใช้ร่วมกัน (กันโค้ดสองจุดเพี้ยนออก
+      จากกัน) แล้วส่ง `ForecastResponse` เข้า `synthesize()` เป็น argument ที่ 4 (optional) —
+      `SynthesisOutput` เพิ่ม field `forecast: ForecastResponse | None` เก็บผลไว้ให้ frontend แสดง
+      ตารางดิบต่อได้เหมือนเดิม แม้จะสังเคราะห์เป็นคำทำนายไปแล้วก็ตาม — `/api/forecast` (standalone,
+      ไม่ synthesize, ไม่บันทึกประวัติ) ยังอยู่เหมือนเดิมสำหรับกรณีอยากได้ตารางดิบอย่างเดียว
+- [x] Backend: `master_interpreter.py` — `synthesize()` รับ `forecast` เป็น argument ที่ 4
+      (optional) ใส่เข้า payload ที่ส่งให้ Gemini เป็น key `"forecast"` เพิ่มกฎข้อ 4 ใน
+      `SYSTEM_PROMPT` บอกให้พิจารณา forecast เป็น "ชั้นจังหวะเวลา" เสริม ด้วยหลัก 3 ขั้นตอนเดียวกัน
+      (จุดร่วม/ความขัดแย้ง/เติมเต็ม) — `_fallback_synthesis()` เพิ่ม `_forecast_summary_lines()`
+      สรุปผล forecast แบบข้อความสั้นต่อท้าย `final_reading` เวลา Gemini ใช้งานไม่ได้
+- [x] Backend: อัปเดต test suite ทั้งหมดให้ตรงกับ request shape ใหม่ (`json={"birth_data": ...}`
+      แทน `json=BIRTH_DATA` ตรงๆ), เพิ่ม test ยืนยันว่า `/api/reading` พร้อม forecast option คืน
+      `forecast` ใน response และบันทึกลง history ถูกต้อง, เพิ่ม test จับ payload ที่ส่งให้ Gemini
+      client จริง (fake) ว่ามี/ไม่มี key `"forecast"` ตรงตามที่ควร — รวม **96 tests ผ่านหมด**, ruff
+      clean
+- [x] Frontend: สร้าง `frontend/src/lib/usePlaceSearch.ts` (custom hook) ดึง logic ค้นหาสถานที่
+      แบบ debounce 600ms ที่เดิมอยู่เฉพาะช่อง "สถานที่เกิด" ออกมาใช้ร่วมกันได้ — `BirthDataForm.tsx`
+      เปลี่ยนทั้งช่อง "สถานที่เกิด" และช่อง relocation ให้ใช้ hook เดียวกัน ทำให้ relocation ได้
+      dropdown ผลค้นหาจริง + auto-fill ละติจูด/ลองจิจูด เหมือนช่องสถานที่เกิดทุกประการ (เดิม
+      relocation กรอกพิกัดเองล้วนๆ)
+- [x] Frontend: `lib/api.ts` ลบ `getForecast()`/`hasForecastOptions()` ออก (ไม่ต้องยิง 2 endpoint
+      แยกกันอีกต่อไป) — `getReading(birthData, forecastOptions)` ยิง `/api/reading` ครั้งเดียว
+      ส่ง `{ birth_data, ...forecastOptions }` ตรงกับ `ReadingRequest` ใหม่ `SynthesisOutput` type
+      เพิ่ม `forecast: ForecastResponse | null` — `reading/page.tsx` ตัด state/การเรียกแยกของ
+      forecast ออก เหลือ `getReading()` เรียกเดียว
+      `ReadingResult.tsx` เพิ่ม `ForecastTab` component: ถ้ามี forecast มากกว่า 1 หมวด (เช่น Solar
+      Arc + Transit) จะโชว์แถบปุ่ม "ข้ามไปดู: Solar Arc / Transit / Lunar Return / Relocation" ให้
+      คลิกสลับดูทีละหมวดแทนการเลื่อนดูทั้งหมด (ถ้ามีแค่หมวดเดียวไม่โชว์แถบปุ่ม เพราะไม่มีอะไรให้ข้าม)
+- [x] ทดสอบแล้ว: backend 96 tests ผ่าน, `ruff check`/`ruff format --check` สะอาด, frontend
+      `npm run build`/`npm run lint` ผ่าน, ยืนยันผ่านเบราว์เซอร์ (Playwright, bypass login ชั่วคราว
+      เหมือน Phase 12 แล้ว revert กลับหมดก่อนจบงาน) ว่า flow ทั้งหมดทำงานถูกต้องจนถึงหน้าผลลัพธ์
+      พร้อม forecast tab — การค้นหาสถานที่ของช่อง relocation ยืนยันด้วยโค้ดว่าใช้ mechanism เดียวกัน
+      กับช่องสถานที่เกิดที่ยืนยันแล้วว่าใช้งานได้จริง (ทดสอบ live network call ผ่าน dropdown จริงใน
+      sandbox นี้ไม่ได้ เพราะ browser ที่ควบคุมด้วย Playwright ไม่ผ่าน proxy ของ sandbox ไปยัง
+      Nominatim ได้ — เป็นข้อจำกัดของสภาพแวดล้อมทดสอบ ไม่ใช่บั๊กของโค้ด)
+- [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: คุณภาพจริงของการสังเคราะห์ forecast โดย Gemini (มี key จริง)
+      ยังทดสอบไม่ได้ในนี้ เหมือนข้อจำกัดเดิมของ Phase 6/10 — ทดสอบได้แค่ path fallback กับ payload
+      shape ที่ถูกต้อง
+
+## Phase 14 — axis_meanings.yaml ครบ 5 แกน (M/A/Sun/Moon/Node)
+
+ผู้ใช้ส่งไฟล์หนังสือ (`uranianchaptersth.zip`, 12 ไฟล์ต่อบท) ตามที่บอกไว้ใน Phase 13 ว่า "มีข้อมูล
+แล้วเด่วส่งให้" — ตรวจสอบแล้วพบว่าเนื้อหาเหมือนกับ `research/uranian-delineation-axes.md` ที่มีอยู่
+แล้วทุกประการ (จาก handoff package เดิม, Phase 11) เพียงแค่ถูกแบ่งเป็นไฟล์ต่อบทแทนไฟล์รวมตามหัวข้อ
+— ไม่มีเนื้อหาใหม่ แต่ยืนยันว่าเนื้อหาที่มีอยู่แล้วถูกต้องครบถ้วนพอจะแปลงเป็น YAML ได้เลย
+
+- [x] แปลงตาราง A-Axis/Sun-Axis/Moon-Axis/Node-Axis จาก `research/uranian-delineation-axes.md`
+      หัวข้อ 3-6 เป็น `axis_meanings.yaml` เพิ่มจากที่มีแค่แกน M เดิม — backfill คู่ที่หนังสือเขียนไว้
+      ฝั่งเดียว (เช่น "M + A" อยู่ใต้หัวข้อ M แต่ไม่มี "A + M" ซ้ำใต้หัวข้อ A) ด้วยข้อความเดียวกันข้าม
+      แกน เพราะ midpoint สมมาตร ผลคือ M/A/MOON/NODE ครบ 21 คู่ (ทุกปัจจัยอื่น) ส่วน SUN ได้ 19 คู่
+      (ต้นฉบับไม่เคยระบุความหมาย Sun+Apollon และ Sun+Admetos)
+- [x] `engine.py`: `_picture_finding()` เดิม hardcode เช็คเฉพาะแกน M (`if "M" in factors`) — แก้เป็น
+      loop ทุกแกนที่มีใน `axis_meanings.yaml` และอยู่ในภาพนั้นจริง เพื่อให้ภาพที่มีมากกว่าหนึ่งแกน
+      (เช่น M/Mars=Sun/Saturn มีทั้ง M และ SUN) ได้หมายเหตุจากทุกแกน ไม่ใช่แค่แกนแรกที่เจอ
+- [x] เพิ่ม unit test 8 เคสใน `test_uranian_knowledge_base.py` (ครอบคลุมทุกแกน + หลายแกนพร้อมกันใน
+      ภาพเดียว) — รวม 102 tests ผ่านหมด, ruff clean — ยืนยันด้วย manual run จริงกับวันเกิด 22 กรกฎาคม
+      1990 ว่าภาพที่มีมากกว่าหนึ่งแกนได้หมายเหตุครบทุกแกนจริง (เช่น A/Mars=Apollon/Neptune ได้ทั้ง 3
+      หมายเหตุจากแกน A)
+- [ ] **ยังไม่ได้ทำ**: `house_meanings` (เนื้อหา "ธรรมชาติของเรือนที่ดาวสถิต" ต่อดาว มีอยู่แล้วใน
+      `research/uranian-delineation-axes.md` หัวข้อ 7 แต่การคำนวณจริงว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่
+      ยังไม่ implement — ต้องคำนวณ house cusp แบบ equal-house จาก M ก่อน ซึ่งเอกสารต้นทางที่มีอยู่
+      (บทที่ 4) อธิบายแค่หลักการกว้างๆ ไม่ได้ให้สูตรคำนวณละเอียดพอจะ implement ได้ทันทีโดยไม่เดา —
+      รอผู้ใช้ยืนยัน convention ที่แน่นอนก่อน), แกน ARIES ของ `axis_meanings.yaml` (ไม่มีเนื้อหา
+      ต้นฉบับให้ถอดความ), Sun+Apollon/Sun+Admetos
+
+## Phase 15 — witte_pictures.yaml: glossary ละเอียด (คู่ + ปัจจัยที่ 3) จากตำรา Witte ฉบับเต็ม
+
+ผู้ใช้ส่งไฟล์ scan+OCR ของหนังสือ *Rules for Planetary Pictures (Uranian System)* ของ Alfred Witte
+ฉบับเต็ม (~255 หน้า, เรียบเรียงโดย Hans Niggemann, 1959) มาให้ — นี่คือตำรา *Regelwerk fuer
+Planetenbilder* ที่ CLAUDE.md/`planetary_pictures.yaml` เคยอ้างถึงว่าเป็นตำราอ้างอิงมาตรฐานของวงการ
+ยูเรเนียนที่ "ละเอียดกว่านี้มาก" — คุณภาพ OCR แย่มาก มีตัวอักษรเพี้ยนแทบทุกย่อหน้า (เช่น
+"Witte"→"Mitte", "Meridian"→"tlcridlan") ผู้ใช้ขอให้ตรวจสอบอย่างถี่ถ้วนก่อนใช้ — ขนาดเต็มเล่มมี
+~2,900+ รายการย่อย (คู่ปัจจัย + ปัจจัยที่ 3 = ความหมายเฉพาะ, โครงสร้างละเอียดกว่า
+`planetary_pictures.yaml` ปัจจุบันมาก) ถามผู้ใช้ก่อนว่าจะเริ่มขอบเขตไหน — ผู้ใช้เลือก **เริ่มจาก
+หมวด Meridian ก่อน** (ตรงกับลำดับความสำคัญที่หนังสือเองระบุไว้: Meridian → Cardinal(Aries) → Sun
+→ Ascendant → Moon → Node → ดาวเคราะห์/TNP อีก 16 ดวง)
+
+- [x] อ่านและสร้างประโยคภาษาอังกฤษที่สมเหตุสมผลใหม่จาก OCR ของหมวด Meridian ทั้งหมด (M + อีก 21
+      ปัจจัยที่เหลือ, หน้า 1-22 ของหนังสือ) ก่อนแปลเป็นไทย — บางรายการกู้คืนจาก OCR ไม่ได้อย่างมั่นใจ
+      (บรรทัดหาย/ปนกันจาก OCR) จึง **ละไว้แทนการเดา** แทนที่จะเสี่ยงใส่ความหมายผิด (ทำนองเดียวกับที่
+      `axis_meanings.yaml` แกน SUN ขาด 2 รายการอยู่แล้ว) — สร้าง
+      `backend/app/knowledge_base/uranian/witte_pictures.yaml`: 21 base pair (M + ปัจจัยอื่นทุกตัว)
+      รวม 412 รายการ (คู่ + ปัจจัยที่ 3 = ความหมายเฉพาะ) ตรวจสอบด้วยสคริปต์ยืนยันว่าไม่มี factor id
+      ผิด ไม่มีปัจจัยที่ 3 ซ้ำกับคู่หลัก ไม่มีรายการซ้ำ และทุกรายการมีเนื้อหาจริง
+- [x] `engine.py`: เพิ่ม `_load_witte_pictures()` และแก้ `_picture_finding()` ให้เช็ค
+      `witte_pictures.yaml` **ก่อน** `planetary_pictures.yaml` สำหรับ Type I picture ที่ตรงคู่+
+      ปัจจัยที่ 3 เป๊ะๆ (weight 0.95 — สูงกว่าทุกแหล่งอื่นเพราะเจาะจงและ authoritative ที่สุด) ถ้าไม่
+      ตรงค่อย fallback ไปตามลำดับเดิม (`planetary_pictures.yaml` → keyword ทั่วไป) Type II ไม่ใช้
+      `witte_pictures.yaml` (ตำรามีแค่โครงสร้าง 3 ปัจจัยต่อ Type I ไม่ใช่ Type II) — axis note
+      ต่อท้ายยังทำงานเหมือนเดิมไม่ว่าความหมายหลักจะมาจากขั้นตอนไหน
+- [x] เพิ่ม unit test 5 เคสใน `test_uranian_knowledge_base.py` (ครอบคลุมทุก base pair ในหมวด
+      Meridian, ความถูกต้องของปัจจัยที่ 3 ทุกตัว, ยืนยันว่า witte ชนะ glossary ทั่วไปจริงเมื่อมีทั้งคู่
+      เข้าเงื่อนไข, ยืนยันว่า Type II ไม่ใช้ witte) — รวม **106 tests ผ่านหมด**, ruff clean — ยืนยัน
+      ด้วย manual run จริงว่า lookup ทำงานถูกต้อง (เช่น `M/Vulkanus=Cupido` ได้ weight 0.95 และ
+      ความหมายตรงตาม yaml เป๊ะ)
+- [ ] **ยังไม่ได้ทำ**: อีก 21 หมวดที่เหลือของหนังสือ (Aries, Sun, Ascendant, Moon, Node, ดาวเคราะห์/
+      TNP อีก 16 ดวง — หน้า 23-255) — ไฟล์ต้นฉบับ OCR ใหญ่เกินจะเก็บสำเนาไว้ใน repo ได้สะดวก
+      (9,599 บรรทัด) ต้องขอให้ผู้ใช้ส่งซ้ำถ้าจะทำหมวดถัดไป — **แก้ไข 2026-08-13 (Phase 16)**: ไฟล์
+      ยังอยู่ในเซสชันเดียวกัน ทำหมวด Aries ต่อได้เลยไม่ต้องขอซ้ำ — ดู Phase 16 ด้านล่าง
+
+## Phase 16 — witte_pictures.yaml: หมวด Aries (คู่ที่ 2 จาก 22 หมวดของหนังสือ)
+
+ผู้ใช้ขอ "ไปต่อเลยได้ไหม" หลังดูหน้าสรุปหมวด Meridian ผ่าน Artifact แล้ว — ทำหมวดถัดไปตามลำดับ
+ความสำคัญที่หนังสือเองระบุไว้ (Meridian → **Cardinal/Aries** → Sun → Ascendant → Moon → Node →
+ดาวเคราะห์ 16 ดวง) ไฟล์ OCR ต้นฉบับยังอยู่ในเซสชันเดียวกัน (ไม่ต้องขอผู้ใช้ส่งซ้ำ)
+
+- [x] อ่านและสร้างประโยคภาษาอังกฤษที่สมเหตุสมผลใหม่จาก OCR ของหมวด Aries ทั้งหมด (ARIES + อีก 20
+      ปัจจัยที่เหลือ — ไม่รวม M เพราะ M+ARIES อยู่ในหมวด Meridian แล้ว, หน้า 23-43 ของหนังสือ) —
+      คุณภาพ OCR แย่กว่าหมวด Meridian ชัดเจน โดยเฉพาะคู่ ARIES+HADES ที่กู้คืนได้แค่ ~17/20 รายการ
+      (ขาด MERCURY/CUPIDO/KRONOS เพราะ OCR เพี้ยนจนอ่านไม่ออก) — เพิ่มเข้า `witte_pictures.yaml`
+      รวม 386 รายการใหม่ (798 รายการรวมทั้งไฟล์) ตรวจสอบด้วยสคริปต์เดียวกับ Phase 15 ว่าไม่มี
+      factor id ผิด ไม่มีปัจจัยที่ 3 ซ้ำ ไม่มี base pair ซ้ำ (M+ARIES ไม่ถูกสร้างซ้ำ) และทุกรายการ
+      มีเนื้อหาจริง
+- [x] `engine.py`: ไม่ต้องแก้โค้ดเพิ่ม — `_load_witte_pictures()`/`_picture_finding()` ที่เขียนไว้
+      ใน Phase 15 เป็น generic อยู่แล้ว รองรับ base pair ใดก็ได้ที่มีใน yaml โดยอัตโนมัติ ยืนยันด้วย
+      manual run จริงว่า `ARIES/JUPITER=MARS` ได้ weight 0.95 และความหมายตรงตาม yaml
+- [x] เพิ่ม unit test 3 เคสใน `test_uranian_knowledge_base.py` (ครอบคลุม base pair ทั้งหมดในหมวด
+      Aries, ไม่มี base pair ซ้ำในไฟล์ทั้งหมด, `_picture_finding` ใช้ witte ได้ถูกต้องกับคู่ที่ไม่มี M
+      ร่วมด้วย ไม่ใช่แค่คู่ที่มี M) — รวม **109 tests ผ่านหมด**, ruff clean
+- [x] อัปเดต header comment ใน `witte_pictures.yaml` และ `knowledge_base/uranian/README.md` ให้
+      ตรงสถานะ (Meridian + Aries ครบ, เหลืออีก 20 หมวด)
+- [x] สร้างหน้าสรุปภาษาไทย (Artifact) แสดงทั้งหมวด Meridian และ Aries ให้ผู้ใช้ตรวจทานคำแปล พร้อม
+      ช่องค้นหา — อัปเดต artifact เดิมแทนสร้างใหม่ (คง URL เดิม)
+- [x] **แก้ไข 2026-08-13 (Phase 17-18)**: ผู้ใช้สั่ง "ต่อจนจบเลยทุก planet ทุกจุด" — ทำหมวด Sun และ
+      Ascendant ต่อแล้ว ดู Phase 17/18 ด้านล่าง เหลืออีก 18 หมวด (Moon, Node, ดาวเคราะห์/TNP 16 ดวง)
+
+## Phase 17 — witte_pictures.yaml: หมวด Sun (คู่ที่ 3 จาก 22 หมวดของหนังสือ)
+
+ผู้ใช้สั่ง "ต่อจนจบเลยทุก planet ทุกจุด" — ทำหมวดถัดไปตามลำดับความสำคัญที่หนังสือระบุ (Meridian →
+Aries → **Sun** → Ascendant → Moon → Node → ดาวเคราะห์ 16 ดวง) ไฟล์ OCR ต้นฉบับยังอยู่ในเซสชัน
+เดียวกัน
+
+- [x] อ่านและสร้างประโยคภาษาอังกฤษที่สมเหตุสมผลใหม่จาก OCR ของหมวด Sun ทั้งหมด (SUN + อีก 19
+      ปัจจัยที่เหลือ — ไม่รวม M/ARIES เพราะ M+SUN และ ARIES+SUN อยู่ในหมวดก่อนหน้าแล้ว) — คู่
+      SUN+CUPIDO และ SUN+APOLLON OCR เสียหายจนตัวบ่งชี้ปัจจัยที่ 3 ("-XX" prefix) หายไปทั้งคู่ กลาย
+      เป็นประโยคร้อยเรียงต่อกันโดยไม่มี prefix บอกว่าประโยคไหนเป็นของปัจจัยใด — ไม่มีทางระบุลำดับได้
+      อย่างน่าเชื่อถือแม้จะเทียบตำแหน่งกับหมวดอื่น (ลำดับใน OCR ไม่คงที่เสมอไป) จึง **ข้ามทั้งคู่ปัจจัย
+      ไปเลยแทนการเดา** (บันทึกด้วย `# missing:` ในไฟล์ yaml) — ได้ 17/19 คู่ที่เหลือ เพิ่มเข้า
+      `witte_pictures.yaml` รวม 311 รายการใหม่ (1,109 รายการรวมทั้งไฟล์)
+- [x] `engine.py`: ไม่ต้องแก้โค้ดเพิ่ม — generic ตั้งแต่ Phase 15 รองรับ base pair ใดก็ได้อัตโนมัติ
+- [x] เพิ่ม unit test ใน `test_uranian_knowledge_base.py` ยืนยันไม่มี base pair ซ้ำ (M+SUN/ARIES+SUN
+      ไม่ถูกสร้างซ้ำ), ปัจจัยที่ 3 ถูกต้องทุกตัว — รวม **109 tests ผ่านหมด**, ruff clean
+- [x] พบและแก้บั๊ก YAML escaping: สคริปต์ generator เดิมใช้ `.replace("'", "\\'")` ซึ่งไม่ใช่ escape
+      sequence ที่ถูกต้องใน double-quoted YAML scalar (รองรับแค่ `\"` และ `\\`) — บั๊กแฝงอยู่ตั้งแต่
+      Phase 15/16 แต่ไม่เคยแสดงอาการเพราะไม่มี keyword ไหนมี apostrophe จนมาเจอในหมวด Ascendant (ดู
+      Phase 18) แก้โดยลบ `.replace("'", ...)` ออกจากทุกสคริปต์ generator
+
+## Phase 18 — witte_pictures.yaml: หมวด Ascendant (คู่ที่ 4 จาก 22 หมวดของหนังสือ)
+
+ทำหมวดถัดไปตามลำดับ (Meridian → Aries → Sun → **Ascendant** → Moon → Node → ดาวเคราะห์ 16 ดวง)
+
+- [x] อ่านและสร้างประโยคภาษาอังกฤษที่สมเหตุสมผลใหม่จาก OCR ของหมวด Ascendant ทั้งหมด (A + อีก 18
+      ปัจจัยที่เหลือ — ไม่รวม M/ARIES/SUN ที่อยู่ในหมวดก่อนหน้าแล้ว) — คู่ A+NODE, A+CUPIDO, A+ADMETOS
+      OCR เสียหายแบบเดียวกับ SUN+CUPIDO/SUN+APOLLON ใน Phase 17 (ตัวบ่งชี้ปัจจัยที่ 3 หายหมด) จึง
+      **ข้ามทั้ง 3 คู่** ตามนโยบายเดียวกัน — ได้ 15/18 คู่ที่เหลือ เพิ่มเข้า `witte_pictures.yaml`
+      รวม 294 รายการใหม่ (1,403 รายการรวมทั้งไฟล์)
+- [x] ระหว่างสร้างไฟล์พบบั๊ก YAML escaping (`ScannerError: found unknown escape character "'"`) ที่
+      รายการ "Ascendant plus Jupiter" (มี apostrophe ใน keyword_en ภาษาอังกฤษ) — revert ไฟล์กลับไป
+      commit ก่อนหน้าด้วย `git checkout`, แก้สคริปต์ generator ทั้ง 3 ตัว (aries/sun/ascendant),
+      regenerate ใหม่, ตรวจสอบไม่มี `\\'` หลงเหลือ, ต่อเข้าไฟล์และ validate ใหม่สำเร็จ — ไม่มีข้อมูล
+      สูญหายเพราะ Python source data (`ascendant_data.py`) ไม่เคยเสียหาย มีแค่ YAML fragment ที่
+      generate ใหม่เท่านั้น
+- [x] `engine.py`: ไม่ต้องแก้โค้ดเพิ่ม — generic ตั้งแต่ Phase 15
+- [x] เพิ่ม unit test ยืนยันไม่มี base pair ซ้ำ ปัจจัยที่ 3 ถูกต้องทุกตัว — รวม **109 tests ผ่านหมด**,
+      ruff clean, `ruff format --check` ผ่าน
+- [x] อัปเดต header comment ใน `witte_pictures.yaml` ให้ตรงสถานะ (Meridian/Aries/Sun/Ascendant ครบ
+      หรือเกือบครบ, 73 base pairs, 1,403 entries รวม)
+- [x] **แก้ไข 2026-08-14 (Phase 19-33)**: ทำครบทั้ง 18 หมวดที่เหลือของหนังสือแล้ว (Moon, Node,
+      ดาวเคราะห์/TNP อีก 16 ดวง) — README และ artifact อัปเดตแล้วด้วย ดู Phase 19-33 ด้านล่าง
+
+## Phase 19-33 — witte_pictures.yaml: หมวดที่เหลือทั้งหมด (Moon ผ่าน Vulkanus) จนจบทั้งเล่ม
+
+ผู้ใช้ยืนยันคำสั่ง "ต่อจนจบเลยทุก planet ทุกจุด" (Phase 17-18) — ทำหมวดที่เหลือทั้ง 18 หมวดต่อเนื่อง
+โดยไม่ต้องขอ confirm ซ้ำในแต่ละหมวด ใช้ pipeline เดียวกันทุกครั้ง (สรุปครั้งเดียว ใช้ซ้ำทุกหมวด):
+(1) อ่าน raw OCR ของหมวดนั้นทั้งหมด สร้างประโยคภาษาอังกฤษที่สมเหตุสมผลใหม่จากตัวอักษรที่ OCR เพี้ยน
+โดยใช้ตำแหน่งในลำดับปัจจัยที่ 3 คงที่ (M, Ar, Su, As, Mo, No, Me, Ve, Ma, Ju, Sa, Ur, Ne, Pl, Cu, Ha,
+Ze, Kr, Ap, Ad, Vu, Po) เป็นเครื่องมือหลักไขรหัส prefix ที่เสียหาย (2) แปลเป็นไทย (3) เขียนไฟล์ข้อมูล
+Python ต่อหมวด (4) **รันสคริปต์ตรวจจับข้อความซ้ำภายในคู่แบบบังคับ** ก่อนทุกครั้ง (เพิ่มเข้ามาเป็น step
+บังคับตั้งแต่หมวด Mars หลังพบบั๊ก copy-paste ซ้ำหลายครั้ง) (5) generate เป็น YAML fragment (6)
+ตรวจสอบไม่มี `\\'` escape เสีย (7) ต่อเข้า `witte_pictures.yaml` (8) validate ทั้งไฟล์ (unique base
+pair, third factor ถูกต้อง, ไม่มี meaning ว่าง) (9) อัปเดต header comment (10) `ruff check`,
+`ruff format --check`, `pytest -q` (11) commit + push แยกทีละหมวด — คู่ที่กู้คืนจาก OCR ไม่ได้อย่าง
+มั่นใจ **ถูกละไว้พร้อม comment `# missing:` ต่อท้ายคู่นั้น** แทนการเดา ตามนโยบายเดิมตั้งแต่ Phase 15
+
+รายละเอียดต่อหมวด (จำนวนคู่ใหม่/รายการใหม่/สะสมรวมทั้งไฟล์ หลังจบแต่ละหมวด):
+
+- [x] **Moon** (หน้า 83-101): 17 คู่ 329 รายการ → สะสม 90 คู่ / 1,732 รายการ
+- [x] **Node** (หน้า 102-118): 16 คู่ 310 รายการ → สะสม 106 คู่ / 2,042 รายการ
+- [x] **Mercury** (หน้า 119-134): 15/15 คู่ครบ 295 รายการ → สะสม 121 คู่ / 2,337 รายการ
+- [x] **Venus** (หน้า 135-149): 14/14 คู่ครบ 271 รายการ → สะสม 135 คู่ / 2,608 รายการ
+- [x] **Mars** (หน้า 150-164): 13/13 คู่ครบ 258 รายการ → สะสม 148 คู่ / 2,866 รายการ — พบบั๊ก OCR
+      พิเศษ: บางคู่มีรายการปัจจัยที่ 3 ท้ายๆ (ราวๆ Zeus ถึง Poseidon) ปรากฏในสแกนดิบ **ก่อน** หัวข้อ
+      ของคู่นั้นเอง (คั่นด้วยตัวบ่งชี้ "หน้าต่อ" ของคู่อื่น) แก้โดยรวม fragment "ท้าย" (เจอก่อน) เข้ากับ
+      fragment "หัว" (เจอที่ label ถูกต้อง) ด้วยมือ — และเจอบั๊ก copy-paste ซ้ำร้ายแรงที่สุดในหมวดนี้
+      (Mars+Hades: Cupido/Zeus/Kronos/Apollon/Admetos/Vulkanus/Poseidon เลื่อนตำแหน่งผิดทั้งหมดเพราะ
+      พลาดจุดแบ่ง Pluto/Cupido จุดเดียว) จึงเพิ่ม step (4) ด้านบนเป็น step บังคับตั้งแต่หมวดนี้เป็นต้นไป
+- [x] **Jupiter** (หน้า 165-177): 12/12 คู่ครบ 234 รายการ → สะสม 160 คู่ / 3,100 รายการ
+- [x] **Saturn** (หน้า 178-189): 11/11 คู่ครบ 215 รายการ (หลายคู่ขาดบางรายการเพราะ OCR เสีย ดู
+      `# missing:` ต่อคู่ในไฟล์) → สะสม 171 คู่ / 3,315 รายการ
+- [x] **Uranus** (หน้า 190-200): 10/10 คู่ครบ 198 รายการ — Kronos ขาด Pluto, Admetos ขาด Venus →
+      สะสม 181 คู่ / 3,513 รายการ
+- [x] **Neptune** (หน้า 201-210): 9/9 คู่ครบ 177 รายการ — คุณภาพ OCR แย่ลงชัดเจนตามที่หนังสือเตือนไว้
+      เอง: Zeus ขาด Saturn, Admetos ขาด Venus และ Hades → สะสม 190 คู่ / 3,690 รายการ
+- [x] **Pluto** (หน้า 211-219): 8/8 คู่ครบ 158 รายการ — Cupido ขาด Admetos, Hades ขาด Cupido →
+      สะสม 198 คู่ / 3,848 รายการ
+- [x] **Cupido** (หน้า 220-227): 7/7 คู่ครบ 137 รายการ — Zeus ขาด Node และ Vulkanus, Kronos ขาด A →
+      สะสม 205 คู่ / 3,985 รายการ
+- [x] **Hades** (หน้า 228-234): 6/6 คู่ครบ 120 รายการ — **ไม่มี missing เลยทั้งหมวด** แม้ OCR จะเสีย
+      มากในช่วงนี้ → สะสม 211 คู่ / 4,105 รายการ
+- [x] **Zeus** (หน้า 235-240): 5/5 คู่ครบ 100 รายการ — ไม่มี missing เลยทั้งหมวดเช่นกัน → สะสม
+      216 คู่ / 4,205 รายการ
+- [x] **Kronos** (หน้า 241-245): 4/4 คู่ครบ 77 รายการ — Admetos ขาด Mars และ Node, Vulkanus ขาด
+      Saturn → สะสม 220 คู่ / 4,282 รายการ
+- [x] **Apollon, Admetos, Vulkanus** (หน้า 246-254, จบหมวดสุดท้ายที่มีคู่ใหม่จริง): รวม 6 คู่ (Apollon
+      +Admetos, Apollon+Vulkanus, Apollon+Poseidon, Admetos+Vulkanus, Admetos+Poseidon,
+      Vulkanus+Poseidon) 118 รายการ — Apollon+Poseidon ขาด Venus, Admetos+Poseidon ขาด Apollon
+      (ข้อความ OCR ใต้ label นี้ซ้ำกับ entry ของ Kronos ก่อนหน้าเป๊ะ กู้คืนต้นฉบับจริงไม่ได้) → สะสม
+      **226 คู่ / 4,400 รายการ** — **Poseidon (หน้า 255) ไม่มีคู่ใหม่เหลือเลย** ตามที่คาดไว้ตั้งแต่ต้น
+      (เป็นปัจจัยลำดับท้ายสุด ทุกคู่ของมันถูกครอบคลุมในหมวดของปัจจัยอื่นไปหมดแล้ว) → **จบทั้งเล่ม**
+- [x] `engine.py`: ไม่ต้องแก้โค้ดเพิ่มเลยตลอด 18 หมวด — `_load_witte_pictures()`/`_picture_finding()`
+      ที่เขียนไว้ตั้งแต่ Phase 15 เป็น generic รองรับ base pair ใดก็ได้ในไฟล์โดยอัตโนมัติ
+- [x] แก้ไข test fixture 2 ตัวใน `test_uranian_knowledge_base.py` สองรอบระหว่างทาง (ตอน Mercury/Venus
+      ครบ แล้วอีกรอบตอนจบทั้งเล่ม) เพราะคู่ที่เคยใช้เป็นตัวอย่าง "ยังไม่มีใน witte_pictures.yaml" ดัน
+      มีจริงแล้วหลังทำหมวดถัดๆ ไปเสร็จ — เลือกคู่ใหม่ที่ยืนยันแล้วว่าจะไม่ถูกเติมอีก (ใช้ 2 ใน 5 คู่ที่
+      ขาดทั้งคู่ถาวร ดูข้อถัดไป) — รวม **109 tests ผ่านหมด** ทุก commit, ruff clean ทุก commit
+- [x] **พบช่องว่างที่ไม่ได้อยู่ใน scope ของ Phase 19-33 โดยตรง**: หลังทำครบทุกหมวดแล้ว ไฟล์มี 226 จาก
+      231 คู่ที่เป็นไปได้ทางทฤษฎี (C(22,2)) — **5 คู่ที่ขาดไปทั้งคู่** (ไม่ใช่แค่บางรายการ) คือ
+      A+NODE, A+CUPIDO, A+ADMETOS (ควรอยู่หมวด Ascendant, Phase 18) และ CUPIDO+SUN, APOLLON+SUN
+      (ควรอยู่หมวด Sun, Phase 17) — ตรวจสอบย้อนกลับไปพบว่า **Phase 17-18 ข้ามทั้ง 5 คู่นี้โดยตั้งใจ**
+      (บันทึกไว้แล้วในบรรทัดข้างบน: "OCR เสียหาย...ตัวบ่งชี้ปัจจัยที่ 3 หายหมด จึงข้ามทั้ง 3 คู่") ไม่ใช่
+      ข้อผิดพลาดใหม่ — ยังไม่ได้ลองกลับไปอ่าน raw OCR อีกครั้งเพื่อดูว่ากู้คืนได้หรือไม่ ถ้าต้องการให้
+      ครบ 231/231 จริงๆ ต้องทำเป็นงานแยกในอนาคต
+- [x] อัปเดต header comment ใน `witte_pictures.yaml` ทุกครั้งที่จบหมวด (ล่าสุด Phase 33: สถานะครบ
+      ทั้งเล่ม, 226/231 คู่, 4,400 รายการ, ระบุ 5 คู่ที่ขาดทั้งคู่ไว้ชัดเจน)
+- [x] อัปเดต `knowledge_base/uranian/README.md` ให้ตรงสถานะจบทั้งเล่มแล้ว — ดูหัวข้อ README ด้านล่าง
+- [x] regenerate + republish review artifact ให้ครอบคลุมทั้ง 22 หมวด — ดูลิงก์ในข้อความสรุปงาน

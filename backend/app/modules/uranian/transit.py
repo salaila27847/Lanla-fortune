@@ -18,16 +18,17 @@ Covers, per the doc's "features the team should build" summary table:
 - **Lunar Return** — the ~27.3-day cycle date when the transiting Moon
   returns to its natal degree, used for monthly-resolution forecasting.
 - **Relocation** — Ascendant/Midheaven recomputed for the same birth
-  moment at a different location.
+  moment at a different location (relocated_angles()).
+- **Daily M/A** — Ascendant/Midheaven recomputed for the same birth
+  *location* at a different moment (the opposite of relocation): pass
+  birth_data to transit_positions() and it's included as part of the
+  transit snapshot, which is also what gives **Transit Axes** — pictures
+  built from *today's* M/Sun, M/A, etc. — for free out of
+  find_transit_pictures()'s existing Type I/II search, with no separate
+  axis-finding logic needed.
 
-Not covered here (see docs/task-breakdown.md): "Daily Meridian and
-Ascendant" (a *current-moment* M/A, distinct from relocation's
-*different-place* M/A) and "Transit Axes" beyond what
-find_transit_pictures already does by treating transit factors as just
-another layer in the same Type I/II search.
-
-Like solar_arc.py, this module is calculation-only: not wired into
-calculate()/EngineResult or any API endpoint yet.
+Wired into POST /api/forecast (app/main.py) — see that endpoint and
+docs/task-breakdown.md Phase 12 for how a caller opts into each piece.
 """
 
 from __future__ import annotations
@@ -74,12 +75,29 @@ RADIX_PREFIX = "r:"
 DIRECTED_PREFIX = "d:"
 TRANSIT_PREFIX = "t:"
 
+DAILY_ANGLE_BASES = frozenset(
+    {"A", "M"}
+)  # Daily M/A counts as a reference point, not a moving body
 
-def transit_positions(target_date: date, target_time: dt_time | None = None) -> dict[str, float]:
+
+def transit_positions(
+    target_date: date,
+    target_time: dt_time | None = None,
+    birth_data: BirthData | None = None,
+) -> dict[str, float]:
     """Real ephemeris longitudes for the 10 classical bodies, 8 TNPs, and
     the (true) Node on target_date — noon UTC by default, since transits
     are normally read at day resolution; pass target_time for hour-level
-    precision (e.g. pinning down a station moment)."""
+    precision (e.g. pinning down a station moment).
+
+    Pass birth_data to additionally include "Daily M/A" — the source
+    doc's technique of computing Ascendant/Midheaven for target_date at
+    the *birth location* (same place, different moment — the opposite of
+    relocated_angles(), which is same moment, different place). Doing it
+    here, as part of the same transit snapshot, means "Transit Axes"
+    (pictures built from *today's* M/Sun, M/A, etc.) fall directly out of
+    find_transit_pictures()'s existing Type I/II search — no separate
+    axis-finding logic needed."""
     dt = datetime.combine(target_date, target_time or dt_time(12, 0), tzinfo=ZoneInfo("UTC"))
     jd = swe.julday(dt.year, dt.month, dt.day, dt.hour + dt.minute / 60 + dt.second / 3600)
 
@@ -89,6 +107,12 @@ def transit_positions(target_date: date, target_time: dt_time | None = None) -> 
     for point_id, swe_id in TNP_SWE_IDS.items():
         positions[point_id.upper()] = swe.calc_ut(jd, swe_id)[0][0]
     positions["NODE"] = swe.calc_ut(jd, swe.TRUE_NODE)[0][0]
+
+    if birth_data is not None:
+        _, ascmc = swe.houses(jd, birth_data.latitude, birth_data.longitude, b"P")
+        positions["A"] = ascmc[0]
+        positions["M"] = ascmc[1]
+
     return positions
 
 
@@ -140,11 +164,15 @@ def find_transit_pictures(
 
     A picture must involve at least one transit (or directed) factor —
     pure radix pictures are already covered by the natal engine — and at
-    least one *radix or directed* personal point, matching the source
-    material's rule that a transit-transit aspect only matters "if it
-    lands on a personal point in the birth chart" (a transiting Sun/
-    Moon/Node passing through the sky isn't itself a personal point;
-    only the fixed radix/directed reference points are)."""
+    least one *reference* personal point: a radix/directed personal
+    point, or today's M/A if transit_positions_ was built with
+    birth_data (Daily M/A — see transit_positions()). That matches the
+    source material's rule that a transit-transit aspect only matters
+    "if it lands on a personal point": a transiting Sun/Moon/Node
+    passing through the sky isn't itself a personal point, but the
+    day's own M/A axis is — it's a computed angle for that day, not a
+    body in motion, the same way radix/directed M/A are references
+    rather than moving bodies."""
     positions: dict[str, float] = {f"{RADIX_PREFIX}{k}": v for k, v in natal_positions.items()}
     if directed_positions_:
         positions.update({f"{DIRECTED_PREFIX}{k}": v for k, v in directed_positions_.items()})
@@ -197,7 +225,9 @@ def find_transit_pictures(
 
     def _has_reference_personal_point(factors: frozenset[str]) -> bool:
         return any(
-            _layer(f) in {"r", "d"} and _base_factor(f) in PERSONAL_POINT_IDS for f in factors
+            (_layer(f) in {"r", "d"} and _base_factor(f) in PERSONAL_POINT_IDS)
+            or (_layer(f) == "t" and _base_factor(f) in DAILY_ANGLE_BASES)
+            for f in factors
         )
 
     found = [
@@ -213,12 +243,16 @@ def transit_forecast(
     natal_positions: dict[str, float],
     target_date: date,
     directed_positions_: dict[str, float] | None = None,
+    birth_data: BirthData | None = None,
 ) -> list[dict[str, Any]]:
     """Convenience entry point: compute transit positions for
     target_date and return the resulting pictures against natal_positions
-    (and directed_positions_, if given)."""
+    (and directed_positions_, if given). Pass birth_data to also include
+    Daily M/A (and, through it, Transit Axes) in the search."""
     return find_transit_pictures(
-        natal_positions, transit_positions(target_date), directed_positions_
+        natal_positions,
+        transit_positions(target_date, birth_data=birth_data),
+        directed_positions_,
     )
 
 

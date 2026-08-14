@@ -8,9 +8,11 @@ from __future__ import annotations
 from datetime import date, time
 
 import pytest
+import yaml
 
 from app.core.schema import BirthData
 from app.modules.uranian.engine import (
+    KB_DIR,
     PERSONAL_POINT_IDS,
     TNP_SWE_IDS,
     _dial90_orb,
@@ -23,6 +25,7 @@ from app.modules.uranian.engine import (
     _load_planetary_pictures,
     _load_points,
     _load_signs,
+    _load_witte_pictures,
     _midpoint,
     _midpoint_matrix,
     _picture_finding,
@@ -157,6 +160,56 @@ def test_axis_meanings_kb_has_m_axis_paired_with_every_other_factor():
     assert set(axis_m) == all_ids - {"M"}
 
 
+@pytest.mark.parametrize("axis_id", ["A", "MOON", "NODE"])
+def test_axis_meanings_kb_has_full_coverage_for_a_moon_node_axes(axis_id):
+    axis = _load_axis_meanings()[axis_id]
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    assert set(axis) == all_ids - {axis_id}
+
+
+def test_axis_meanings_kb_sun_axis_covers_all_but_two_undocumented_factors():
+    # The source book never gives Sun+Apollon / Sun+Admetos meanings.
+    axis_sun = _load_axis_meanings()["SUN"]
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    assert set(axis_sun) == all_ids - {"SUN", "APOLLON", "ADMETOS"}
+
+
+def test_witte_pictures_kb_covers_all_twenty_one_meridian_base_pairs():
+    witte = _load_witte_pictures()
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    m_pairs = {pair for pair in witte if "M" in pair}
+    assert {next(iter(pair - {"M"})) for pair in m_pairs} == all_ids - {"M"}
+
+
+def test_witte_pictures_kb_covers_all_twenty_aries_base_pairs():
+    # M+ARIES lives in the Meridian section already, so Aries's own section
+    # only needs the other 20 factors.
+    witte = _load_witte_pictures()
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    aries_pairs = {pair for pair in witte if "ARIES" in pair and "M" not in pair}
+    assert {next(iter(pair - {"ARIES"})) for pair in aries_pairs} == all_ids - {"ARIES", "M"}
+
+
+def test_witte_pictures_kb_third_factors_are_valid_and_distinct_from_the_pair():
+    witte = _load_witte_pictures()
+    all_ids = set(_load_factors()) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    for pair, entries in witte.items():
+        assert entries, pair
+        for third_factor, meaning in entries.items():
+            assert third_factor in all_ids
+            assert third_factor not in pair
+            assert meaning.strip()
+
+
+def test_witte_pictures_kb_has_no_duplicate_base_pairs():
+    data = yaml.safe_load((KB_DIR / "witte_pictures.yaml").read_text(encoding="utf-8"))
+    seen = set()
+    for base_pair in data["base_pairs"]:
+        key = frozenset(base_pair["factors"])
+        assert key not in seen, base_pair["factors"]
+        seen.add(key)
+
+
 # ---------- planetary picture detection (synthetic positions) ----------
 
 
@@ -205,24 +258,79 @@ def test_pictures_without_a_personal_point_are_filtered_out():
 
 
 def test_picture_finding_uses_glossary_meaning_when_a_pair_matches():
+    # witte_pictures.yaml now covers the whole book (226/231 base pairs), so a
+    # pair-only fixture needs a hit that's specifically absent for that pair.
+    # NEPTUNE+ZEUS is in witte_pictures.yaml but its SATURN entry was lost to
+    # OCR damage (see the pair's `# missing:` note), so this hit falls through
+    # to planetary_pictures.yaml's pair-only entry -- exercising that tier.
     picture = {
         "type": "type1",
-        "pair": ("MERCURY", "SATURN"),
-        "hit": "SUN",
-        "factors": frozenset({"MERCURY", "SATURN", "SUN"}),
+        "pair": ("NEPTUNE", "ZEUS"),
+        "hit": "SATURN",
+        "factors": frozenset({"NEPTUNE", "ZEUS", "SATURN"}),
         "orb": 0.2,
     }
     finding = _picture_finding(picture)
-    assert "การเดินทาง" in finding.meaning
+    assert "จินตนาการเชิงสร้างสรรค์" in finding.meaning
     assert finding.weight == 0.75
 
 
-def test_picture_finding_falls_back_to_generic_composition_when_unmatched():
+def test_picture_finding_prefers_witte_exact_match_over_generic_glossary():
+    # M+VULKANUS=CUPIDO has a specific entry in witte_pictures.yaml (the real
+    # Rules for Planetary Pictures glossary) — it should win over
+    # planetary_pictures.yaml's pair-only entries and the generic fallback.
     picture = {
         "type": "type1",
-        "pair": ("VENUS", "JUPITER"),
+        "pair": ("M", "VULKANUS"),
+        "hit": "CUPIDO",
+        "factors": frozenset({"M", "VULKANUS", "CUPIDO"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert finding.weight == 0.95
+    assert finding.meaning.startswith("อำนาจและอิทธิพลผ่านครอบครัวหรือชุมชน")
+
+
+def test_picture_finding_uses_witte_exact_match_for_a_non_m_base_pair():
+    # ARIES+JUPITER=MARS comes from the Aries section, not the Meridian one —
+    # confirms the lookup isn't hardcoded to M-containing pairs.
+    picture = {
+        "type": "type1",
+        "pair": ("ARIES", "JUPITER"),
+        "hit": "MARS",
+        "factors": frozenset({"ARIES", "JUPITER", "MARS"}),
+        "orb": 0.1,
+    }
+    finding = _picture_finding(picture)
+    assert finding.weight == 0.95
+    assert finding.meaning.startswith("ความสุขในความรักกับผู้ชาย")
+
+
+def test_picture_finding_ignores_witte_pictures_for_type2():
+    # witte_pictures.yaml only covers Type I (pair + single third factor) —
+    # Type II pictures must still fall through to the generic glossary/composition.
+    picture = {
+        "type": "type2",
+        "pair": ("M", "VULKANUS"),
+        "pair_b": ("CUPIDO", "ZEUS"),
+        "factors": frozenset({"M", "VULKANUS", "CUPIDO", "ZEUS"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert finding.weight != 0.95
+
+
+def test_picture_finding_falls_back_to_generic_composition_when_unmatched():
+    # witte_pictures.yaml now covers the whole book, but 5 base pairs never
+    # made it in even as a whole entry -- OCR damage from the Ascendant/Sun
+    # chapters (done in an earlier session), never recovered. APOLLON+SUN is
+    # one of them, and it's absent from planetary_pictures.yaml's curated 50
+    # pairs too, so this exercises the generic keyword-composition tier.
+    picture = {
+        "type": "type1",
+        "pair": ("APOLLON", "SUN"),
         "hit": "MOON",
-        "factors": frozenset({"VENUS", "JUPITER", "MOON"}),
+        "factors": frozenset({"APOLLON", "SUN", "MOON"}),
         "orb": 0.2,
     }
     finding = _picture_finding(picture)
@@ -240,3 +348,31 @@ def test_picture_finding_appends_axis_m_note_when_m_is_involved():
     }
     finding = _picture_finding(picture)
     assert "บนแกน M" in finding.meaning
+
+
+def test_picture_finding_appends_axis_note_for_a_non_m_axis():
+    # NODE is now a documented axis too, not just M.
+    picture = {
+        "type": "type1",
+        "pair": ("NODE", "VENUS"),
+        "hit": "MARS",
+        "factors": frozenset({"NODE", "VENUS", "MARS"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert "บนแกน NODE" in finding.meaning
+
+
+def test_picture_finding_appends_notes_for_every_axis_present_in_the_picture():
+    # Both M and SUN are axes, and both are present in this picture — each
+    # should contribute its own axis note, not just the first one found.
+    picture = {
+        "type": "type2",
+        "pair": ("M", "MARS"),
+        "pair_b": ("SUN", "SATURN"),
+        "factors": frozenset({"M", "MARS", "SUN", "SATURN"}),
+        "orb": 0.2,
+    }
+    finding = _picture_finding(picture)
+    assert "บนแกน M" in finding.meaning
+    assert "บนแกน SUN" in finding.meaning
