@@ -37,6 +37,7 @@ import json
 import logging
 import os
 
+import httpx
 from google import genai
 from google.genai import errors, types
 from pydantic import BaseModel
@@ -127,10 +128,12 @@ async def _generate_synthesis(
     client: genai.Client, model: str, system_prompt: str, payload: dict[str, object]
 ) -> _LLMSynthesis:
     """Shared by synthesize() and synthesize_followup(): calls Gemini with
-    response_schema=_LLMSynthesis, retrying transient 5xx/429 errors with a
-    short backoff before giving up. Raises on a non-retryable error or once
-    attempts are exhausted — callers catch that and fall back to a non-LLM
-    SynthesisOutput."""
+    response_schema=_LLMSynthesis, retrying transient 5xx/429 errors and
+    httpx-level transport failures (read/connect timeouts etc. — these
+    aren't wrapped into errors.APIError by the SDK, so they need their own
+    except clause) with a short backoff before giving up. Raises on a
+    non-retryable error or once attempts are exhausted — callers catch
+    that and fall back to a non-LLM SynthesisOutput."""
     config = types.GenerateContentConfig(
         system_instruction=system_prompt,
         max_output_tokens=4096,
@@ -165,6 +168,22 @@ async def _generate_synthesis(
                 raise
             logger.warning(
                 "Gemini call failed with retryable error (attempt %d/%d), retrying: %s",
+                attempt + 1,
+                _MAX_ATTEMPTS,
+                exc,
+            )
+            await asyncio.sleep(_RETRY_BACKOFF_SECONDS * (attempt + 1))
+        except httpx.TransportError as exc:
+            # Read/connect/write timeouts, connection resets, etc. — raised
+            # directly by httpx (the SDK's HTTP transport), never wrapped
+            # into errors.APIError, so this needs its own except clause or
+            # it crashes the request with an unhandled 500 instead of
+            # retrying/falling back like every other Gemini failure mode.
+            last_attempt = attempt == _MAX_ATTEMPTS - 1
+            if last_attempt:
+                raise
+            logger.warning(
+                "Gemini call failed with a transport error (attempt %d/%d), retrying: %s",
                 attempt + 1,
                 _MAX_ATTEMPTS,
                 exc,
@@ -210,7 +229,7 @@ async def synthesize(
             forecast=forecast,
             oracle_question=oracle_question,
         )
-    except (errors.APIError, TypeError, ValueError) as exc:
+    except (errors.APIError, TypeError, ValueError, httpx.TransportError) as exc:
         # TypeError covers the genai SDK's own "missing/invalid API key"
         # failure, which it raises before ever making a request.
         logger.warning("Synthesis via Gemini failed, falling back to raw engine summary: %s", exc)
@@ -246,7 +265,7 @@ async def synthesize_followup(
             forecast=previous.forecast,
             oracle_question=question,
         )
-    except (errors.APIError, TypeError, ValueError) as exc:
+    except (errors.APIError, TypeError, ValueError, httpx.TransportError) as exc:
         logger.warning(
             "Follow-up synthesis via Gemini failed, falling back to raw oracle summary: %s", exc
         )
