@@ -258,17 +258,20 @@ def test_pictures_without_a_personal_point_are_filtered_out():
 
 
 def test_picture_finding_uses_glossary_meaning_when_a_pair_matches():
-    # ADMETOS+POSEIDON is not yet in witte_pictures.yaml (Admetos chapter not done),
-    # so this exercises the planetary_pictures.yaml fallback tier specifically.
+    # witte_pictures.yaml now covers the whole book (226/231 base pairs), so a
+    # pair-only fixture needs a hit that's specifically absent for that pair.
+    # NEPTUNE+ZEUS is in witte_pictures.yaml but its SATURN entry was lost to
+    # OCR damage (see the pair's `# missing:` note), so this hit falls through
+    # to planetary_pictures.yaml's pair-only entry -- exercising that tier.
     picture = {
         "type": "type1",
-        "pair": ("ADMETOS", "POSEIDON"),
-        "hit": "SUN",
-        "factors": frozenset({"ADMETOS", "POSEIDON", "SUN"}),
+        "pair": ("NEPTUNE", "ZEUS"),
+        "hit": "SATURN",
+        "factors": frozenset({"NEPTUNE", "ZEUS", "SATURN"}),
         "orb": 0.2,
     }
     finding = _picture_finding(picture)
-    assert "การศึกษา" in finding.meaning
+    assert "จินตนาการเชิงสร้างสรรค์" in finding.meaning
     assert finding.weight == 0.75
 
 
@@ -318,14 +321,16 @@ def test_picture_finding_ignores_witte_pictures_for_type2():
 
 
 def test_picture_finding_falls_back_to_generic_composition_when_unmatched():
-    # VULKANUS+POSEIDON is not in witte_pictures.yaml (Vulkanus chapter not done --
-    # it's second-to-last) nor in planetary_pictures.yaml's curated 50 pairs, so this
-    # exercises the generic keyword-composition tier specifically.
+    # witte_pictures.yaml now covers the whole book, but 5 base pairs never
+    # made it in even as a whole entry -- OCR damage from the Ascendant/Sun
+    # chapters (done in an earlier session), never recovered. APOLLON+SUN is
+    # one of them, and it's absent from planetary_pictures.yaml's curated 50
+    # pairs too, so this exercises the generic keyword-composition tier.
     picture = {
         "type": "type1",
-        "pair": ("VULKANUS", "POSEIDON"),
+        "pair": ("APOLLON", "SUN"),
         "hit": "MOON",
-        "factors": frozenset({"VULKANUS", "POSEIDON", "MOON"}),
+        "factors": frozenset({"APOLLON", "SUN", "MOON"}),
         "orb": 0.2,
     }
     finding = _picture_finding(picture)
