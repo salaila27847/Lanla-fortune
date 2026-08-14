@@ -5,9 +5,15 @@ import { backendFetch } from "@/lib/backend";
 import type { ReadingRecord } from "@/lib/api";
 
 function formatDate(iso: string): string {
+  // This page is a Server Component — it renders on Vercel's server clock
+  // (UTC), not the visitor's browser, so toLocaleString() without an
+  // explicit timeZone silently formats in UTC instead of local time. The
+  // app is Thai-only, so pin it to Bangkok rather than trying to detect
+  // the visitor's zone server-side.
   return new Date(iso).toLocaleString("th-TH", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Asia/Bangkok",
   });
 }
 

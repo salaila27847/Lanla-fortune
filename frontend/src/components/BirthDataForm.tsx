@@ -1,9 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import tzlookup from "tz-lookup";
 import type { BirthData, ForecastOptions } from "@/lib/api";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
 import type { GeocodeResult } from "@/lib/geocode";
+
+// tz-lookup only throws for out-of-bounds/NaN input, which real geocode
+// results never produce — the catch is just defensive. On failure, keep
+// whatever timezone was already selected rather than guessing.
+function timezoneForCoordinates(
+  latitude: number,
+  longitude: number,
+  fallback: string,
+): string {
+  try {
+    return tzlookup(latitude, longitude);
+  } catch {
+    return fallback;
+  }
+}
 
 type CityPreset = {
   label: string;
@@ -63,9 +79,7 @@ export default function BirthDataForm({ onSubmit, onSkip }: Props) {
     setPlace(result.displayName);
     setLatitude(result.latitude);
     setLongitude(result.longitude);
-    if (result.countryCode === "th") {
-      setTimezone("Asia/Bangkok");
-    }
+    setTimezone(timezoneForCoordinates(result.latitude, result.longitude, timezone));
     birthSearch.setShowResults(false);
   }
 
