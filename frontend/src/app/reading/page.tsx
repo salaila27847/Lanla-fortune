@@ -125,8 +125,15 @@ export default function ReadingPage() {
     }
   }
 
-  async function fetchReading(skipOracle: boolean) {
+  // `picks` is accepted as a parameter (defaulting to the oraclePicks
+  // state, for the skip/retry paths) rather than always reading state,
+  // because the oracle-draw step's onComplete calls setOraclePicks(...)
+  // and fetchReading(...) synchronously in the same handler — state
+  // updates don't apply until the next render, so reading `oraclePicks`
+  // here right after setting it would still see the old (empty) value.
+  async function fetchReading(skipOracle: boolean, picks: string[] = oraclePicks) {
     setOracleSkipped(skipOracle);
+    if (!skipOracle) setOraclePicks(picks);
     setPendingAction("reading");
     setLoadingMessage("กำลังสังเคราะห์คำทำนาย...");
     setStep("loading");
@@ -140,7 +147,7 @@ export default function ReadingPage() {
           ? {}
           : {
               oracle: {
-                picks: oraclePicks,
+                picks,
                 ...(oracleQuestion ? { question: oracleQuestion } : {}),
               },
             }),
@@ -248,10 +255,7 @@ export default function ReadingPage() {
           cards={oracleDeck.cards.map((c): DrawableCard => ({ id: c.card_id, label: c.name_th }))}
           rows={4}
           nextLabel="ดูคำทำนาย"
-          onComplete={(picked) => {
-            setOraclePicks(picked.map((p) => p.id));
-            void fetchReading(false);
-          }}
+          onComplete={(picked) => void fetchReading(false, picked.map((p) => p.id))}
           onSkip={oracleIsSkippable ? () => fetchReading(true) : undefined}
           skipLabel="ข้ามไพ่ออราเคิล"
         />
