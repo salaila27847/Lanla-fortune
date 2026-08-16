@@ -64,20 +64,46 @@ export type ReadingRecord = {
   synthesis: SynthesisOutput;
 };
 
+// Real cards fetched from a full shuffled deck (POST /api/oracle/draw,
+// POST /api/tarot/draw) — so a tap on the card grid reveals a specific,
+// already-decided card instead of a cosmetic one assigned afterward.
+export type OracleCardPreview = {
+  card_id: string;
+  name_th: string;
+  category_th: string;
+  meaning: string;
+  keywords: string[];
+};
+
+export type OracleDeck = { cards: OracleCardPreview[] };
+
+export type TarotCardPreview = {
+  card_id: string;
+  name_th: string;
+  reversed: boolean;
+  meaning: string;
+  keywords: string[];
+};
+
+export type TarotDeck = { positions: string[]; cards: TarotCardPreview[] };
+
 // Body shape for POST /api/reading — birth_data/tarot/oracle are each
 // independently optional, since the user can skip any 1 or 2 of the 3
 // disciplines (see backend/app/core/schema.py's ReadingRequest). At least
 // one of the three must be present, or the backend rejects with 422.
+// tarot.picks/oracle.picks are the cards the user actually revealed (in
+// tap order) from the deck /api/tarot/draw or /api/oracle/draw returned —
+// trusted as-is server-side, but re-looked-up by id for the real meaning.
 export type ReadingSubmission = ForecastOptions & {
   birth_data?: BirthData;
-  tarot?: { spread: string };
-  oracle?: { card_count: number; question?: string };
+  tarot?: { spread: string; picks: { card_id: string; reversed: boolean }[] };
+  oracle?: { picks: string[]; question?: string };
 };
 
 export type FollowUpSubmission = {
   previous: SynthesisOutput;
   question: string;
-  oracle_count: number;
+  oracle_picks: string[];
 };
 
 export class ReadingRequestError extends Error {
@@ -109,7 +135,7 @@ async function extractErrorDetail(res: Response): Promise<string | undefined> {
   return undefined;
 }
 
-async function postReadingRequest(path: string, body: unknown): Promise<SynthesisOutput> {
+async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -124,11 +150,19 @@ async function postReadingRequest(path: string, body: unknown): Promise<Synthesi
 }
 
 export async function getReading(submission: ReadingSubmission): Promise<SynthesisOutput> {
-  return postReadingRequest("/api/reading", submission);
+  return postJson("/api/reading", submission);
 }
 
 export async function getFollowUpReading(
   submission: FollowUpSubmission,
 ): Promise<SynthesisOutput> {
-  return postReadingRequest("/api/reading/follow-up", submission);
+  return postJson("/api/reading/follow-up", submission);
+}
+
+export async function drawOracleDeck(deck?: string): Promise<OracleDeck> {
+  return postJson("/api/oracle/draw", deck ? { deck } : {});
+}
+
+export async function drawTarotDeck(spread: string): Promise<TarotDeck> {
+  return postJson("/api/tarot/draw", { spread });
 }

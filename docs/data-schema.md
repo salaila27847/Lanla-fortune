@@ -33,15 +33,58 @@ class BirthData(BaseModel):
     timezone: str
 ```
 
-## TarotDraw / OracleDraw
+## Draw-before-reveal (`POST /api/oracle/draw`, `POST /api/tarot/draw`)
+
+**แก้ไข 2026-08-16**: ผู้ใช้ตัดสินใจให้การจั่วไพ่เป็นการเลือกจริงของผู้ใช้ ไม่ใช่แค่ animation
+cosmetic ที่สุ่มไพ่หลังบ้านทีหลังโดยไม่สนตำแหน่งที่แตะ — client ต้องเรียก endpoint นี้ก่อนแสดงตาราง
+ไพ่ (`CardDrawStep`) เพื่อรับ**สำรับทั้งชุดที่สับแล้ว**พร้อมเนื้อหาไพ่จริงทุกใบ ตำแหน่งที่ผู้ใช้แตะจึง
+แม็ปกับไพ่จริงที่ตัดสินไว้ล่วงหน้าแล้ว ไม่ใช่ไพ่ที่กำหนดทีหลัง — สำหรับทาโรต์ orientation
+(กลับหัว/ตั้งตรง) ก็ตัดสินไว้พร้อมกับการสับด้วยเหตุผลเดียวกัน
 
 ```python
-class CardDraw(BaseModel):
-    deck: str                # ชื่อชุดไพ่
+class OracleDrawRequest(BaseModel):
+    deck: str | None = None      # ไม่ระบุ = ใช้ deck default (lanla_original)
+
+class OracleCardPreview(BaseModel):
     card_id: str
-    position_in_spread: str | None   # เช่น "past", "present", "future"
+    name_th: str
+    category_th: str
+    meaning: str
+    keywords: list[str]
+
+class OracleDeckResponse(BaseModel):
+    cards: list[OracleCardPreview]   # สำรับทั้ง 88 ใบ สับแล้ว
+
+class TarotDrawRequest(BaseModel):
+    spread: str = "three_card"
+
+class TarotCardPreview(BaseModel):
+    card_id: str
+    name_th: str
+    reversed: bool                    # ตัดสินไว้ตอนสับแล้ว ไม่ใช่ตอนตีความ
+    meaning: str
+    keywords: list[str]
+
+class TarotDeckResponse(BaseModel):
+    positions: list[str]              # label ตามเลย์เอาท์ที่เลือก เช่น ["อดีต","ปัจจุบัน","อนาคต"]
+    cards: list[TarotCardPreview]     # สำรับทั้ง 78 ใบ สับแล้ว
+```
+
+ผู้ใช้เลือก "trust client" สำหรับขั้นถัดไป (ส่งไพ่ที่จั่วไปกลับให้ `/api/reading`) — **ไม่มี**
+token/session ฝั่ง server คอยกันการปลอมแปลงว่าจั่วอะไรมาจริง (เหตุผล: ไม่มีคู่แข่ง/เดิมพันในระบบนี้
+ผู้ใช้ปลอมไพ่ของตัวเองก็แค่หลอกตัวเอง) **แต่**เนื้อหา (meaning/keywords) ยังคง authoritative จาก
+knowledge base เสมอ — client ส่งกลับแค่ `card_id` (+ `reversed` สำหรับทาโรต์) ในลำดับที่แตะ
+backend จะ lookup ความหมายจริงเองทุกครั้ง ไม่เคยเชื่อ meaning ที่ client ส่งมา (ดู
+`build_result_from_picks()` ใน `app/modules/{oracle,tarot}/engine.py`)
+
+```python
+class TarotPick(BaseModel):
+    card_id: str
     reversed: bool
 ```
+
+`CardDraw` (ของเดิม) ถูกลบออกแล้ว — ไม่เคยถูกใช้งานจริงอยู่ก่อนแล้ว และตอนนี้แทนที่ด้วย `TarotPick`
+(สำหรับ tarot) กับ `picks: list[str]` (สำหรับ oracle) ที่ผูกกับ flow ใหม่นี้โดยตรง
 
 ## Forecast (Solar Arc / Transit / Lunar Return / Relocation — ไม่บังคับ, ต่อกับ Uranian engine)
 
@@ -99,13 +142,24 @@ class ForecastResponse(BaseModel):
 เสมอ (validate ด้วย `model_validator`) `ForecastRequest` (ของ `/api/forecast` เดี่ยวๆ) ยังคงบังคับ
 `birth_data` เหมือนเดิมเพราะเป็น Uranian-only endpoint
 
+**แก้ไข 2026-08-16**: `tarot.picks`/`oracle.picks` แทนที่ `card_count`/`spread`-only เดิม — client
+ต้องจั่วไพ่จริงก่อนผ่าน `POST /api/oracle|tarot/draw` (ดูหัวข้อ "Draw-before-reveal" ด้านบน) แล้วส่ง
+ไพ่ที่แตะเปิดจริงกลับมาที่นี่ตามลำดับที่แตะ backend ไม่ได้สุ่มไพ่เองในขั้นตอนนี้อีกต่อไป แค่ lookup
+ความหมายจากไพ่ที่ client ระบุ id มา (`build_result_from_picks()`)
+
 ```python
+class TarotPick(BaseModel):
+    card_id: str
+    reversed: bool
+
 class TarotRequest(BaseModel):
     spread: str = "three_card"   # id จาก backend/app/knowledge_base/tarot/spreads.yaml
+    picks: list[TarotPick]       # ต้องมีจำนวนเท่ากับ positions ของ spread นี้ (validate ที่ endpoint)
 
 class OracleRequest(BaseModel):
-    card_count: int              # ge=3, le=9 — สุ่มจากระบบเสมอ (ไม่ใช่ผู้ใช้เลือก)
+    picks: list[str]             # card id ตามลำดับที่แตะ — ge=3, le=9 (สุ่มจำนวนจากระบบเสมอ ไม่ใช่ผู้ใช้เลือก)
     question: str | None = None  # บังคับก็ต่อเมื่อ oracle เป็นศาสตร์เดียวที่เลือก (ไม่มี birth_data/tarot)
+    deck: str | None = None
 
 class ReadingRequest(BaseModel):
     birth_data: BirthData | None = None
@@ -127,18 +181,19 @@ class ForecastRequest(BaseModel):
     relocation: RelocationRequest | None = None
 ```
 
-## FollowUpRequest (body ของ `POST /api/reading/follow-up`) — แก้ไข 2026-08-14
+## FollowUpRequest (body ของ `POST /api/reading/follow-up`) — แก้ไข 2026-08-14, 2026-08-16
 
-Flow "ถามเพิ่ม" ที่หน้าแสดงผล: ผู้ใช้พิมพ์คำถามต่อ ระบบสุ่มไพ่ออราเคิลชุดใหม่ 3-9 ใบให้เปิด แล้ว
-สังเคราะห์ต่อเนื่องจากคำทำนายเดิม โดยให้น้ำหนักกับไพ่ชุดใหม่เป็นหลัก — client ส่ง `SynthesisOutput`
-ที่ตัวเองมีอยู่แล้วกลับมาตรงๆ (ข้อมูลในเซสชันนี้ ไม่ใช่ดึงจาก `/history` — ยังคงกฎ "ห้ามใช้ประวัติ
-ผู้ใช้" ในข้อ 1)
+Flow "ถามเพิ่ม" ที่หน้าแสดงผล: ผู้ใช้พิมพ์คำถามต่อ จั่วไพ่ออราเคิลชุดใหม่จริง (ผ่าน
+`POST /api/oracle/draw` เหมือน reading รอบแรก — ดูหัวข้อ "Draw-before-reveal") แล้วสังเคราะห์
+ต่อเนื่องจากคำทำนายเดิม โดยให้น้ำหนักกับไพ่ชุดใหม่เป็นหลัก — client ส่ง `SynthesisOutput` ที่ตัวเอง
+มีอยู่แล้วกลับมาตรงๆ (ข้อมูลในเซสชันนี้ ไม่ใช่ดึงจาก `/history` — ยังคงกฎ "ห้ามใช้ประวัติผู้ใช้"
+ในข้อ 1)
 
 ```python
 class FollowUpRequest(BaseModel):
     previous: SynthesisOutput    # ผลลัพธ์ล่าสุดที่ client มีอยู่แล้วในเซสชันนี้
     question: str                # min_length=1
-    oracle_count: int            # ge=3, le=9 — สุ่มจากระบบเสมอ
+    oracle_picks: list[str]      # card id ตามลำดับที่แตะ — ge=3, le=9 (สุ่มจำนวนจากระบบเสมอ)
 ```
 
 ## SynthesisOutput (output สุดท้ายจาก Master Interpreter)

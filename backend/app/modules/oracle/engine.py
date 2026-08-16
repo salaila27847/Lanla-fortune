@@ -38,10 +38,21 @@ def _load_deck_cards(deck: str) -> tuple[dict[str, Any], ...]:
     return tuple(cards)
 
 
-async def draw(deck: str = DEFAULT_DECK, count: int = 1) -> EngineResult:
-    cards = _load_deck_cards(deck)
-    drawn = random.sample(cards, k=min(count, len(cards)))
+def shuffle(deck: str = DEFAULT_DECK) -> list[dict[str, Any]]:
+    """Full-deck shuffle for the pick-your-own-card flow — the client
+    fetches this (via POST /api/oracle/draw) before showing the card
+    grid, so tapping a position reveals a specific, already-decided card
+    rather than one picked at random after the fact."""
+    cards = list(_load_deck_cards(deck))
+    random.shuffle(cards)
+    return cards
 
+
+def build_result(drawn: list[dict[str, Any]]) -> EngineResult:
+    """Aggregates an already-chosen, ordered list of card dicts (as
+    returned by _load_deck_cards/shuffle) into an EngineResult — shared
+    by the random draw() convenience wrapper below and the real
+    pick-your-own-card flow (build_result_from_picks)."""
     findings = [
         Finding(
             label=f"{card['name_th']} ({card['category_th']})",
@@ -60,3 +71,30 @@ async def draw(deck: str = DEFAULT_DECK, count: int = 1) -> EngineResult:
         raw_findings=findings,
         confidence=0.65,
     )
+
+
+def build_result_from_picks(picks: list[str], deck: str = DEFAULT_DECK) -> EngineResult:
+    """Real pick-your-own-card flow: `picks` are the card ids the client
+    revealed (in tap order) from a deck it already fetched via shuffle().
+    Trusted as-is — no server-side session/token guarding which ids were
+    "really" dealt — but every id is re-looked-up against our own
+    knowledge base here, so the meaning text in the result is always
+    authoritative, never client-submitted."""
+    by_id = {card["id"]: card for card in _load_deck_cards(deck)}
+    if len(set(picks)) != len(picks):
+        raise ValueError("เลือกไพ่ใบซ้ำกัน")
+    try:
+        drawn = [by_id[card_id] for card_id in picks]
+    except KeyError as exc:
+        raise ValueError(f"ไม่พบไพ่ id นี้ในสำรับ: {exc}") from exc
+    return build_result(drawn)
+
+
+async def draw(deck: str = DEFAULT_DECK, count: int = 1) -> EngineResult:
+    """Convenience wrapper for a random (non-interactive) draw — used by
+    tests and scripts. The real reading flow no longer calls this; it
+    uses shuffle() + build_result_from_picks() instead, so the cards
+    shown to the user really are the ones used in the reading."""
+    cards = _load_deck_cards(deck)
+    drawn = list(random.sample(cards, k=min(count, len(cards))))
+    return build_result(drawn)

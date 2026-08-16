@@ -20,6 +20,9 @@ from app.core.schema import (
     ForecastResponse,
     LunarReturnRequest,
     LunarReturnResult,
+    OracleCardPreview,
+    OracleDeckResponse,
+    OracleDrawRequest,
     PictureResult,
     ReadingRecord,
     ReadingRequest,
@@ -28,13 +31,20 @@ from app.core.schema import (
     SolarArcRequest,
     SolarArcResult,
     SynthesisOutput,
+    TarotCardPreview,
+    TarotDeckResponse,
+    TarotDrawRequest,
     TransitRequest,
     TransitResult,
 )
 from app.db.models import Base, Reading, User
 from app.db.session import engine, get_db_session
-from app.modules.oracle.engine import draw as oracle_draw
-from app.modules.tarot.engine import draw as tarot_draw
+from app.modules.oracle.engine import DEFAULT_DECK as ORACLE_DEFAULT_DECK
+from app.modules.oracle.engine import build_result_from_picks as oracle_build_result
+from app.modules.oracle.engine import shuffle as oracle_shuffle
+from app.modules.tarot.engine import _load_spread as _load_tarot_spread
+from app.modules.tarot.engine import build_result_from_picks as tarot_build_result
+from app.modules.tarot.engine import shuffle as tarot_shuffle
 from app.modules.uranian.engine import _compute_positions, _factor_display_name, _julian_day_ut
 from app.modules.uranian.engine import calculate as uranian_calculate
 from app.modules.uranian.solar_arc import (
@@ -154,6 +164,61 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.post("/api/oracle/draw", response_model=OracleDeckResponse)
+async def draw_oracle_deck(
+    request: OracleDrawRequest,
+    _user: User = Depends(get_current_user),
+) -> OracleDeckResponse:
+    """Full shuffled deck for the pick-your-own-card flow — fetched
+    before the card grid is shown, so the position the user taps reveals
+    a specific, already-decided card instead of a cosmetic one that gets
+    assigned after the fact (see CLAUDE.md's oracle "user really picks"
+    decision and frontend/src/components/CardDrawStep.tsx)."""
+    cards = oracle_shuffle(request.deck or ORACLE_DEFAULT_DECK)
+    return OracleDeckResponse(
+        cards=[
+            OracleCardPreview(
+                card_id=card["id"],
+                name_th=card["name_th"],
+                category_th=card["category_th"],
+                meaning=card["meaning"],
+                keywords=card["keywords"],
+            )
+            for card in cards
+        ]
+    )
+
+
+@app.post("/api/tarot/draw", response_model=TarotDeckResponse)
+async def draw_tarot_deck(
+    request: TarotDrawRequest,
+    _user: User = Depends(get_current_user),
+) -> TarotDeckResponse:
+    """Same idea as /api/oracle/draw for the 78-card tarot deck —
+    orientation (reversed) is decided per card at shuffle time too, so
+    it's fixed before the reveal rather than re-rolled afterward."""
+    try:
+        positions = [p["label_th"] for p in _load_tarot_spread(request.spread)["positions"]]
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    cards = tarot_shuffle()
+    return TarotDeckResponse(
+        positions=positions,
+        cards=[
+            TarotCardPreview(
+                card_id=card["id"],
+                name_th=card["name_th"],
+                reversed=card["reversed"],
+                meaning=card["meaning_reversed"] if card["reversed"] else card["meaning_upright"],
+                keywords=card["keywords_reversed"]
+                if card["reversed"]
+                else card["keywords_upright"],
+            )
+            for card in cards
+        ],
+    )
+
+
 @app.post("/api/reading", response_model=SynthesisOutput)
 async def get_reading(
     request: ReadingRequest,
@@ -162,19 +227,31 @@ async def get_reading(
 ) -> SynthesisOutput:
     birth_data = request.birth_data
 
-    # Run only the engines the user actually chose, concurrently — see
-    # CLAUDE.md performance requirement + the per-discipline skip buttons
-    # (ReadingRequest guarantees at least one of these 3 is present).
+    # Uranian is the only engine still computed in this call — tarot/
+    # oracle are no longer drawn here at all. The client already fetched
+    # a real shuffled deck (POST /api/oracle|tarot/draw) and revealed its
+    # own picks from it, so we just re-derive the authoritative
+    # EngineResult from those picked ids below (trusted for *which* cards
+    # were picked, never for their meaning — see CLAUDE.md).
     tasks: dict[str, Any] = {}
     if birth_data is not None:
         tasks["uranian"] = uranian_calculate(birth_data)
-    if request.tarot is not None:
-        tasks["tarot"] = tarot_draw(request.tarot.spread)
-    if request.oracle is not None:
-        tasks["oracle"] = oracle_draw(count=request.oracle.card_count)
 
     results = await asyncio.gather(*tasks.values())
     engine_results = dict(zip(tasks.keys(), results, strict=True))
+
+    try:
+        if request.tarot is not None:
+            engine_results["tarot"] = tarot_build_result(
+                request.tarot.spread,
+                [(pick.card_id, pick.reversed) for pick in request.tarot.picks],
+            )
+        if request.oracle is not None:
+            engine_results["oracle"] = oracle_build_result(
+                request.oracle.picks, request.oracle.deck or ORACLE_DEFAULT_DECK
+            )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
     forecast_response: ForecastResponse | None = None
     if birth_data is not None and (
@@ -210,12 +287,16 @@ async def get_reading_followup(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_session),
 ) -> SynthesisOutput:
-    """The "ask more" flow on the result screen: draws a fresh, randomly
-    sized (3-9) batch of oracle cards and synthesizes them as a priority
+    """The "ask more" flow on the result screen: re-derives an
+    EngineResult from the oracle cards the client already revealed (via
+    /api/oracle/draw + its own picks) and synthesizes them as a priority
     continuation of `request.previous` — the reading the client already
     has in this session (see FollowUpRequest; never reads stored
     /history, per CLAUDE.md's "no user history" rule)."""
-    oracle_result = await oracle_draw(count=request.oracle_count)
+    try:
+        oracle_result = oracle_build_result(request.oracle_picks, ORACLE_DEFAULT_DECK)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     result = await synthesize_followup(request.previous, oracle_result, request.question)
 
     db.add(

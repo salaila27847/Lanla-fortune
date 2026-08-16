@@ -48,30 +48,84 @@ class BirthData(BaseModel):
         return value
 
 
-class CardDraw(BaseModel):
-    deck: str
+class OracleDrawRequest(BaseModel):
+    """Body for POST /api/oracle/draw — fetches a full shuffled deck so
+    the client can lay out real cards face-down and reveal genuine picks,
+    instead of a cosmetic grid whose positions never mapped to anything
+    (see app/modules/oracle/engine.py's shuffle())."""
+
+    deck: str | None = None
+
+
+class OracleCardPreview(BaseModel):
     card_id: str
-    position_in_spread: str | None = None
-    reversed: bool = False
+    name_th: str
+    category_th: str
+    meaning: str
+    keywords: list[str]
+
+
+class OracleDeckResponse(BaseModel):
+    cards: list[OracleCardPreview]
+
+
+class TarotDrawRequest(BaseModel):
+    """Body for POST /api/tarot/draw — same idea as OracleDrawRequest for
+    the 78-card tarot deck. Orientation (reversed) is decided per card at
+    shuffle time too, so it's fixed before the reveal rather than
+    re-rolled afterward."""
+
+    spread: str = "three_card"
+
+
+class TarotCardPreview(BaseModel):
+    card_id: str
+    name_th: str
+    reversed: bool
+    meaning: str
+    keywords: list[str]
+
+
+class TarotDeckResponse(BaseModel):
+    positions: list[str]
+    cards: list[TarotCardPreview]
+
+
+class TarotPick(BaseModel):
+    """One card the user actually tapped and revealed, in tap order — id
+    and orientation as delivered by /api/tarot/draw. Trusted as-is (no
+    server-side session/token — see CLAUDE.md's "trust client" decision);
+    the backend always re-looks-up the meaning from its own knowledge
+    base by card_id, so a client can misreport at most *which* card it
+    claims to have picked, never the meaning attached to it."""
+
+    card_id: str
+    reversed: bool
 
 
 class TarotRequest(BaseModel):
     """Present in ReadingRequest only when the user chose to use Tarot —
     its absence is how the reading endpoint knows to skip the engine
-    entirely (see CLAUDE.md item: skip button per discipline)."""
+    entirely (see CLAUDE.md item: skip button per discipline). `picks`
+    must be cards (by id) drawn from the same shuffled deck /api/tarot/draw
+    returned, one per spread position — the endpoint validates the count
+    against spreads.yaml since that's not expressible statically here."""
 
     spread: str = "three_card"
+    picks: list[TarotPick]
 
 
 class OracleRequest(BaseModel):
     """Present in ReadingRequest only when the user chose to use Oracle.
-    card_count is always system-randomized 3-9 by the caller (never
-    user-picked) — see docs/data-schema.md. question is required when
-    Oracle is the *only* engine chosen (validated on ReadingRequest below)
-    and unused otherwise."""
+    `picks` are card ids in tap order, 3-9 of them (system-randomized by
+    the caller before drawing, never a user-chosen count) from a deck the
+    client fetched via /api/oracle/draw — see docs/data-schema.md.
+    question is required when Oracle is the *only* engine chosen
+    (validated on ReadingRequest below) and unused otherwise."""
 
-    card_count: int = Field(ge=3, le=9)
+    picks: list[str] = Field(min_length=3, max_length=9)
     question: str | None = Field(default=None, min_length=1, max_length=1000)
+    deck: str | None = None
 
 
 class SolarArcRequest(BaseModel):
@@ -187,13 +241,14 @@ class FollowUpRequest(BaseModel):
     result screen. The client sends back the exact SynthesisOutput it
     already has (this session's current reading, not anything pulled
     from stored /history — see CLAUDE.md's "no user history" rule) plus
-    a new question and a fresh randomized oracle draw count. The new
+    a new question and the picks (card ids, tap order, 3-9 of them) it
+    revealed from a fresh deck fetched via /api/oracle/draw. The new
     oracle draw takes priority in the synthesis while staying continuous
     with the previous reading."""
 
     previous: SynthesisOutput
     question: str = Field(min_length=1, max_length=1000)
-    oracle_count: int = Field(ge=3, le=9)
+    oracle_picks: list[str] = Field(min_length=3, max_length=9)
 
 
 class ReadingRecord(BaseModel):

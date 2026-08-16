@@ -186,19 +186,24 @@ async def test_reading_forecast_option_without_birth_data_is_rejected(client):
     assert res.status_code == 422
 
 
+ORACLE_PICKS_5 = ["animal_horse", "animal_turtle", "shadow_dry_well", "animal_ox", "animal_rabbit"]
+ORACLE_PICKS_4 = ["animal_horse", "animal_turtle", "shadow_dry_well", "animal_ox"]
+CELTIC_CROSS_PICKS = [{"card_id": f"major_{i:02d}", "reversed": False} for i in range(10)]
+
+
 async def test_reading_oracle_only_requires_a_question(client):
     res = await client.post(
         "/api/reading",
-        json={"oracle": {"card_count": 5}},
+        json={"oracle": {"picks": ORACLE_PICKS_5}},
         headers=_auth_headers("sub-a", "a@x.com"),
     )
     assert res.status_code == 422
 
 
-async def test_reading_oracle_card_count_out_of_range_is_rejected(client):
+async def test_reading_oracle_picks_out_of_range_is_rejected(client):
     res = await client.post(
         "/api/reading",
-        json={"oracle": {"card_count": 2, "question": "จะเป็นอย่างไร"}},
+        json={"oracle": {"picks": ORACLE_PICKS_5[:2], "question": "จะเป็นอย่างไร"}},
         headers=_auth_headers("sub-a", "a@x.com"),
     )
     assert res.status_code == 422
@@ -208,8 +213,8 @@ async def test_reading_tarot_and_oracle_only_persists_null_birth_data(client):
     res = await client.post(
         "/api/reading",
         json={
-            "tarot": {"spread": "celtic_cross"},
-            "oracle": {"card_count": 5},
+            "tarot": {"spread": "celtic_cross", "picks": CELTIC_CROSS_PICKS},
+            "oracle": {"picks": ORACLE_PICKS_5},
         },
         headers=_auth_headers("sub-a", "a@x.com"),
     )
@@ -224,7 +229,7 @@ async def test_reading_tarot_and_oracle_only_persists_null_birth_data(client):
 async def test_reading_oracle_only_with_question_includes_it_in_response(client):
     res = await client.post(
         "/api/reading",
-        json={"oracle": {"card_count": 4, "question": "ความรักของฉันจะเป็นอย่างไร"}},
+        json={"oracle": {"picks": ORACLE_PICKS_4, "question": "ความรักของฉันจะเป็นอย่างไร"}},
         headers=_auth_headers("sub-a", "a@x.com"),
     )
     assert res.status_code == 200
@@ -236,7 +241,11 @@ async def test_reading_oracle_only_with_question_includes_it_in_response(client)
 async def test_reading_follow_up_persists_with_null_birth_data(client):
     res = await client.post(
         "/api/reading/follow-up",
-        json={"previous": PREVIOUS_SYNTHESIS, "question": "แล้วเรื่องงานล่ะ", "oracle_count": 5},
+        json={
+            "previous": PREVIOUS_SYNTHESIS,
+            "question": "แล้วเรื่องงานล่ะ",
+            "oracle_picks": ORACLE_PICKS_5,
+        },
         headers=_auth_headers("sub-a", "a@x.com"),
     )
     assert res.status_code == 200
@@ -247,3 +256,57 @@ async def test_reading_follow_up_persists_with_null_birth_data(client):
     history = (await client.get("/api/readings", headers=_auth_headers("sub-a", "a@x.com"))).json()
     assert history[0]["birth_data"] is None
     assert history[0]["synthesis"]["final_reading"] == "fake follow-up reading"
+
+
+async def test_draw_oracle_deck_returns_full_shuffled_deck(client):
+    res = await client.post("/api/oracle/draw", json={}, headers=_auth_headers("sub-a", "a@x.com"))
+    assert res.status_code == 200
+    cards = res.json()["cards"]
+    assert len(cards) == 88
+    assert len({c["card_id"] for c in cards}) == 88
+    assert all({"name_th", "category_th", "meaning", "keywords"} <= c.keys() for c in cards)
+
+
+async def test_draw_tarot_deck_returns_full_shuffled_deck_and_positions(client):
+    res = await client.post(
+        "/api/tarot/draw", json={"spread": "three_card"}, headers=_auth_headers("sub-a", "a@x.com")
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["positions"] == ["อดีต", "ปัจจุบัน", "อนาคต"]
+    assert len(body["cards"]) == 78
+    assert len({c["card_id"] for c in body["cards"]}) == 78
+
+
+async def test_draw_tarot_deck_unknown_spread_is_rejected(client):
+    res = await client.post(
+        "/api/tarot/draw", json={"spread": "no-such-spread"}, headers=_auth_headers("sub-a", "a@x.com")
+    )
+    assert res.status_code == 422
+
+
+async def test_reading_oracle_duplicate_pick_is_rejected(client):
+    res = await client.post(
+        "/api/reading",
+        json={"oracle": {"picks": ["animal_horse", "animal_horse", "animal_ox"], "question": "q"}},
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 422
+
+
+async def test_reading_oracle_unknown_card_id_is_rejected(client):
+    res = await client.post(
+        "/api/reading",
+        json={"oracle": {"picks": ["not-a-real-card", "animal_ox", "animal_rabbit"], "question": "q"}},
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 422
+
+
+async def test_reading_tarot_pick_count_mismatch_is_rejected(client):
+    res = await client.post(
+        "/api/reading",
+        json={"tarot": {"spread": "three_card", "picks": CELTIC_CROSS_PICKS[:2]}},
+        headers=_auth_headers("sub-a", "a@x.com"),
+    )
+    assert res.status_code == 422

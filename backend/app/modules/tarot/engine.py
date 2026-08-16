@@ -47,18 +47,31 @@ def _load_spread(spread_type: str) -> dict[str, Any]:
     raise ValueError(f"Unknown tarot spread: {spread_type}")
 
 
-async def draw(spread_type: str = DEFAULT_SPREAD) -> EngineResult:
-    deck = _load_deck()
-    positions = _load_spread(spread_type)["positions"]
-    drawn_cards = random.sample(deck, k=len(positions))
+def shuffle() -> list[dict[str, Any]]:
+    """Full 78-card deck shuffle for the pick-your-own-card flow, with
+    orientation pre-decided per card — the client fetches this (via POST
+    /api/tarot/draw) before showing the card grid, so tapping a position
+    reveals a specific, already-decided card+orientation rather than one
+    picked at random after the fact. Independent of spread choice: the
+    spread only determines how many of these get used, not which cards
+    exist to shuffle."""
+    deck = list(_load_deck())
+    random.shuffle(deck)
+    return [{**card, "reversed": random.choice([True, False])} for card in deck]
 
+
+def build_result(spread_type: str, drawn: list[tuple[dict[str, Any], bool]]) -> EngineResult:
+    """Aggregates an already-chosen, ordered list of (card, is_reversed)
+    pairs into an EngineResult — shared by the random draw() convenience
+    wrapper below and the real pick-your-own-card flow
+    (build_result_from_picks)."""
+    positions = _load_spread(spread_type)["positions"]
     findings: list[Finding] = []
     themes: list[str] = []
     first_meaning = ""
     present_meaning = ""
 
-    for position, card in zip(positions, drawn_cards):
-        is_reversed = random.choice([True, False])
+    for position, (card, is_reversed) in zip(positions, drawn, strict=True):
         meaning = card["meaning_reversed"] if is_reversed else card["meaning_upright"]
         keywords = card["keywords_reversed"] if is_reversed else card["keywords_upright"]
         orientation = "กลับหัว" if is_reversed else "ตั้งตรง"
@@ -82,3 +95,36 @@ async def draw(spread_type: str = DEFAULT_SPREAD) -> EngineResult:
         raw_findings=findings,
         confidence=0.65,
     )
+
+
+def build_result_from_picks(spread_type: str, picks: list[tuple[str, bool]]) -> EngineResult:
+    """Real pick-your-own-card flow: `picks` are (card_id, reversed) pairs
+    the client revealed (in tap order) from a deck it already fetched via
+    shuffle(). Trusted as-is — no server-side session/token guarding
+    which cards were "really" dealt — but every id is re-looked-up
+    against our own knowledge base here, so the meaning text in the
+    result is always authoritative, never client-submitted."""
+    positions = _load_spread(spread_type)["positions"]
+    if len(picks) != len(positions):
+        raise ValueError(f"ต้องเลือกไพ่ {len(positions)} ใบสำหรับเลย์เอาท์นี้")
+    card_ids = [card_id for card_id, _ in picks]
+    if len(set(card_ids)) != len(card_ids):
+        raise ValueError("เลือกไพ่ใบซ้ำกัน")
+    by_id = {card["id"]: card for card in _load_deck()}
+    try:
+        drawn = [(by_id[card_id], is_reversed) for card_id, is_reversed in picks]
+    except KeyError as exc:
+        raise ValueError(f"ไม่พบไพ่ id นี้ในสำรับ: {exc}") from exc
+    return build_result(spread_type, drawn)
+
+
+async def draw(spread_type: str = DEFAULT_SPREAD) -> EngineResult:
+    """Convenience wrapper for a random (non-interactive) draw — used by
+    tests and scripts. The real reading flow no longer calls this; it
+    uses shuffle() + build_result_from_picks() instead, so the cards
+    shown to the user really are the ones used in the reading."""
+    deck = _load_deck()
+    positions = _load_spread(spread_type)["positions"]
+    drawn_cards = random.sample(deck, k=len(positions))
+    drawn = [(card, random.choice([True, False])) for card in drawn_cards]
+    return build_result(spread_type, drawn)
