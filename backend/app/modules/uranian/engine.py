@@ -362,7 +362,7 @@ async def calculate(birth_data: BirthData) -> EngineResult:
     return EngineResult(
         engine="uranian",
         summary=summary,
-        themes=list(dict.fromkeys(themes))[:5],
+        themes=list(dict.fromkeys(themes)),
         raw_findings=findings,
         confidence=0.55 if known_time else 0.35,
     )

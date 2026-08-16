@@ -21,6 +21,7 @@ class Finding(BaseModel):
     label: str
     meaning: str
     weight: float = Field(ge=0, le=1)
+    voice: str | None = None
 
 
 class EngineResult(BaseModel):

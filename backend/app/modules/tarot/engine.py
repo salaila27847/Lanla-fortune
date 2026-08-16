@@ -78,7 +78,7 @@ async def draw(spread_type: str = DEFAULT_SPREAD) -> EngineResult:
     return EngineResult(
         engine="tarot",
         summary=present_meaning or first_meaning,
-        themes=list(dict.fromkeys(themes))[:5],
+        themes=list(dict.fromkeys(themes)),
         raw_findings=findings,
         confidence=0.65,
     )

@@ -16,6 +16,9 @@ class Finding(BaseModel):
     label: str          # เช่น "Cupido/Ascendant = 45°" หรือ "The Tower (reversed)"
     meaning: str         # ความหมายจากฐานข้อมูล
     weight: float         # น้ำหนักความสำคัญ 0-1
+    voice: str | None    # คำพูดของ finding ในมุมมองบุคคลที่หนึ่ง ("ฉันคือ...") — ปัจจุบันมาจาก
+                          # voice_th ในไพ่ออราเคิลเท่านั้น (uranian/tarot ยังไม่มีข้อมูลนี้ จึงเป็น
+                          # None) Master Interpreter ใช้เป็นแรงบันดาลใจโทนเสียง ไม่ใช่คัดลอกทั้งประโยค
 ```
 
 ## BirthData (input สำหรับ Uranian Engine)

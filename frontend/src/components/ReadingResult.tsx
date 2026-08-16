@@ -290,6 +290,11 @@ export default function ReadingResult({ result, onRestart }: Props) {
                   >
                     <p className="font-medium text-zinc-800 dark:text-zinc-200">{finding.label}</p>
                     <p className="mt-1 text-zinc-600 dark:text-zinc-400">{finding.meaning}</p>
+                    {finding.voice && (
+                      <p className="mt-2 border-l-2 border-zinc-300 pl-3 italic text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                        “{finding.voice}”
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

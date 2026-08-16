@@ -2,6 +2,7 @@ export type Finding = {
   label: string;
   meaning: string;
   weight: number;
+  voice: string | null;
 };
 
 export type EngineResult = {

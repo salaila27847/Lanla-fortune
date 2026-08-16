@@ -27,5 +27,8 @@ decks/
   <deck อื่นๆ ในอนาคต>/   ← เพิ่ม folder ใหม่ตาม pattern เดียวกัน แล้วเรียกผ่าน draw(deck="...")
 ```
 
-การ์ดแต่ละใบมี `id`, `name_th`, `keywords`, `meaning` — engine (`app/modules/oracle/engine.py`)
-โหลดไฟล์เหล่านี้ตรงและสุ่มจั่ว ไม่มี hardcode เนื้อหาการ์ดในโค้ด
+การ์ดแต่ละใบมี `id`, `name_th`, `keywords`, `meaning`, `voice_th` (คำพูดของไพ่ในมุมมองบุคคลที่หนึ่ง
+เช่น "ฉันคือ...", ใช้สื่อตัวตน/บุคลิกของไพ่ใบนั้นในคำทำนายที่สังเคราะห์แล้ว — ดู
+`app/synthesis/master_interpreter.py`) — engine (`app/modules/oracle/engine.py`) โหลดไฟล์เหล่านี้
+ตรงและสุ่มจั่ว ไม่มี hardcode เนื้อหาการ์ดในโค้ด `voice_th` ถูก map เข้า `Finding.voice`
+(ดู `docs/data-schema.md`)
