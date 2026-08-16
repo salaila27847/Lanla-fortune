@@ -4,16 +4,19 @@ import { useState } from "react";
 import BirthDataForm from "@/components/BirthDataForm";
 import TarotSpreadPicker from "@/components/TarotSpreadPicker";
 import OracleQuestionForm from "@/components/OracleQuestionForm";
-import CardDrawStep from "@/components/CardDrawStep";
+import CardDrawStep, { type DrawableCard } from "@/components/CardDrawStep";
 import ReadingResult from "@/components/ReadingResult";
 import { randomOracleCount } from "@/lib/random";
-import { ORACLE_DECK_SIZE, TAROT_DECK_SIZE } from "@/lib/deckSizes";
 import {
+  drawOracleDeck,
+  drawTarotDeck,
   getReading,
   ReadingRequestError,
   type BirthData,
   type ForecastOptions,
+  type OracleDeck,
   type SynthesisOutput,
+  type TarotDeck,
 } from "@/lib/api";
 import type { TarotSpreadInfo } from "@/lib/tarotSpreads";
 
@@ -27,8 +30,14 @@ type Step =
   | "result"
   | "error";
 
+// What to retry when the "loading" step's fetch fails — reconstructed from
+// state already on hand rather than stashing a closure in useState.
+type PendingAction = "tarot-deck" | "oracle-deck" | "reading";
+
 export default function ReadingPage() {
   const [step, setStep] = useState<Step>("birth-data");
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [pendingAction, setPendingAction] = useState<PendingAction>("reading");
 
   const [birthData, setBirthData] = useState<BirthData | null>(null);
   const [forecastOptions, setForecastOptions] = useState<ForecastOptions>({});
@@ -36,9 +45,13 @@ export default function ReadingPage() {
 
   const [tarotSpread, setTarotSpread] = useState<TarotSpreadInfo | null>(null);
   const [tarotSkipped, setTarotSkipped] = useState(false);
+  const [tarotDeck, setTarotDeck] = useState<TarotDeck | null>(null);
+  const [tarotPicks, setTarotPicks] = useState<{ card_id: string; reversed: boolean }[]>([]);
 
   const [oracleQuestion, setOracleQuestion] = useState<string | null>(null);
   const [oracleCount, setOracleCount] = useState<number | null>(null);
+  const [oracleDeck, setOracleDeck] = useState<OracleDeck | null>(null);
+  const [oraclePicks, setOraclePicks] = useState<string[]>([]);
   const [oracleSkipped, setOracleSkipped] = useState(false);
 
   const [result, setResult] = useState<SynthesisOutput | null>(null);
@@ -52,12 +65,53 @@ export default function ReadingPage() {
     setUranianSkipped(false);
     setTarotSpread(null);
     setTarotSkipped(false);
+    setTarotDeck(null);
+    setTarotPicks([]);
     setOracleQuestion(null);
     setOracleCount(null);
+    setOracleDeck(null);
+    setOraclePicks([]);
     setOracleSkipped(false);
     setResult(null);
     setErrorMessage("");
     setIsInputError(false);
+  }
+
+  // Fetches a real shuffled tarot deck before showing the card grid, so
+  // the position the user taps reveals a genuine pick (see CLAUDE.md's
+  // oracle/tarot "user really picks" decision) instead of a cosmetic one
+  // assigned after the fact.
+  async function enterTarotDraw(spread: TarotSpreadInfo) {
+    setTarotSpread(spread);
+    setTarotSkipped(false);
+    setPendingAction("tarot-deck");
+    setLoadingMessage("กำลังสับไพ่ทาโรต์...");
+    setStep("loading");
+    try {
+      const deck = await drawTarotDeck(spread.id);
+      setTarotDeck(deck);
+      setStep("tarot-draw");
+    } catch {
+      setErrorMessage("ไม่สามารถจั่วไพ่ทาโรต์ได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
+      setIsInputError(false);
+      setStep("error");
+    }
+  }
+
+  async function enterOracleDraw() {
+    setOracleCount(randomOracleCount());
+    setPendingAction("oracle-deck");
+    setLoadingMessage("กำลังสับไพ่ออราเคิล...");
+    setStep("loading");
+    try {
+      const deck = await drawOracleDeck();
+      setOracleDeck(deck);
+      setStep("oracle-draw");
+    } catch {
+      setErrorMessage("ไม่สามารถจั่วไพ่ออราเคิลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
+      setIsInputError(false);
+      setStep("error");
+    }
   }
 
   // Oracle is the only discipline that always has a card count (system
@@ -67,23 +121,26 @@ export default function ReadingPage() {
     if (skippedUranian && skippedTarot) {
       setStep("oracle-question");
     } else {
-      setOracleCount(randomOracleCount());
-      setStep("oracle-draw");
+      void enterOracleDraw();
     }
   }
 
   async function fetchReading(skipOracle: boolean) {
     setOracleSkipped(skipOracle);
+    setPendingAction("reading");
+    setLoadingMessage("กำลังสังเคราะห์คำทำนาย...");
     setStep("loading");
     try {
       const reading = await getReading({
         ...(uranianSkipped ? {} : { birth_data: birthData as BirthData, ...forecastOptions }),
-        ...(tarotSkipped ? {} : { tarot: { spread: (tarotSpread as TarotSpreadInfo).id } }),
+        ...(tarotSkipped
+          ? {}
+          : { tarot: { spread: (tarotSpread as TarotSpreadInfo).id, picks: tarotPicks } }),
         ...(skipOracle
           ? {}
           : {
               oracle: {
-                card_count: oracleCount as number,
+                picks: oraclePicks,
                 ...(oracleQuestion ? { question: oracleQuestion } : {}),
               },
             }),
@@ -99,6 +156,16 @@ export default function ReadingPage() {
         setIsInputError(false);
       }
       setStep("error");
+    }
+  }
+
+  function retry() {
+    if (pendingAction === "tarot-deck" && tarotSpread) {
+      void enterTarotDraw(tarotSpread);
+    } else if (pendingAction === "oracle-deck") {
+      void enterOracleDraw();
+    } else {
+      void fetchReading(oracleSkipped);
     }
   }
 
@@ -127,11 +194,7 @@ export default function ReadingPage() {
 
       {step === "tarot-spread" && (
         <TarotSpreadPicker
-          onSelect={(spread) => {
-            setTarotSpread(spread);
-            setTarotSkipped(false);
-            setStep("tarot-draw");
-          }}
+          onSelect={(spread) => void enterTarotDraw(spread)}
           onSkip={() => {
             setTarotSkipped(true);
             enterOracleStage(uranianSkipped, true);
@@ -139,16 +202,29 @@ export default function ReadingPage() {
         />
       )}
 
-      {step === "tarot-draw" && tarotSpread && (
+      {step === "tarot-draw" && tarotSpread && tarotDeck && (
         <CardDrawStep
           title={`จั่วไพ่ทาโรต์ — ${tarotSpread.name_th}`}
           subtitle="ตั้งสมาธิและแตะไพ่ที่รู้สึกดึงดูดใจทีละใบ"
-          cardCount={tarotSpread.positions.length}
-          deckSize={TAROT_DECK_SIZE}
+          cardCount={tarotDeck.positions.length}
+          cards={tarotDeck.cards.map(
+            (c): DrawableCard => ({
+              id: c.card_id,
+              label: c.reversed ? `${c.name_th} (กลับหัว)` : c.name_th,
+            }),
+          )}
           rows={3}
-          positionLabels={tarotSpread.positions}
+          positionLabels={tarotDeck.positions}
           nextLabel="ถัดไป"
-          onComplete={() => enterOracleStage(uranianSkipped, false)}
+          onComplete={(picked) => {
+            setTarotPicks(
+              picked.map((p) => {
+                const card = tarotDeck.cards.find((c) => c.card_id === p.id);
+                return { card_id: p.id, reversed: card?.reversed ?? false };
+              }),
+            );
+            enterOracleStage(uranianSkipped, false);
+          }}
         />
       )}
 
@@ -159,21 +235,23 @@ export default function ReadingPage() {
           submitLabel="ถัดไป: จั่วไพ่ออราเคิล"
           onSubmit={(question) => {
             setOracleQuestion(question);
-            setOracleCount(randomOracleCount());
-            setStep("oracle-draw");
+            void enterOracleDraw();
           }}
         />
       )}
 
-      {step === "oracle-draw" && oracleCount && (
+      {step === "oracle-draw" && oracleCount && oracleDeck && (
         <CardDrawStep
           title="จั่วไพ่ออราเคิล"
           subtitle={`ระบบสุ่มไพ่ออราเคิล ${oracleCount} ใบให้คุณเลือกจากทั้งสำรับ`}
           cardCount={oracleCount}
-          deckSize={ORACLE_DECK_SIZE}
+          cards={oracleDeck.cards.map((c): DrawableCard => ({ id: c.card_id, label: c.name_th }))}
           rows={4}
           nextLabel="ดูคำทำนาย"
-          onComplete={() => fetchReading(false)}
+          onComplete={(picked) => {
+            setOraclePicks(picked.map((p) => p.id));
+            void fetchReading(false);
+          }}
           onSkip={oracleIsSkippable ? () => fetchReading(true) : undefined}
           skipLabel="ข้ามไพ่ออราเคิล"
         />
@@ -182,7 +260,7 @@ export default function ReadingPage() {
       {step === "loading" && (
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950 dark:border-zinc-700 dark:border-t-zinc-50" />
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">กำลังสังเคราะห์คำทำนาย...</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">{loadingMessage}</p>
         </div>
       )}
 
@@ -191,7 +269,7 @@ export default function ReadingPage() {
           <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
           <button
             type="button"
-            onClick={() => (isInputError ? restart() : fetchReading(oracleSkipped))}
+            onClick={() => (isInputError ? restart() : retry())}
             className="rounded-full bg-zinc-950 px-6 py-2.5 text-sm font-medium text-zinc-50 dark:bg-zinc-50 dark:text-zinc-950"
           >
             {isInputError ? "แก้ไขข้อมูล" : "ลองใหม่"}

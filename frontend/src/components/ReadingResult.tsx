@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import CardDrawStep from "@/components/CardDrawStep";
+import CardDrawStep, { type DrawableCard } from "@/components/CardDrawStep";
 import { randomOracleCount } from "@/lib/random";
-import { ORACLE_DECK_SIZE } from "@/lib/deckSizes";
 import {
+  drawOracleDeck,
   getFollowUpReading,
   type ForecastResponse,
+  type OracleDeck,
   type PictureResult,
   type SynthesisOutput,
 } from "@/lib/api";
@@ -155,7 +156,7 @@ function ForecastTab({ forecast }: { forecast: ForecastResponse }) {
   );
 }
 
-type FollowUpStage = "idle" | "drawing" | "loading";
+type FollowUpStage = "idle" | "deck-loading" | "drawing" | "loading";
 
 export default function ReadingResult({ result, onRestart }: Props) {
   const [activeResult, setActiveResult] = useState(result);
@@ -164,6 +165,7 @@ export default function ReadingResult({ result, onRestart }: Props) {
   const [followUpStage, setFollowUpStage] = useState<FollowUpStage>("idle");
   const [followUpQuestion, setFollowUpQuestion] = useState("");
   const [followUpCardCount, setFollowUpCardCount] = useState(0);
+  const [followUpDeck, setFollowUpDeck] = useState<OracleDeck | null>(null);
   const [followUpError, setFollowUpError] = useState("");
 
   const forecast = activeResult.forecast;
@@ -176,24 +178,36 @@ export default function ReadingResult({ result, onRestart }: Props) {
     ...(hasForecast ? [{ id: "forecast" as const, label: "การพยากรณ์ล่วงหน้า" }] : []),
   ];
 
-  function startFollowUpDraw() {
+  // Fetches a real shuffled oracle deck before showing the card grid, so
+  // the position the user taps reveals a genuine pick — same reasoning
+  // as the initial reading's draw steps (see reading/page.tsx).
+  async function startFollowUpDraw() {
     if (!followUpQuestion.trim()) return;
     setFollowUpError("");
     setFollowUpCardCount(randomOracleCount());
-    setFollowUpStage("drawing");
+    setFollowUpStage("deck-loading");
+    try {
+      const deck = await drawOracleDeck();
+      setFollowUpDeck(deck);
+      setFollowUpStage("drawing");
+    } catch {
+      setFollowUpError("ไม่สามารถจั่วไพ่ออราเคิลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
+      setFollowUpStage("idle");
+    }
   }
 
-  async function submitFollowUp() {
+  async function submitFollowUp(picks: string[]) {
     setFollowUpStage("loading");
     try {
       const updated = await getFollowUpReading({
         previous: activeResult,
         question: followUpQuestion.trim(),
-        oracle_count: followUpCardCount,
+        oracle_picks: picks,
       });
       setActiveResult(updated);
       setTab("overview");
       setFollowUpQuestion("");
+      setFollowUpDeck(null);
       setFollowUpStage("idle");
     } catch {
       setFollowUpError("ไม่สามารถถามเพิ่มเติมได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง");
@@ -334,15 +348,22 @@ export default function ReadingResult({ result, onRestart }: Props) {
           </div>
         )}
 
-        {followUpStage === "drawing" && (
+        {followUpStage === "deck-loading" && (
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-950 dark:border-zinc-700 dark:border-t-zinc-50" />
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">กำลังสับไพ่ออราเคิล...</p>
+          </div>
+        )}
+
+        {followUpStage === "drawing" && followUpDeck && (
           <CardDrawStep
             title="จั่วไพ่ออราเคิลเพิ่มเติม"
             subtitle={`ระบบสุ่มไพ่ออราเคิล ${followUpCardCount} ใบให้คุณเลือกจากทั้งสำรับ`}
             cardCount={followUpCardCount}
-            deckSize={ORACLE_DECK_SIZE}
+            cards={followUpDeck.cards.map((c): DrawableCard => ({ id: c.card_id, label: c.name_th }))}
             rows={4}
             nextLabel="ดูคำทำนาย"
-            onComplete={submitFollowUp}
+            onComplete={(picked) => void submitFollowUp(picked.map((p) => p.id))}
           />
         )}
 

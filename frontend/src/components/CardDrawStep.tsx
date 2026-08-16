@@ -3,37 +3,36 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
+export type DrawableCard = {
+  id: string;
+  label: string;
+};
+
 type Props = {
   title: string;
   subtitle: string;
   cardCount: number;
-  /** Total cards in the deck spread out for picking (e.g. 78 tarot, 88 oracle). */
-  deckSize: number;
+  /** The full deck, already shuffled server-side (see /api/oracle/draw,
+   * /api/tarot/draw) — every position here maps to a real, already-
+   * decided card, so tapping one reveals a genuine pick rather than a
+   * cosmetic one assigned after the fact. */
+  cards: DrawableCard[];
   /** How many overlapping rows to arrange the deck into (3-4 looks best). */
   rows: number;
   /** Labels in *pick order* (1st card picked, 2nd, ...) — not tied to a
    * fixed position in the spread, since the user picks freely. */
   positionLabels?: string[];
-  onComplete: () => void;
+  onComplete: (picked: DrawableCard[]) => void;
   nextLabel: string;
   onSkip?: () => void;
   skipLabel?: string;
 };
 
-function shuffledDeckOrder(deckSize: number): number[] {
-  const order = Array.from({ length: deckSize }, (_, i) => i);
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  return order;
-}
-
-function splitIntoRows(order: number[], rows: number): number[][] {
-  const perRow = Math.ceil(order.length / rows);
-  const result: number[][] = [];
+function splitIntoRows<T>(items: T[], rows: number): T[][] {
+  const perRow = Math.ceil(items.length / rows);
+  const result: T[][] = [];
   for (let r = 0; r < rows; r++) {
-    const row = order.slice(r * perRow, (r + 1) * perRow);
+    const row = items.slice(r * perRow, (r + 1) * perRow);
     if (row.length > 0) result.push(row);
   }
   return result;
@@ -52,7 +51,7 @@ export default function CardDrawStep({
   title,
   subtitle,
   cardCount,
-  deckSize,
+  cards,
   rows,
   positionLabels,
   onComplete,
@@ -60,19 +59,21 @@ export default function CardDrawStep({
   onSkip,
   skipLabel,
 }: Props) {
-  // Shuffled once per mount — the deck the user sees is "fresh" each time
-  // this step is entered. All cards look identical face-down, so which
-  // slot ends up where is cosmetic; the actual card drawn is decided
-  // server-side independent of which spread position was tapped.
-  const [deckOrder] = useState(() => shuffledDeckOrder(deckSize));
-  const rowsOfIndices = useMemo(() => splitIntoRows(deckOrder, rows), [deckOrder, rows]);
-  const [pickedOrder, setPickedOrder] = useState<number[]>([]);
+  const rowsOfCards = useMemo(() => splitIntoRows(cards, rows), [cards, rows]);
+  const [pickedIds, setPickedIds] = useState<string[]>([]);
 
-  const isDone = pickedOrder.length >= cardCount;
+  const isDone = pickedIds.length >= cardCount;
 
-  function pickCard(deckIndex: number) {
-    if (isDone || pickedOrder.includes(deckIndex)) return;
-    setPickedOrder((prev) => [...prev, deckIndex]);
+  function pickCard(cardId: string) {
+    if (isDone || pickedIds.includes(cardId)) return;
+    setPickedIds((prev) => [...prev, cardId]);
+  }
+
+  function handleComplete() {
+    const picked = pickedIds
+      .map((id) => cards.find((c) => c.id === id))
+      .filter((c): c is DrawableCard => c !== undefined);
+    onComplete(picked);
   }
 
   return (
@@ -88,7 +89,7 @@ export default function CardDrawStep({
             <span
               key={`${label}-${i}`}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                i < pickedOrder.length
+                i < pickedIds.length
                   ? "border-zinc-950 bg-zinc-950 text-zinc-50 dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-950"
                   : "border-zinc-300 text-zinc-500 dark:border-zinc-700 dark:text-zinc-400"
               }`}
@@ -99,28 +100,28 @@ export default function CardDrawStep({
         </div>
       ) : (
         <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          เลือกแล้ว {pickedOrder.length} / {cardCount} ใบ
+          เลือกแล้ว {pickedIds.length} / {cardCount} ใบ
         </p>
       )}
 
       <div className="w-full overflow-x-auto py-2">
         <div className="flex w-fit flex-col items-start mx-auto">
-          {rowsOfIndices.map((rowIndices, rowIdx) => (
+          {rowsOfCards.map((rowCards, rowIdx) => (
             <div
               key={rowIdx}
               className="flex"
               style={{ marginTop: rowIdx === 0 ? 0 : -OVERLAP_Y, zIndex: rowIdx }}
             >
-              {rowIndices.map((deckIndex, i) => {
-                const pickNumber = pickedOrder.indexOf(deckIndex) + 1;
+              {rowCards.map((card, i) => {
+                const pickNumber = pickedIds.indexOf(card.id) + 1;
                 const isPicked = pickNumber > 0;
                 return (
                   <motion.button
-                    key={deckIndex}
+                    key={card.id}
                     type="button"
-                    onClick={() => pickCard(deckIndex)}
+                    onClick={() => pickCard(card.id)}
                     disabled={isPicked || isDone}
-                    aria-label={isPicked ? `ไพ่ที่เลือกลำดับ ${pickNumber}` : "แตะเพื่อเลือกไพ่ใบนี้"}
+                    aria-label={isPicked ? `ไพ่ที่เลือกลำดับ ${pickNumber}: ${card.label}` : "แตะเพื่อเลือกไพ่ใบนี้"}
                     className="relative shrink-0 [perspective:600px]"
                     style={{
                       width: CARD_WIDTH,
@@ -151,6 +152,23 @@ export default function CardDrawStep({
         </div>
       </div>
 
+      {pickedIds.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-2">
+          {pickedIds.map((id, i) => {
+            const card = cards.find((c) => c.id === id);
+            if (!card) return null;
+            return (
+              <span
+                key={id}
+                className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+              >
+                {positionLabels ? `${positionLabels[i]}: ${card.label}` : card.label}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
         ไพ่ทั้งสำรับถูกสับเรียบร้อยแล้ว แตะไพ่ที่รู้สึกดึงดูดใจให้ครบ {cardCount} ใบ
       </p>
@@ -158,7 +176,7 @@ export default function CardDrawStep({
       <button
         type="button"
         disabled={!isDone}
-        onClick={onComplete}
+        onClick={handleComplete}
         className="rounded-full bg-zinc-950 px-6 py-3 text-sm font-medium text-zinc-50 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200"
       >
         {nextLabel}
