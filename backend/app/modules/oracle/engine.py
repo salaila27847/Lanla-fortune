@@ -47,10 +47,11 @@ async def draw(deck: str = DEFAULT_DECK, count: int = 1) -> EngineResult:
             label=f"{card['name_th']} ({card['category_th']})",
             meaning=card["meaning"],
             weight=0.6,
+            voice=card.get("voice_th"),
         )
         for card in drawn
     ]
-    themes = list(dict.fromkeys(kw for card in drawn for kw in card["keywords"]))[:5]
+    themes = list(dict.fromkeys(kw for card in drawn for kw in card["keywords"]))
 
     return EngineResult(
         engine="oracle",
