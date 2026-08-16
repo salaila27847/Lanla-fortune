@@ -280,7 +280,9 @@ async def test_draw_tarot_deck_returns_full_shuffled_deck_and_positions(client):
 
 async def test_draw_tarot_deck_unknown_spread_is_rejected(client):
     res = await client.post(
-        "/api/tarot/draw", json={"spread": "no-such-spread"}, headers=_auth_headers("sub-a", "a@x.com")
+        "/api/tarot/draw",
+        json={"spread": "no-such-spread"},
+        headers=_auth_headers("sub-a", "a@x.com"),
     )
     assert res.status_code == 422
 
@@ -297,7 +299,9 @@ async def test_reading_oracle_duplicate_pick_is_rejected(client):
 async def test_reading_oracle_unknown_card_id_is_rejected(client):
     res = await client.post(
         "/api/reading",
-        json={"oracle": {"picks": ["not-a-real-card", "animal_ox", "animal_rabbit"], "question": "q"}},
+        json={
+            "oracle": {"picks": ["not-a-real-card", "animal_ox", "animal_rabbit"], "question": "q"}
+        },
         headers=_auth_headers("sub-a", "a@x.com"),
     )
     assert res.status_code == 422
