@@ -15,10 +15,14 @@ from app.modules.uranian.engine import (
     KB_DIR,
     PERSONAL_POINT_IDS,
     TNP_SWE_IDS,
+    _angular_distance,
+    _antiscia_finding,
+    _antiscion,
     _dial90_orb,
     _factor_category,
     _factor_display_name,
     _factor_keywords,
+    _find_antiscia_contacts,
     _find_pictures,
     _load_axis_meanings,
     _load_factors,
@@ -83,6 +87,24 @@ def test_dial90_orb_wraps_within_quadrant():
     assert _dial90_orb(10, 10) == 0
     assert _dial90_orb(10, 100) == pytest.approx(0.0, abs=1e-9)
     assert _dial90_orb(0, 45) == 45
+
+
+def test_antiscion_mirrors_across_the_solstitial_axis():
+    assert _antiscion(0) == pytest.approx(180.0)  # Aries <-> Libra
+    assert _antiscion(90) == pytest.approx(90.0)  # Cancer is its own antiscion
+    assert _antiscion(270) == pytest.approx(270.0)  # so is Capricorn
+    assert _antiscion(60) == pytest.approx(120.0)  # Gemini 0 <-> Leo 0, both 30 from Cancer
+
+
+def test_antiscion_is_its_own_inverse():
+    for longitude in (0, 15, 90, 183.4, 270, 359.9):
+        assert _antiscion(_antiscion(longitude)) == pytest.approx(longitude, abs=1e-9)
+
+
+def test_angular_distance_takes_the_shorter_way_around():
+    assert _angular_distance(10, 20) == pytest.approx(10.0)
+    assert _angular_distance(350, 10) == pytest.approx(20.0)
+    assert _angular_distance(0, 180) == pytest.approx(180.0)
 
 
 @pytest.mark.asyncio
@@ -376,3 +398,55 @@ def test_picture_finding_appends_notes_for_every_axis_present_in_the_picture():
     finding = _picture_finding(picture)
     assert "บนแกน M" in finding.meaning
     assert "บนแกน SUN" in finding.meaning
+
+
+# ---------- antiscia ----------
+
+
+def test_antiscia_contact_detected_when_a_factor_sits_on_a_mirror_point():
+    # antiscion(SUN=100) = 80; MOON sits right on it.
+    positions = {"SUN": 100.0, "MOON": 80.0, "MARS": 200.0}
+    contacts = _find_antiscia_contacts(positions, PERSONAL_POINT_IDS)
+    assert len(contacts) == 1
+    assert contacts[0]["pair"] == ("MOON", "SUN")
+    assert contacts[0]["orb"] < 0.01
+
+
+def test_antiscia_contact_is_symmetric():
+    # Same configuration read from the other factor's side should agree.
+    positions = {"SUN": 100.0, "MOON": 80.0}
+    contacts = _find_antiscia_contacts(positions, PERSONAL_POINT_IDS)
+    assert len(contacts) == 1
+    assert contacts[0]["factors"] == frozenset({"SUN", "MOON"})
+
+
+def test_antiscia_contact_out_of_orb_is_not_detected():
+    positions = {"SUN": 100.0, "MOON": 75.0}  # 5 off the 80 antiscion
+    assert _find_antiscia_contacts(positions, PERSONAL_POINT_IDS) == []
+
+
+def test_antiscia_contacts_without_a_personal_point_are_filtered_out():
+    positions = {"MERCURY": 100.0, "VENUS": 80.0}
+    assert _find_antiscia_contacts(positions, PERSONAL_POINT_IDS) == []
+
+
+def test_antiscia_finding_uses_glossary_meaning_when_a_pair_matches():
+    glossary_pair = next(iter(_load_planetary_pictures()))
+    a, b = sorted(glossary_pair)
+    contact = {"type": "antiscia", "pair": (a, b), "factors": frozenset((a, b)), "orb": 0.3}
+    finding = _antiscia_finding(contact)
+    assert finding.weight == 0.5
+    assert "จุดสะท้อนแกนครีษมายัน" in finding.meaning
+
+
+def test_antiscia_finding_falls_back_to_generic_composition_when_unmatched():
+    contact = {
+        "type": "antiscia",
+        "pair": ("ARIES", "MOON"),
+        "factors": frozenset({"ARIES", "MOON"}),
+        "orb": 0.3,
+    }
+    assert frozenset({"ARIES", "MOON"}) not in _load_planetary_pictures()
+    finding = _antiscia_finding(contact)
+    assert finding.weight == 0.35
+    assert "antiscion" in finding.meaning

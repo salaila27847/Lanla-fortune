@@ -34,9 +34,9 @@ research/                  ← เอกสารวิจัยต้นทา�
                             factors principle/function/expression/manifestation) — รวมถึง
                             `uranian-niggemann-primary-source.md` ที่ถอดความจากตำราปฐมภูมิ
                             "The Principles of the Uranian System of Astrology" ของ Hans
-                            Niggemann (ลูกศิษย์ตรงของ Witte/Sieggrün) มี antiscia formula ที่
-                            engine ยังไม่ implement, orb reference เพิ่มเติม, และประวัติศาสตร์
-                            ที่มาของดาวสมมติ
+                            Niggemann (ลูกศิษย์ตรงของ Witte/Sieggrün) มี antiscia formula
+                            (implement แล้วใน engine.py — ดูข้อ 5 ด้านล่าง), orb reference
+                            เพิ่มเติม, และประวัติศาสตร์ที่มาของดาวสมมติ
 ```
 
 `points.yaml` ใช้ id ตัวพิมพ์เล็ก (เช่น `cupido`) ส่วน `factors.yaml`/`planetary_pictures.yaml`/
@@ -80,6 +80,15 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
    จากนั้นถ้าภาพมีแกนใดแกนหนึ่งใน `axis_meanings.yaml` ร่วมอยู่ด้วย (M, A, SUN, MOON, NODE) จะเติม
    หมายเหตุจากแกนนั้นต่อท้ายเสมอ ไม่ว่าความหมายหลักจะมาจากขั้นตอนไหนก็ตาม — ถ้ามีมากกว่าหนึ่งแกนใน
    ภาพเดียวกัน (เช่น M/Mars=Sun/Saturn มีทั้ง M และ SUN) จะเติมหมายเหตุของทุกแกนที่พบ ไม่ใช่แค่แกนแรก
+5. **Antiscia-contact findings** — ปัจจัยหนึ่งตกที่จุดสะท้อน (antiscion) ของอีกปัจจัยหนึ่ง คือจุดที่มี
+   declination เท่ากันข้ามแกนครีษมายัน Cancer/Capricorn (`_antiscion()`: `180° - longitude`) orb 1.5°
+   เหมือน Type I เพราะอ่านเหมือนคอนจังชันตรงๆ — เป็นความสัมพันธ์คนละแบบจาก midpoint picture ด้านบน
+   (ไม่ใช่ Type I/II) คำนวณแยกด้วย `_find_antiscia_contacts()` แล้วต่อท้าย picture findings **เสมอ**
+   ไม่ว่า orb จะแคบแค่ไหนก็ไม่แซงหน้าภาพจริงขึ้นไปอยู่อันดับแรก เพราะต้นฉบับปฐมภูมิ (ดู
+   `research/uranian-niggemann-primary-source.md` หัวข้อ 3) ระบุชัดว่า antiscia ให้ผลอ่อนกว่า
+   picture ที่ครบสมบูรณ์เสมอ — หาความหมายจาก `planetary_pictures.yaml` ถ้ามีคู่ตรงกัน (weight 0.5)
+   ไม่งั้น compose จาก keywords ของทั้งสองปัจจัย (weight 0.35) เก็บสูงสุด 5 รายการ
+   (`MAX_ANTISCIA_FINDINGS`)
 
 ไม่มี hardcode เนื้อหาความหมายในโค้ด engine ทั้งหมดโหลดจากไฟล์ YAML ข้างต้น
 
@@ -123,6 +132,7 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
   อ่าน raw OCR อีกครั้งเพื่อกู้คืน 5 คู่นี้ — ต้นฉบับ scan+OCR ดิบทั้งเล่ม (~255 หน้า, 9,599 บรรทัด)
   เก็บไว้เฉพาะในเซสชันที่แปล ไม่ได้ก็อปปี้เข้า repo เพราะไฟล์ใหญ่มาก ต้องขอผู้ใช้ส่งซ้ำถ้าจะกลับไปแก้
 - forecast (`solar_arc.py`/`transit.py`) ไม่มี rate limit หรือแคชผลลัพธ์
-- **Antiscia ไม่ได้ implement เลย** — `engine.py` ไม่มีการคำนวณจุดสะท้อน (antiscion) ของปัจจัยใดๆ
-  สูตรและกติกาการเคลื่อนที่ตอน direction มีอยู่แล้วใน `research/uranian-niggemann-primary-source.md`
-  หัวข้อ 3 พร้อมใช้งานถ้าจะเพิ่มในอนาคต (ไม่ blocking สำหรับ MVP ปัจจุบัน)
+- Antiscia ยัง**ไม่ได้**เพิ่มเข้า `solar_arc.py`/`transit.py` — ที่ implement แล้วคือใน radix engine
+  (`engine.py`, ดูข้อ 5 ด้านบน) เท่านั้น กติกาการเคลื่อนที่ตอน direction (antiscion เดินสวนทาง solar arc)
+  มีอยู่แล้วใน `research/uranian-niggemann-primary-source.md` หัวข้อ 3 พร้อมใช้งานถ้าจะขยายไปที่
+  forecast module ในอนาคต (ไม่ blocking สำหรับ MVP ปัจจุบัน)
