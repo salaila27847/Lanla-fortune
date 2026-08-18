@@ -41,7 +41,13 @@ research/                  ← เอกสารวิจัยต้นทา�
                             เทียบกับพฤติกรรมจริงของโค้ด พบและแก้บั๊ก mod-45 ใน `_dial90_orb()`
                             (กระทบทั้ง engine.py/solar_arc.py/transit.py) เพิ่ม significance tier
                             จาก orb และเพิ่ม 22.5° fine-timing pass ใน transit.py — ดูข้อ 4/6 และ
-                            หัวข้อ transit.py ด้านล่าง
+                            หัวข้อ transit.py ด้านล่าง — และ
+                            `uranian-charun-pikul-reading-process.md` ถอดความจากเอกสารสอนภาษาไทย
+                            ของจรัญ พิกุล นักโหราศาสตร์ไทย (คนละเล่มกับ Jacobson แม้ชื่อไฟล์คล้ายกัน) มี
+                            worked example ที่ตรวจสอบเลขถูกต้องแล้ว (§6), ยืนยัน personal-point filter
+                            และ axis-note combination ของ engine จากแหล่งอิสระ (§7), และจุดเชื่อมโยง
+                            ประวัติศาสตร์กับ Carl Perch/Niggemann (§1) — เอกสารต้นฉบับมีแค่ 11/46 หน้า
+                            ในไฟล์ที่ได้รับ ยังขาดเนื้อหาส่วนใหญ่
 ```
 
 `points.yaml` ใช้ id ตัวพิมพ์เล็ก (เช่น `cupido`) ส่วน `factors.yaml`/`planetary_pictures.yaml`/
