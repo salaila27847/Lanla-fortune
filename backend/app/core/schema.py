@@ -166,6 +166,18 @@ class PictureResult(BaseModel):
     orb: float
 
 
+class FineTimingHit(BaseModel):
+    """A fast-moving transiting body landing on the 22.5° (16th-harmonic)
+    family of a radix/directed personal point — the day-level timing
+    filter from the dial hierarchy (90° dial = is this theme active,
+    22.5° dial = is it today). See transit.find_fine_timing_hits()."""
+
+    label: str
+    transit_factor: str
+    reference_factor: str
+    orb: float
+
+
 class SolarArcResult(BaseModel):
     arc_degrees: float
     pictures: list[PictureResult]
@@ -173,6 +185,7 @@ class SolarArcResult(BaseModel):
 
 class TransitResult(BaseModel):
     pictures: list[PictureResult]
+    fine_timing: list[FineTimingHit] = []
 
 
 class LunarReturnResult(BaseModel):

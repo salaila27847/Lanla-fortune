@@ -6,6 +6,7 @@ import { randomOracleCount } from "@/lib/random";
 import {
   drawOracleDeck,
   getFollowUpReading,
+  type FineTimingHit,
   type ForecastResponse,
   type OracleDeck,
   type PictureResult,
@@ -70,6 +71,27 @@ function PictureTable({ pictures }: { pictures: PictureResult[] }) {
   );
 }
 
+function FineTimingList({ hits }: { hits: FineTimingHit[] }) {
+  if (hits.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+        จุดเวลาที่แม่นเป็นพิเศษ (จาน 22.5°)
+      </h4>
+      <ul className="space-y-1">
+        {hits.map((hit, i) => (
+          <li
+            key={i}
+            className="rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-700 dark:border-zinc-800 dark:text-zinc-300"
+          >
+            {hit.label} <span className="text-zinc-400 dark:text-zinc-500">({hit.orb.toFixed(2)}°)</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ForecastSectionContent({
   section,
   forecast,
@@ -92,6 +114,7 @@ function ForecastSectionContent({
       <div className="flex flex-col gap-2">
         <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Transit — ดาวโคจรผ่าน</h3>
         <PictureTable pictures={forecast.transit.pictures} />
+        <FineTimingList hits={forecast.transit.fine_timing} />
       </div>
     );
   }

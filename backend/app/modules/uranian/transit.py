@@ -12,6 +12,11 @@ Covers, per the doc's "features the team should build" summary table:
   target date, checked against the radix (and optionally directed)
   chart for Type I/II pictures, at the tight orb (≤1°) the source
   material specifies for transits.
+- **Fine timing** — a fast-moving transiting body (Sun/Moon/Mercury/
+  Venus/Mars/Node) hitting the 22.5° (16th-harmonic) family of a
+  personal point, at a tighter orb than the Type I/II search above.
+  The dial-hierarchy day-level filter — see find_fine_timing_hits() and
+  backend/app/knowledge_base/uranian/research/uranian-dial-hierarchy.md.
 - **Station points** — the dates a slow-moving body turns retrograde or
   direct, which the doc singles out as especially significant when the
   station lands on a personal point.
@@ -47,11 +52,18 @@ from app.modules.uranian.engine import (
     PERSONAL_POINT_IDS,
     TNP_SWE_IDS,
     _dial90_orb,
+    _dial225_orb,
     _julian_day_ut,
     _midpoint,
 )
 
 TRANSIT_ORB_DEGREES = 1.0  # tight orb — Uranian transits are read as near-exact events, not applying/separating ranges
+
+FAST_TRANSIT_FACTORS = frozenset(
+    {"SUN", "MOON", "MERCURY", "VENUS", "MARS", "NODE"}
+)  # complement of SLOW_TRANSIT_FACTORS below — daily motion fast enough to pin an event to a specific day
+
+FINE_TIMING_ORB_DEGREES = 0.5  # arcminute-scale precision isn't meaningful from a noon-UTC daily snapshot; this is the day-resolution equivalent
 
 SLOW_TRANSIT_FACTORS = frozenset(
     {
@@ -236,6 +248,55 @@ def find_transit_pictures(
         if _has_moving_factor(p["factors"]) and _has_reference_personal_point(p["factors"])
     ]
     found.sort(key=lambda p: p["orb"])
+    return found
+
+
+def find_fine_timing_hits(
+    natal_positions: dict[str, float],
+    transit_positions_: dict[str, float],
+    directed_positions_: dict[str, float] | None = None,
+    orb: float = FINE_TIMING_ORB_DEGREES,
+) -> list[dict[str, Any]]:
+    """A fast-moving transiting body (Sun, Moon, Mercury, Venus, Mars, or
+    the Node) landing on the 16th-harmonic (22.5°) family of a
+    radix/directed personal point — the finer "which day" filter from
+    the dial hierarchy (90° dial: is this theme active this season;
+    22.5° dial: is it today). See backend/app/knowledge_base/uranian/
+    research/uranian-dial-hierarchy.md section 3.
+
+    Unlike find_transit_pictures(), this is a direct point-to-point
+    check, not a midpoint search: day-level timing comes from a single
+    fast body crossing a fixed reference point, not a 4-factor
+    structure, so there's no midpoint combinatorics to run — just every
+    fast transiting body against every personal point, at a tight orb."""
+    reference: dict[str, float] = {
+        f"{RADIX_PREFIX}{k}": v for k, v in natal_positions.items() if k in PERSONAL_POINT_IDS
+    }
+    if directed_positions_:
+        reference.update(
+            {
+                f"{DIRECTED_PREFIX}{k}": v
+                for k, v in directed_positions_.items()
+                if k in PERSONAL_POINT_IDS
+            }
+        )
+
+    found: list[dict[str, Any]] = []
+    for t_factor, t_longitude in transit_positions_.items():
+        if t_factor not in FAST_TRANSIT_FACTORS:
+            continue
+        for ref_key, ref_longitude in reference.items():
+            hit_orb = _dial225_orb(t_longitude, ref_longitude)
+            if hit_orb <= orb:
+                found.append(
+                    {
+                        "transit_factor": f"{TRANSIT_PREFIX}{t_factor}",
+                        "reference_factor": ref_key,
+                        "orb": hit_orb,
+                    }
+                )
+
+    found.sort(key=lambda hit: hit["orb"])
     return found
 
 
