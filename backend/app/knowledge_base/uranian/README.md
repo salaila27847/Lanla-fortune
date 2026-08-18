@@ -31,7 +31,12 @@ witte_pictures.yaml        ← glossary ละเอียดกว่า axis_m
                             "ยังไม่ได้ทำ" ด้านล่าง
 research/                  ← เอกสารวิจัยต้นทาง (ภาษาไทย, ถอดความจากตำรา ไม่ใช่คำแปลตรงตัว)
                             เก็บไว้เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (เช่น house_meanings,
-                            factors principle/function/expression/manifestation)
+                            factors principle/function/expression/manifestation) — รวมถึง
+                            `uranian-niggemann-primary-source.md` ที่ถอดความจากตำราปฐมภูมิ
+                            "The Principles of the Uranian System of Astrology" ของ Hans
+                            Niggemann (ลูกศิษย์ตรงของ Witte/Sieggrün) มี antiscia formula ที่
+                            engine ยังไม่ implement, orb reference เพิ่มเติม, และประวัติศาสตร์
+                            ที่มาของดาวสมมติ
 ```
 
 `points.yaml` ใช้ id ตัวพิมพ์เล็ก (เช่น `cupido`) ส่วน `factors.yaml`/`planetary_pictures.yaml`/
@@ -118,3 +123,6 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
   อ่าน raw OCR อีกครั้งเพื่อกู้คืน 5 คู่นี้ — ต้นฉบับ scan+OCR ดิบทั้งเล่ม (~255 หน้า, 9,599 บรรทัด)
   เก็บไว้เฉพาะในเซสชันที่แปล ไม่ได้ก็อปปี้เข้า repo เพราะไฟล์ใหญ่มาก ต้องขอผู้ใช้ส่งซ้ำถ้าจะกลับไปแก้
 - forecast (`solar_arc.py`/`transit.py`) ไม่มี rate limit หรือแคชผลลัพธ์
+- **Antiscia ไม่ได้ implement เลย** — `engine.py` ไม่มีการคำนวณจุดสะท้อน (antiscion) ของปัจจัยใดๆ
+  สูตรและกติกาการเคลื่อนที่ตอน direction มีอยู่แล้วใน `research/uranian-niggemann-primary-source.md`
+  หัวข้อ 3 พร้อมใช้งานถ้าจะเพิ่มในอนาคต (ไม่ blocking สำหรับ MVP ปัจจุบัน)
