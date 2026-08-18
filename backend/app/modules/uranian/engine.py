@@ -18,6 +18,14 @@ Two kinds of findings are produced:
    point (Sun, Moon, M, A, Node, Aries Point) are kept. Each picture is
    matched against the curated combinations glossary; unmatched pictures
    fall back to a meaning composed from each factor's own keywords.
+3. Antiscia-contact findings — a factor sitting on another factor's
+   antiscion (its mirror point across the Cancer/Capricorn solstitial
+   axis, same declination). Symmetric and independent of the midpoint
+   search above; per the source material antiscia read weaker than a
+   direct picture, so these are always appended after the Type I/II
+   picture findings, never mixed in ahead of them by orb alone. See
+   backend/app/knowledge_base/uranian/research/uranian-niggemann-primary-source.md
+   section 3 for the formula and the primary-source citation.
 
 Meanings are assembled from backend/app/knowledge_base/uranian/
 (points.yaml, signs.yaml, factors.yaml, planetary_pictures.yaml,
@@ -72,6 +80,11 @@ _CATEGORY_RANK = {"transneptunian": 0, "planet": 1, "personal_point": 2}
 TYPE1_ORB_DEGREES = 1.5  # off-center orb for a single factor on another pair's midpoint
 TYPE2_ORB_DEGREES = 3.0  # off-side orb for two pairs' midpoints coinciding
 MAX_PICTURE_FINDINGS = 10  # cap picture findings so payloads stay proportionate
+
+ANTISCIA_ORB_DEGREES = 1.5  # a mirror-point hit reads like a direct conjunction, so it gets the same tight orb as Type I
+MAX_ANTISCIA_FINDINGS = (
+    5  # antiscia are the weakest finding type; keep them a minority of the payload
+)
 
 
 @lru_cache
@@ -171,6 +184,19 @@ def _dial90_orb(a: float, b: float) -> float:
     return min(diff, 90 - diff)
 
 
+def _antiscion(longitude: float) -> float:
+    """Mirror a longitude across the Cancer(90°)/Capricorn(270°) axis —
+    the point with the same declination on the other side of the
+    solstitial axis. Symmetric: antiscion(antiscion(x)) == x."""
+    return (180.0 - longitude) % 360.0
+
+
+def _angular_distance(a: float, b: float) -> float:
+    """Shortest separation between two longitudes on the full 360° circle."""
+    diff = abs(a - b) % 360
+    return min(diff, 360 - diff)
+
+
 def _compute_positions(jd: float, birth_data: BirthData, known_time: bool) -> dict[str, float]:
     """Longitudes for all factors that don't need the birth time, plus
     Ascendant/Midheaven when it's known. Dict insertion order is fixed
@@ -253,6 +279,31 @@ def _find_pictures(
     return found
 
 
+def _find_antiscia_contacts(
+    positions: dict[str, float],
+    personal_point_ids: frozenset[str],
+    orb: float = ANTISCIA_ORB_DEGREES,
+) -> list[dict[str, Any]]:
+    """A factor sitting on another factor's antiscion. Symmetric —
+    a on antiscion(b) implies b on antiscion(a) — so each pair is
+    checked once. Kept separate from _find_pictures() since antiscia
+    contacts are their own (weaker) finding type, not a midpoint
+    structure. Keeps only contacts involving at least one personal
+    point, and sorts tightest-orb first."""
+    found: list[dict[str, Any]] = []
+    for a, b in combinations(positions, 2):
+        orb_hit = _angular_distance(positions[a], _antiscion(positions[b]))
+        if orb_hit <= orb:
+            pair = tuple(sorted((a, b)))
+            found.append(
+                {"type": "antiscia", "pair": pair, "factors": frozenset(pair), "orb": orb_hit}
+            )
+
+    found = [contact for contact in found if contact["factors"] & personal_point_ids]
+    found.sort(key=lambda contact: contact["orb"])
+    return found
+
+
 def _picture_theme(picture: dict[str, Any]) -> str | None:
     """One keyword to feed into the engine's themes, from whichever
     factor in the picture is most distinctive (TNP > planet > personal
@@ -313,6 +364,27 @@ def _picture_finding(picture: dict[str, Any]) -> Finding:
     return Finding(label=label, meaning=meaning, weight=weight)
 
 
+def _antiscia_finding(contact: dict[str, Any]) -> Finding:
+    a, b = contact["pair"]
+    disp = _factor_display_name
+    label = f"{disp(a)} พาดจุดสะท้อน (antiscion) ของ {disp(b)} (คลาดเคลื่อน {contact['orb']:.2f}°)"
+
+    glossary = _load_planetary_pictures()
+    match = glossary.get(frozenset((a, b)))
+    if match:
+        meaning = f"{match['meaning_th']} (เชื่อมโยงผ่านจุดสะท้อนแกนครีษมายัน ผลอ่อนกว่าคอนจังชันจริง)"
+        weight = 0.5
+    else:
+        keywords = [keywords[0] for f in (a, b) if (keywords := _factor_keywords(f))]
+        meaning = (
+            f"{disp(a)} และ {disp(b)} เชื่อมโยงกันผ่านจุดสะท้อน (antiscion) ข้ามแกนครีษมายัน "
+            f"(Cancer/Capricorn) สะท้อนพลัง: {', '.join(dict.fromkeys(keywords))}"
+        )
+        weight = 0.35
+
+    return Finding(label=label, meaning=meaning, weight=weight)
+
+
 async def calculate(birth_data: BirthData) -> EngineResult:
     jd, known_time = _julian_day_ut(birth_data)
     positions = _compute_positions(jd, birth_data, known_time)
@@ -343,6 +415,18 @@ async def calculate(birth_data: BirthData) -> EngineResult:
         theme = _picture_theme(picture)
         if theme:
             themes.insert(0, theme)
+
+    # Appended after the picture findings (never sorted in ahead of them by
+    # orb alone) — antiscia read weaker than a direct picture per the source
+    # material, regardless of how tight the antiscion hit is.
+    antiscia_contacts = _find_antiscia_contacts(positions, PERSONAL_POINT_IDS)[
+        :MAX_ANTISCIA_FINDINGS
+    ]
+    for contact in antiscia_contacts:
+        picture_findings.append(_antiscia_finding(contact))
+        theme = _picture_theme(contact)
+        if theme:
+            themes.append(theme)
 
     if not known_time:
         placement_findings.append(
