@@ -14,10 +14,17 @@ Two kinds of findings are produced:
 2. Planetary-picture findings — 90°-dial midpoint structures among all
    22 factors: Type I (a single factor sits on another pair's midpoint,
    e.g. Mars/Saturn=Uranus) and Type II (two pairs' midpoints coincide,
-   e.g. M/Moon=Venus/Sun). Only pictures involving at least one personal
-   point (Sun, Moon, M, A, Node, Aries Point) are kept. Each picture is
-   matched against the curated combinations glossary; unmatched pictures
-   fall back to a meaning composed from each factor's own keywords.
+   e.g. M/Moon=Venus/Sun). "90°-dial" means the full hard-aspect family
+   the dial reads as a hit — conjunction, semisquare, square,
+   sesquiquadrate, and opposition (see _dial90_orb) — not just
+   conjunction/square/opposition. Only pictures involving at least one
+   personal point (Sun, Moon, M, A, Node, Aries Point) are kept. Each
+   picture is matched against the curated combinations glossary;
+   unmatched pictures fall back to a meaning composed from each
+   factor's own keywords. A picture whose orb is tight enough
+   (≤ SIGNIFICANT_ORB_DEGREES) gets a "reads as unavoidable" marker
+   appended to its label — the dial-hierarchy principle that a
+   near-exact hit is a stronger theme, not just a present one.
 3. Antiscia-contact findings — a factor sitting on another factor's
    antiscion (its mirror point across the Cancer/Capricorn solstitial
    axis, same declination). Symmetric and independent of the midpoint
@@ -85,6 +92,8 @@ ANTISCIA_ORB_DEGREES = 1.5  # a mirror-point hit reads like a direct conjunction
 MAX_ANTISCIA_FINDINGS = (
     5  # antiscia are the weakest finding type; keep them a minority of the payload
 )
+
+SIGNIFICANT_ORB_DEGREES = 0.5  # a hit this tight reads as a near-exact, harder-to-avoid theme — see _significance_suffix()
 
 
 @lru_cache
@@ -178,10 +187,45 @@ def _midpoint(a: float, b: float) -> float:
     return (a + diff / 2) % 360
 
 
+def _dial_fold_orb(a: float, b: float, fold_degrees: float) -> float:
+    """Distance to the nearest multiple of fold_degrees between two
+    longitudes — the family of hard aspects a dial of that size reads as
+    a "hit" (a single dial position), since every multiple of
+    fold_degrees folds onto the same point."""
+    diff = abs((a - b) % fold_degrees)
+    return min(diff, fold_degrees - diff)
+
+
 def _dial90_orb(a: float, b: float) -> float:
-    """Distance between two longitudes on the 90° dial (mod 90)."""
-    diff = abs((a - b) % 90)
-    return min(diff, 90 - diff)
+    """Hard-aspect-family distance the 90° dial reads as a hit:
+    conjunction, semisquare, square, sesquiquadrate, and opposition
+    (0°/45°/90°/135°/180°, the 8th harmonic) — folded at 45°, not 90°.
+
+    Folding at 90° alone would only catch the 0°/90°/180°/270° family
+    (a-b near a multiple of 90) and silently miss 45°/135°/225°/315°
+    (semisquare/sesquiquadrate) entirely, even though Witte's own
+    description of the dial reads both as valid hits: "squares and
+    oppositions show as conjunctions, while the semi- and
+    sesqui-squares show as oppositions" — i.e. the same dial position,
+    just read from either the "same point" or "opposite point" side.
+    Ludwig Rudolph made the same point about the 45° dial specifically:
+    it isn't a separate instrument, it's the 90° dial's own data read
+    from the other side. Folding at 45° captures both readings in one
+    check. See backend/app/knowledge_base/uranian/research/
+    uranian-dial-hierarchy.md for the full citation trail."""
+    return _dial_fold_orb(a, b, 45.0)
+
+
+SEMI_OCTILE_DIAL_DEGREES = 22.5  # the 16th harmonic — finer than the 90° dial's own 8th-harmonic family; see _dial225_orb in transit.py
+
+
+def _dial225_orb(a: float, b: float) -> float:
+    """16th-harmonic hard-aspect-family distance (22.5° increments) —
+    the full semi-octile family (22.5°/45°/67.5°/90°/112.5°/135°/157.5°/
+    180°...), a strict superset of _dial90_orb's 8th-harmonic family.
+    Used for the fine "which day" timing pass in transit.py, not for
+    natal/directed picture-finding — see the module docstring."""
+    return _dial_fold_orb(a, b, SEMI_OCTILE_DIAL_DEGREES)
 
 
 def _antiscion(longitude: float) -> float:
@@ -304,6 +348,16 @@ def _find_antiscia_contacts(
     return found
 
 
+def _significance_suffix(orb: float) -> str:
+    """A short marker appended to a finding's label when its orb is
+    tight enough to read as a near-exact hit, not just a loose one —
+    the same "zoom in with a finer dial to see if it's a major theme"
+    principle the 45°/22.5° dials apply, expressed here as a stricter
+    orb threshold on the same underlying distance rather than a
+    separate fold (see uranian-dial-hierarchy.md section 2)."""
+    return " ★ ตรงเป๊ะ (เรื่องใหญ่ที่หลีกเลี่ยงยาก)" if orb <= SIGNIFICANT_ORB_DEGREES else ""
+
+
 def _picture_theme(picture: dict[str, Any]) -> str | None:
     """One keyword to feed into the engine's themes, from whichever
     factor in the picture is most distinctive (TNP > planet > personal
@@ -323,11 +377,17 @@ def _picture_finding(picture: dict[str, Any]) -> Finding:
     if picture["type"] == "type1":
         a, b = picture["pair"]
         c = picture["hit"]
-        label = f"{disp(a)}/{disp(b)} = {disp(c)} (คลาดเคลื่อน {picture['orb']:.2f}°)"
+        label = (
+            f"{disp(a)}/{disp(b)} = {disp(c)} (คลาดเคลื่อน {picture['orb']:.2f}°)"
+            f"{_significance_suffix(picture['orb'])}"
+        )
     else:
         a, b = picture["pair"]
         c, d = picture["pair_b"]
-        label = f"{disp(a)}/{disp(b)} = {disp(c)}/{disp(d)} (คลาดเคลื่อน {picture['orb']:.2f}°)"
+        label = (
+            f"{disp(a)}/{disp(b)} = {disp(c)}/{disp(d)} (คลาดเคลื่อน {picture['orb']:.2f}°)"
+            f"{_significance_suffix(picture['orb'])}"
+        )
 
     witte_meaning = None
     if picture["type"] == "type1":
@@ -367,7 +427,10 @@ def _picture_finding(picture: dict[str, Any]) -> Finding:
 def _antiscia_finding(contact: dict[str, Any]) -> Finding:
     a, b = contact["pair"]
     disp = _factor_display_name
-    label = f"{disp(a)} พาดจุดสะท้อน (antiscion) ของ {disp(b)} (คลาดเคลื่อน {contact['orb']:.2f}°)"
+    label = (
+        f"{disp(a)} พาดจุดสะท้อน (antiscion) ของ {disp(b)} (คลาดเคลื่อน {contact['orb']:.2f}°)"
+        f"{_significance_suffix(contact['orb'])}"
+    )
 
     glossary = _load_planetary_pictures()
     match = glossary.get(frozenset((a, b)))

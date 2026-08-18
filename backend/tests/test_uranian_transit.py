@@ -13,6 +13,7 @@ from app.core.schema import BirthData
 from app.modules.uranian.engine import _compute_positions, _julian_day_ut
 from app.modules.uranian.transit import (
     daily_speed,
+    find_fine_timing_hits,
     find_lunar_return,
     find_stations_in_range,
     find_transit_pictures,
@@ -189,6 +190,55 @@ def test_same_body_radix_vs_directed_type2_picture_is_excluded_end_to_end():
     directed = {"SUN": 90.0, "VENUS": 110.0}
     pictures = find_transit_pictures(natal, transit_positions_={}, directed_positions_=directed)
     assert pictures == []
+
+
+# ---------- find_fine_timing_hits (22.5° day-level filter) ----------
+
+
+def test_fine_timing_hit_detected_when_a_fast_body_sits_on_the_semi_octile_point():
+    natal = {"SUN": 0.0}  # personal point at 0°
+    transit = {"MARS": 22.4}  # 22.5° family point, 0.1° off — fast body, tight orb
+    hits = find_fine_timing_hits(natal, transit)
+    assert len(hits) == 1
+    assert hits[0]["transit_factor"] == "t:MARS"
+    assert hits[0]["reference_factor"] == "r:SUN"
+    assert hits[0]["orb"] == pytest.approx(0.1, abs=1e-9)
+
+
+def test_fine_timing_hit_misses_that_find_transit_pictures_cannot_see():
+    # 22.5° apart is a genuine miss on the (45°-folded) hard-aspect family
+    # find_transit_pictures uses — this is exactly the gap find_fine_timing_hits fills.
+    natal = {"SUN": 0.0}
+    transit = {"MARS": 22.5}
+    assert find_transit_pictures(natal, transit) == []
+    assert len(find_fine_timing_hits(natal, transit)) == 1
+
+
+def test_fine_timing_excludes_slow_moving_bodies():
+    natal = {"SUN": 0.0}
+    transit = {"SATURN": 22.5}  # exact semi-octile hit, but Saturn isn't a fast body
+    assert find_fine_timing_hits(natal, transit) == []
+
+
+def test_fine_timing_excludes_non_personal_point_natal_factors():
+    natal = {"MERCURY": 0.0}  # not a personal point
+    transit = {"MARS": 22.5}
+    assert find_fine_timing_hits(natal, transit) == []
+
+
+def test_fine_timing_out_of_orb_is_not_detected():
+    natal = {"SUN": 0.0}
+    transit = {"MARS": 23.5}  # 1° off the 22.5° mark — outside the 0.5° fine-timing orb
+    assert find_fine_timing_hits(natal, transit) == []
+
+
+def test_fine_timing_includes_directed_personal_points_when_given():
+    natal = {"MERCURY": 0.0}  # not itself a personal point
+    directed = {"SUN": 22.5}  # directed Sun is
+    transit = {"VENUS": 22.5}
+    hits = find_fine_timing_hits(natal, transit, directed)
+    assert len(hits) == 1
+    assert hits[0]["reference_factor"] == "d:SUN"
 
 
 # ---------- station points ----------

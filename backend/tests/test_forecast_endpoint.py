@@ -65,6 +65,9 @@ async def test_forecast_transit(client):
     body = res.json()["transit"]
     for picture in body["pictures"]:
         assert picture["orb"] <= 1.0  # transit's tight orb
+    for hit in body["fine_timing"]:
+        assert hit["orb"] <= 0.5  # fine-timing's even tighter orb
+        assert hit["transit_factor"].startswith("t:")
 
 
 async def test_forecast_lunar_return(client):

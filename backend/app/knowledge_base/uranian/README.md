@@ -36,7 +36,12 @@ research/                  ← เอกสารวิจัยต้นทา�
                             "The Principles of the Uranian System of Astrology" ของ Hans
                             Niggemann (ลูกศิษย์ตรงของ Witte/Sieggrün) มี antiscia formula
                             (implement แล้วใน engine.py — ดูข้อ 5 ด้านล่าง), orb reference
-                            เพิ่มเติม, และประวัติศาสตร์ที่มาของดาวสมมติ
+                            เพิ่มเติม, และประวัติศาสตร์ที่มาของดาวสมมติ — และ
+                            `uranian-dial-hierarchy.md` ที่วิเคราะห์ลำดับชั้นจาน 360°/90°/45°/22.5°
+                            เทียบกับพฤติกรรมจริงของโค้ด พบและแก้บั๊ก mod-45 ใน `_dial90_orb()`
+                            (กระทบทั้ง engine.py/solar_arc.py/transit.py) เพิ่ม significance tier
+                            จาก orb และเพิ่ม 22.5° fine-timing pass ใน transit.py — ดูข้อ 4/6 และ
+                            หัวข้อ transit.py ด้านล่าง
 ```
 
 `points.yaml` ใช้ id ตัวพิมพ์เล็ก (เช่น `cupido`) ส่วน `factors.yaml`/`planetary_pictures.yaml`/
@@ -69,6 +74,12 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
    - **Type II**: midpoint ของคู่หนึ่งตรงกับ midpoint ของอีกคู่หนึ่ง (เช่น `M/Moon=Venus/Sun`)
      orb 3.0°
 
+   **"90° dial" หมายถึงตระกูลมุมแข็งเต็มรูปแบบที่จานจริงอ่านเป็น hit** — conjunction, semisquare,
+   square, sesquiquadrate, opposition (0/45/90/135/180°) — `_dial90_orb()` พับที่ mod 45 ไม่ใช่ mod
+   90 เพื่อจับทั้ง 5 มุมนี้ (แก้บั๊กที่เคยพับ mod 90 อย่างเดียวแล้วพลาดตระกูล semisquare/sesquiquadrate
+   ไปทั้งหมด — ดู `research/uranian-dial-hierarchy.md` หัวข้อ 3 สำหรับที่มาและหลักฐาน) `solar_arc.py`/
+   `transit.py` import `_dial90_orb` ตัวเดียวกันนี้ตรงๆ จึงได้รับการแก้ไปด้วยอัตโนมัติ
+
    เก็บเฉพาะภาพที่มีจุดส่วนตัว (Sun, Moon, M, A, Node, จุดอาริส) อย่างน้อยหนึ่งจุด แล้วหาความหมาย
    ตามลำดับความสำคัญนี้ (`_picture_finding` ใน `engine.py`):
    1. **Type I ที่ตรงกับ `witte_pictures.yaml` เป๊ะๆ** (คู่ปัจจัย + ปัจจัยที่ 3 ตรงกัน) — เจาะจงและ
@@ -89,6 +100,11 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
    picture ที่ครบสมบูรณ์เสมอ — หาความหมายจาก `planetary_pictures.yaml` ถ้ามีคู่ตรงกัน (weight 0.5)
    ไม่งั้น compose จาก keywords ของทั้งสองปัจจัย (weight 0.35) เก็บสูงสุด 5 รายการ
    (`MAX_ANTISCIA_FINDINGS`)
+6. **Significance marker** — finding ใดก็ตาม (picture หรือ antiscia) ที่ orb ≤
+   `SIGNIFICANT_ORB_DEGREES` (0.5°) จะได้เครื่องหมาย "★ ตรงเป๊ะ (เรื่องใหญ่ที่หลีกเลี่ยงยาก)" ต่อท้าย
+   label จาก `_significance_suffix()` — หลักการ "orb ยิ่งแคบยิ่งมีนัยสำคัญ" ตามที่ต้นฉบับปฐมภูมิเขียนไว้
+   ไม่ใช่การพับจานใหม่ แค่ threshold ที่แคบกว่าเดิมบน orb ที่คำนวณอยู่แล้ว — ใช้ helper ตัวเดียวกันนี้ใน
+   `main.py::_forecast_picture_label` ด้วย เพื่อให้ solar arc/transit ได้เครื่องหมายเดียวกัน
 
 ไม่มี hardcode เนื้อหาความหมายในโค้ด engine ทั้งหมดโหลดจากไฟล์ YAML ข้างต้น
 
@@ -105,9 +121,16 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
 - `transit.py`: Transit จริง ณ วันที่เลือก (`transit_positions()`, `find_transit_pictures()`,
   orb แคบ 1°), Station Points (`daily_speed()`, `find_stations_in_range()`), Lunar Return
   (`find_lunar_return()`, bisection search), Relocation (`relocated_angles()`), Daily M/A
-  (`transit_positions(birth_data=...)` เพิ่ม Ascendant/Midheaven ของวันนั้นที่สถานที่เกิดเดิม) และ
+  (`transit_positions(birth_data=...)` เพิ่ม Ascendant/Midheaven ของวันนั้นที่สถานที่เกิดเดิม), และ
   Transit Axes (เกิดขึ้นเองจาก `find_transit_pictures()` เมื่อมี Daily M/A โดยไม่ต้องมีปัจจัย
-  radix/directed เลย)
+  radix/directed เลย) — บวก **Fine timing** (`find_fine_timing_hits()`, ใหม่): ดาวจรที่เคลื่อนที่เร็ว
+  (`FAST_TRANSIT_FACTORS` = Sun/Moon/Mercury/Venus/Mars/Node) ทับจุด 22.5° (16th harmonic,
+  `_dial225_orb()` ใน `engine.py`) ของจุดส่วนตัว radix/directed ที่ orb แคบมาก
+  (`FINE_TIMING_ORB_DEGREES = 0.5`) — เป็นการเช็กจุดต่อจุดตรงๆ ไม่ใช่ midpoint combinatorics แบบ
+  `find_transit_pictures()` เพราะการหา "วันไหน" มาจากดาวเร็วดวงเดียวทับจุดอ้างอิงคงที่ ไม่ใช่โครงสร้าง
+  4 ปัจจัย ผลลัพธ์อยู่ใน `TransitResult.fine_timing` (schema ใหม่ `FineTimingHit`) แยกจาก `pictures`
+  โดยตั้งใจ เพื่อไม่แตะ `PictureResult.type` Literal เดิมที่ frontend มี branch เฉพาะอยู่แล้ว — ดู
+  `research/uranian-dial-hierarchy.md` หัวข้อ 5
 
 ## ยังไม่ได้ทำ (สืบทอดจาก handoff package)
 

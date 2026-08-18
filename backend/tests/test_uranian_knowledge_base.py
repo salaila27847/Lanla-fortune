@@ -14,11 +14,14 @@ from app.core.schema import BirthData
 from app.modules.uranian.engine import (
     KB_DIR,
     PERSONAL_POINT_IDS,
+    SIGNIFICANT_ORB_DEGREES,
     TNP_SWE_IDS,
     _angular_distance,
     _antiscia_finding,
     _antiscion,
     _dial90_orb,
+    _dial225_orb,
+    _dial_fold_orb,
     _factor_category,
     _factor_display_name,
     _factor_keywords,
@@ -34,6 +37,7 @@ from app.modules.uranian.engine import (
     _midpoint_matrix,
     _picture_finding,
     _sign_for_longitude,
+    _significance_suffix,
     calculate,
 )
 
@@ -85,8 +89,26 @@ def test_midpoint_uses_shorter_arc():
 
 def test_dial90_orb_wraps_within_quadrant():
     assert _dial90_orb(10, 10) == 0
-    assert _dial90_orb(10, 100) == pytest.approx(0.0, abs=1e-9)
-    assert _dial90_orb(0, 45) == 45
+    assert _dial90_orb(10, 100) == pytest.approx(
+        0.0, abs=1e-9
+    )  # 90° apart: square/opposition family
+
+
+def test_dial90_orb_catches_the_semisquare_sesquiquadrate_family():
+    # Folding at 45° (not 90°) is the fix: Witte's own dial reads
+    # semisquare/sesquiquadrate as a hit too ("show as oppositions"),
+    # so 45°/135° apart must register as tightly as 90°/180° apart.
+    assert _dial90_orb(0, 45) == pytest.approx(0.0, abs=1e-9)
+    assert _dial90_orb(0, 135) == pytest.approx(0.0, abs=1e-9)
+    assert _dial90_orb(0, 225) == pytest.approx(0.0, abs=1e-9)
+    assert _dial90_orb(0, 315) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_dial90_orb_maxes_out_at_the_true_midpoint_between_hard_aspects():
+    # 22.5° apart is exactly between two hard-aspect-family points (0°
+    # and 45°) — the worst case for this fold, and not a hit at any
+    # sane orb. Confirms the fold doesn't over-match.
+    assert _dial90_orb(0, 22.5) == pytest.approx(22.5)
 
 
 def test_antiscion_mirrors_across_the_solstitial_axis():
@@ -105,6 +127,27 @@ def test_angular_distance_takes_the_shorter_way_around():
     assert _angular_distance(10, 20) == pytest.approx(10.0)
     assert _angular_distance(350, 10) == pytest.approx(20.0)
     assert _angular_distance(0, 180) == pytest.approx(180.0)
+
+
+def test_dial_fold_orb_is_generic_over_fold_size():
+    assert _dial_fold_orb(0, 90, 90.0) == pytest.approx(0.0, abs=1e-9)
+    assert _dial_fold_orb(0, 45, 90.0) == pytest.approx(45.0)  # the old (buggy) 90°-only behavior
+    assert _dial90_orb(a=0, b=45) == pytest.approx(_dial_fold_orb(0, 45, 45.0))
+
+
+def test_dial225_orb_catches_the_semi_octile_family_the_90_dial_misses():
+    # 22.5°/67.5°/112.5°/157.5° apart are real hits on the 16th-harmonic
+    # dial but never register on the (45°-folded) 90° dial.
+    for offset in (22.5, 67.5, 112.5, 157.5, 202.5, 337.5):
+        assert _dial225_orb(0, offset) == pytest.approx(0.0, abs=1e-9)
+        assert _dial90_orb(0, offset) == pytest.approx(22.5)  # a genuine miss on the coarser dial
+    # Anything already a hit on the 90° dial is also a hit on the 22.5° dial (superset).
+    assert _dial225_orb(0, 45) == pytest.approx(0.0, abs=1e-9)
+
+
+def test_significance_suffix_only_appears_within_the_tight_orb():
+    assert _significance_suffix(SIGNIFICANT_ORB_DEGREES) != ""
+    assert _significance_suffix(SIGNIFICANT_ORB_DEGREES + 0.01) == ""
 
 
 @pytest.mark.asyncio
@@ -297,6 +340,19 @@ def test_picture_finding_uses_glossary_meaning_when_a_pair_matches():
     assert finding.weight == 0.75
 
 
+def test_picture_finding_label_marks_a_tight_orb_as_significant():
+    tight = {
+        "type": "type1",
+        "pair": ("NEPTUNE", "ZEUS"),
+        "hit": "SATURN",
+        "factors": frozenset({"NEPTUNE", "ZEUS", "SATURN"}),
+        "orb": 0.1,
+    }
+    loose = {**tight, "orb": 1.4}
+    assert "★" in _picture_finding(tight).label
+    assert "★" not in _picture_finding(loose).label
+
+
 def test_picture_finding_prefers_witte_exact_match_over_generic_glossary():
     # M+VULKANUS=CUPIDO has a specific entry in witte_pictures.yaml (the real
     # Rules for Planetary Pictures glossary) — it should win over
@@ -437,6 +493,15 @@ def test_antiscia_finding_uses_glossary_meaning_when_a_pair_matches():
     finding = _antiscia_finding(contact)
     assert finding.weight == 0.5
     assert "จุดสะท้อนแกนครีษมายัน" in finding.meaning
+
+
+def test_antiscia_finding_label_marks_a_tight_orb_as_significant():
+    glossary_pair = next(iter(_load_planetary_pictures()))
+    a, b = sorted(glossary_pair)
+    tight = {"type": "antiscia", "pair": (a, b), "factors": frozenset((a, b)), "orb": 0.1}
+    loose = {**tight, "orb": 1.4}
+    assert "★" in _antiscia_finding(tight).label
+    assert "★" not in _antiscia_finding(loose).label
 
 
 def test_antiscia_finding_falls_back_to_generic_composition_when_unmatched():

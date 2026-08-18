@@ -36,8 +36,15 @@ export type PictureResult = {
   orb: number;
 };
 
+export type FineTimingHit = {
+  label: string;
+  transit_factor: string;
+  reference_factor: string;
+  orb: number;
+};
+
 export type SolarArcResult = { arc_degrees: number; pictures: PictureResult[] };
-export type TransitResult = { pictures: PictureResult[] };
+export type TransitResult = { pictures: PictureResult[]; fine_timing: FineTimingHit[] };
 export type LunarReturnResult = { return_at: string };
 export type RelocationResult = { ascendant: number; midheaven: number };
 

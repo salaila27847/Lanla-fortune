@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import get_current_user
 from app.core.schema import (
     BirthData,
+    FineTimingHit,
     FollowUpRequest,
     ForecastRequest,
     ForecastResponse,
@@ -45,14 +46,25 @@ from app.modules.oracle.engine import shuffle as oracle_shuffle
 from app.modules.tarot.engine import _load_spread as _load_tarot_spread
 from app.modules.tarot.engine import build_result_from_picks as tarot_build_result
 from app.modules.tarot.engine import shuffle as tarot_shuffle
-from app.modules.uranian.engine import _compute_positions, _factor_display_name, _julian_day_ut
+from app.modules.uranian.engine import (
+    _compute_positions,
+    _factor_display_name,
+    _julian_day_ut,
+    _significance_suffix,
+)
 from app.modules.uranian.engine import calculate as uranian_calculate
 from app.modules.uranian.solar_arc import (
     directed_positions,
     find_directed_pictures,
     solar_arc_degrees,
 )
-from app.modules.uranian.transit import find_lunar_return, relocated_angles, transit_forecast
+from app.modules.uranian.transit import (
+    find_fine_timing_hits,
+    find_lunar_return,
+    relocated_angles,
+    transit_forecast,
+    transit_positions,
+)
 from app.synthesis.master_interpreter import synthesize, synthesize_followup
 
 FORECAST_PICTURE_LIMIT = 30  # a "raw table" view, wider than the natal engine's top-10 reading cap
@@ -69,13 +81,15 @@ def _forecast_picture_label(picture: dict[str, Any]) -> str:
     if picture["type"] == "type1":
         a, b = picture["pair"]
         c = picture["hit"]
-        return f"{_format_forecast_factor(a)}/{_format_forecast_factor(b)} = {_format_forecast_factor(c)}"
-    a, b = picture["pair"]
-    c, d = picture["pair_b"]
-    return (
-        f"{_format_forecast_factor(a)}/{_format_forecast_factor(b)} = "
-        f"{_format_forecast_factor(c)}/{_format_forecast_factor(d)}"
-    )
+        label = f"{_format_forecast_factor(a)}/{_format_forecast_factor(b)} = {_format_forecast_factor(c)}"
+    else:
+        a, b = picture["pair"]
+        c, d = picture["pair_b"]
+        label = (
+            f"{_format_forecast_factor(a)}/{_format_forecast_factor(b)} = "
+            f"{_format_forecast_factor(c)}/{_format_forecast_factor(d)}"
+        )
+    return label + _significance_suffix(picture["orb"])
 
 
 def _to_picture_result(picture: dict[str, Any]) -> PictureResult:
@@ -84,6 +98,21 @@ def _to_picture_result(picture: dict[str, Any]) -> PictureResult:
         label=_forecast_picture_label(picture),
         factors=sorted(picture["factors"]),
         orb=round(picture["orb"], 3),
+    )
+
+
+def _to_fine_timing_hit(hit: dict[str, Any]) -> FineTimingHit:
+    transit_factor = hit["transit_factor"]
+    reference_factor = hit["reference_factor"]
+    label = (
+        f"{_format_forecast_factor(transit_factor)} ทับจุด 22.5° ของ "
+        f"{_format_forecast_factor(reference_factor)} — ช่วงเวลาที่เหตุการณ์นี้ปะทุ"
+    )
+    return FineTimingHit(
+        label=label,
+        transit_factor=transit_factor,
+        reference_factor=reference_factor,
+        orb=round(hit["orb"], 3),
     )
 
 
@@ -103,6 +132,7 @@ def _compute_forecast(
     natal_positions = _compute_positions(jd, birth_data, known_time)
 
     response = ForecastResponse()
+    directed: dict[str, float] | None = None
 
     if solar_arc:
         arc = solar_arc_degrees(birth_data, solar_arc.target_date)
@@ -115,8 +145,11 @@ def _compute_forecast(
 
     if transit:
         pictures = transit_forecast(natal_positions, transit.target_date, birth_data=birth_data)
+        transit_positions_ = transit_positions(transit.target_date, birth_data=birth_data)
+        fine_timing = find_fine_timing_hits(natal_positions, transit_positions_, directed)
         response.transit = TransitResult(
-            pictures=[_to_picture_result(p) for p in pictures[:FORECAST_PICTURE_LIMIT]]
+            pictures=[_to_picture_result(p) for p in pictures[:FORECAST_PICTURE_LIMIT]],
+            fine_timing=[_to_fine_timing_hit(h) for h in fine_timing[:FORECAST_PICTURE_LIMIT]],
         )
 
     if lunar_return:
