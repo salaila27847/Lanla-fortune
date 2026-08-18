@@ -24,11 +24,13 @@ witte_pictures.yaml        ← glossary ละเอียดกว่า axis_m
                             22 หมวดของหนังสือแล้ว** (Meridian → Aries → Sun → Ascendant → Moon →
                             Node → Mercury → Venus → Mars → Jupiter → Saturn → Uranus → Neptune →
                             Pluto → Cupido → Hades → Zeus → Kronos → Apollon → Admetos → Vulkanus
-                            → Poseidon ตามลำดับที่หนังสือกำหนด) รวม **226 base pairs, 4,400
-                            รายการ** จาก 231 คู่ที่เป็นไปได้ทางทฤษฎี — 5 คู่ที่ขาดไปทั้งคู่
-                            (A+NODE, A+CUPIDO, A+ADMETOS, CUPIDO+SUN, APOLLON+SUN) ข้ามไปตั้งใจ
-                            เพราะ OCR เสียจนระบุตัวบ่งชี้ปัจจัยที่ 3 ไม่ได้เลย ดูรายละเอียดที่หัวข้อ
-                            "ยังไม่ได้ทำ" ด้านล่าง
+                            → Poseidon ตามลำดับที่หนังสือกำหนด) รวม **229 base pairs, 4,403
+                            รายการ** จาก 231 คู่ที่เป็นไปได้ทางทฤษฎี — เดิมมี 5 คู่ที่ขาดไปทั้งคู่
+                            ข้ามไปตั้งใจเพราะ OCR เสียจนระบุตัวบ่งชี้ปัจจัยที่ 3 ไม่ได้เลย — **แก้ไข
+                            2026-08-18**: กู้คืนได้บางส่วน 3 คู่ (A+NODE, CUPIDO+SUN, APOLLON+SUN —
+                            คนละ 1 รายการเท่านั้น ยังไม่ครบ) จาก errata sheet ที่ผู้ใช้ส่งมา ยังเหลือ
+                            A+CUPIDO (ไม่พบเลย) และ A+ADMETOS (พบผู้สมัครที่ OCR อ่านกำกวมเกินยืนยัน)
+                            ที่ยังไม่มีข้อมูล ดูรายละเอียดที่หัวข้อ "ยังไม่ได้ทำ" ด้านล่าง
 research/                  ← เอกสารวิจัยต้นทาง (ภาษาไทย, ถอดความจากตำรา ไม่ใช่คำแปลตรงตัว)
                             เก็บไว้เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (เช่น house_meanings,
                             factors principle/function/expression/manifestation) — รวมถึง
@@ -168,14 +170,18 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
 - `witte_pictures.yaml` **ทำครบทั้ง 22 หมวดของหนังสือแล้ว** (Meridian → Aries → Sun → Ascendant →
   Moon → Node → Mercury → Venus → Mars → Jupiter → Saturn → Uranus → Neptune → Pluto → Cupido →
   Hades → Zeus → Kronos → Apollon → Admetos → Vulkanus → Poseidon ตามลำดับที่หนังสือกำหนด) รวม
-  **226 base pairs / 4,400 รายการ** จาก 231 คู่ที่เป็นไปได้ทางทฤษฎี (C(22,2)) — บาง base pair เอง
+  **229 base pairs / 4,403 รายการ** จาก 231 คู่ที่เป็นไปได้ทางทฤษฎี (C(22,2)) — บาง base pair เอง
   ก็ขาดบางรายการ third-factor เพราะ OCR กู้คืนไม่ได้ (ดู comment `# missing:` ต่อท้ายคู่นั้นในตัวไฟล์
   yaml) — คุณภาพ OCR แย่ลงเรื่อยๆ ตามหลังเล่ม (ตามที่หนังสือเองเตือนไว้) โดยเฉพาะหมวด Neptune เป็นต้นไป
-  **5 คู่ที่ขาดไปทั้งคู่** (ไม่ใช่แค่บางรายการ) คือ A+NODE, A+CUPIDO, A+ADMETOS (หมวด Ascendant) และ
-  CUPIDO+SUN, APOLLON+SUN (หมวด Sun) — ข้ามไปตั้งใจตั้งแต่ตอนทำหมวดนั้นๆ เพราะตัวบ่งชี้ปัจจัยที่ 3
-  ("-XX" prefix) หายไปจาก OCR ทั้งหมดจนไม่มีทางระบุลำดับรายการได้อย่างน่าเชื่อถือ ยังไม่ได้ลองกลับไป
-  อ่าน raw OCR อีกครั้งเพื่อกู้คืน 5 คู่นี้ — ต้นฉบับ scan+OCR ดิบทั้งเล่ม (~255 หน้า, 9,599 บรรทัด)
-  เก็บไว้เฉพาะในเซสชันที่แปล ไม่ได้ก็อปปี้เข้า repo เพราะไฟล์ใหญ่มาก ต้องขอผู้ใช้ส่งซ้ำถ้าจะกลับไปแก้
+  **แก้ไข 2026-08-18**: เดิมมี 5 คู่ที่ขาดไปทั้งคู่ (A+NODE, A+CUPIDO, A+ADMETOS หมวด Ascendant,
+  CUPIDO+SUN, APOLLON+SUN หมวด Sun) — ผู้ใช้ส่งไฟล์ errata sheet ต้นฉบับ "The Missing Combinations
+  in the Book of Rules" (ภาคผนวก 2 หน้า คนละไฟล์กับเล่มหลัก) มาให้ กู้คืนได้บางส่วน 3 คู่ (A+NODE,
+  CUPIDO+SUN, APOLLON+SUN — คนละ 1 third-factor เท่านั้น ยังไม่ใช่ชุดสมบูรณ์ ~20 รายการแบบคู่อื่น)
+  ยังเหลือ **A+CUPIDO** (ไม่พบใน errata sheet เลย) และ **A+ADMETOS** (พบผู้สมัครที่ OCR อ่านกำกวมเกิน
+  จะยืนยัน — อ่านได้ "A+Ai-Sa" ไม่ตรงกับตัวย่อปัจจัยใดในระบบ) — ถ้าต้องการให้ครบทั้ง 231/231 คู่แบบสมบูรณ์
+  จริงๆ (ทุก third-factor) ยังต้องขอไฟล์เล่มหลักฉบับเต็ม (บท Ascendant หน้า 64-82, Sun หน้า 44-63)
+  มาอ่านอยู่ดี — ต้นฉบับ scan+OCR ดิบทั้งเล่ม (~255 หน้า, 9,599 บรรทัด) เก็บไว้เฉพาะในเซสชันที่แปล
+  ไม่ได้ก็อปปี้เข้า repo เพราะไฟล์ใหญ่มาก ต้องขอผู้ใช้ส่งซ้ำถ้าจะกลับไปแก้
 - forecast (`solar_arc.py`/`transit.py`) ไม่มี rate limit หรือแคชผลลัพธ์
 - Antiscia ยัง**ไม่ได้**เพิ่มเข้า `solar_arc.py`/`transit.py` — ที่ implement แล้วคือใน radix engine
   (`engine.py`, ดูข้อ 5 ด้านบน) เท่านั้น กติกาการเคลื่อนที่ตอน direction (antiscion เดินสวนทาง solar arc)

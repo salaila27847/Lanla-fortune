@@ -22,11 +22,16 @@
 # (246-249), Admetos (250-252), Vulkanus (253-254) — Poseidon (หน้า 255) ไม่มีคู่ใหม่เหลือเลย
 # เพราะเป็นปัจจัยลำดับท้ายสุด ทุกคู่ของมันถูกครอบคลุมในหมวดของปัจจัยอื่นไปหมดแล้ว รวม 226 จาก 231
 # คู่ที่เป็นไปได้ทางทฤษฎี (C(22,2)) — บางคู่ในบางหมวดยังขาดบางรายการ third-factor เพราะ OCR เสีย
-# ดู comment `# missing:` ต่อท้ายแต่ละคู่ที่ขาด — **ที่ยังขาดทั้งคู่ไปเลย (ไม่ใช่แค่บางรายการ) มี 5
-# คู่**: A+NODE, A+CUPIDO, A+ADMETOS (ทั้งหมดควรอยู่ในหมวด Ascendant), CUPIDO+SUN, APOLLON+SUN
-# (ทั้งหมดควรอยู่ในหมวด Sun) — ทั้ง 5 คู่นี้มาจากรอบทำงานก่อนหน้า sessions นี้ (ก่อน Phase 15) ยัง
-# ไม่ได้ตรวจสอบว่ากู้คืนจาก OCR ดิบได้หรือไม่ ถ้าต้องการให้ครบ 231/231 จริงๆ ต้องกลับไปอ่าน raw OCR
-# ของหมวด Ascendant/Sun อีกครั้งเพื่อหาคู่เหล่านี้
+# ดู comment `# missing:` ต่อท้ายแต่ละคู่ที่ขาด — **แก้ไข 2026-08-18**: เดิมมี 5 คู่ที่ขาดทั้งคู่ไปเลย
+# (A+NODE, A+CUPIDO, A+ADMETOS, CUPIDO+SUN, APOLLON+SUN) ผู้ใช้ส่งไฟล์ errata sheet ต้นฉบับชื่อ
+# "The Missing Combinations in the Book of Rules" (คนละไฟล์กับตัวเล่มหลัก 255 หน้า — เป็นภาคผนวก
+# 2 หน้าที่ผู้แต่ง/สำนักพิมพ์ออกมาเพิ่มสำหรับคู่ที่ตกหล่นไปจากเล่มหลัก) มาให้ — กู้คืนได้ **บางส่วน**
+# 3 จาก 5 คู่ (A+NODE, CUPIDO+SUN, APOLLON+SUN — ได้คนละ 1 third-factor เท่านั้น ไม่ใช่ชุดสมบูรณ์
+# ~20 รายการแบบคู่อื่น ดู `# missing:` ท้ายแต่ละคู่สำหรับรายการที่ยังขาด) ส่วน A+CUPIDO ไม่ปรากฏใน
+# errata sheet 2 หน้านี้เลย และ A+ADMETOS มีผู้สมัคร (candidate) หนึ่งแถวที่ OCR อ่านกำกวมเกินจะยืนยัน
+# (อ่านได้ "A+Ai-Sa" ซึ่งไม่ตรงกับตัวย่อปัจจัยใดในระบบ) จึงยังไม่ใส่ — ถ้าต้องการให้ครบทั้ง 231/231 คู่
+# จริงๆ (ชุดสมบูรณ์ทุก third-factor) ยังต้องขอไฟล์เล่มหลักฉบับเต็ม (บทที่ Ascendant หน้า 64-82 และ
+# Sun หน้า 44-63) มาอ่านเพิ่มอยู่ดี — errata sheet 2 หน้าไม่เพียงพอ
 #
 # engine.py ใช้ไฟล์นี้เฉพาะกับ Type I picture (pair + hit ตรงตัว) เป็นลำดับความสำคัญสูงสุด
 # ก่อน planetary_pictures.yaml (คู่ทั่วไป) และก่อน fallback แบบ keyword — ดู _picture_finding()
@@ -2257,6 +2262,14 @@ base_pairs:
       - third_factor: NEPTUNE
         meaning_th: "การขาดความอยากอาหาร สภาพอ่อนแรง การทดลองอาหารแปลกใหม่ การเปลี่ยนแปลงของร่างกายที่แทบสังเกตไม่ได้"
 
+  - factors: [SUN, CUPIDO]
+    # กู้คืนบางส่วนจาก errata sheet "The Missing Combinations in the Book of Rules" (2026-08-18) —
+    # ยังไม่ครบ ยังขาดเกือบทุก third-factor เพราะ errata sheet มีให้แค่รายการเดียวสำหรับคู่นี้
+    # missing: M, ARIES, A, MOON, NODE, MERCURY, VENUS, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO, HADES, ZEUS, KRONOS, APOLLON, VULKANUS, POSEIDON
+    entries:
+      - third_factor: ADMETOS
+        meaning_th: "ชายโสดที่ใช้ชีวิตอย่างสันโดษ ไม่ผูกพันกับครอบครัวหรือสังคม"
+
   - factors: [SUN, HADES]
     keyword_en: "Pursued by misfortune. Diseased body. Dirty or very unclean work, hard physical labor. Broken down or mis-shapen body. Carrier of secrets."
     # missing: CUPIDO, ZEUS, KRONOS, APOLLON, ADMETOS, VULKANUS, POSEIDON (OCR เพี้ยนเกินกู้คืนได้อย่างมั่นใจหลังช่วง Pluto)
@@ -2374,6 +2387,14 @@ base_pairs:
         meaning_th: "การใช้อำนาจรัฐหรือประสบกับมัน อำนาจอันทรงพลัง"
       - third_factor: POSEIDON
         meaning_th: "การเป็นผู้นำทางจิตวิญญาณ ความสูงส่งของจิตวิญญาณ"
+
+  - factors: [SUN, APOLLON]
+    # กู้คืนบางส่วนจาก errata sheet "The Missing Combinations in the Book of Rules" (2026-08-18) —
+    # ยังไม่ครบ ยังขาดเกือบทุก third-factor เพราะ errata sheet มีให้แค่รายการเดียวสำหรับคู่นี้
+    # missing: M, ARIES, A, MOON, NODE, MERCURY, VENUS, MARS, JUPITER, SATURN, URANUS, NEPTUNE, PLUTO, CUPIDO, HADES, ZEUS, KRONOS, ADMETOS, POSEIDON
+    entries:
+      - third_factor: VULKANUS
+        meaning_th: "ความสำเร็จครั้งใหญ่ที่สุดในชีวิต"
 
   - factors: [SUN, ADMETOS]
     keyword_en: "The deadly death. Dwarf. Retarded body. Stagnation of the body. Property. Landscape. Native land or place."
@@ -2546,6 +2567,14 @@ base_pairs:
         meaning_th: "การถูกอิทธิพลอย่างมากจากสาธารณะใกล้ตัว ความเชื่อมโยงที่แข็งแกร่งกับสาธารณะ การแสดงพลังของผู้หญิง"
       - third_factor: POSEIDON
         meaning_th: "การสื่อสารกับผู้หญิงที่มีจิตใจสูงส่ง การรับรู้ผ่านพวกเธอ"
+
+  - factors: [A, NODE]
+    # กู้คืนบางส่วนจาก errata sheet "The Missing Combinations in the Book of Rules" (2026-08-18) —
+    # ยังไม่ครบ ยังขาดเกือบทุก third-factor เพราะ errata sheet มีให้แค่รายการเดียวสำหรับคู่นี้
+    # missing: M, ARIES, SUN, MOON, MERCURY, VENUS, MARS, JUPITER, SATURN, URANUS, NEPTUNE, CUPIDO, HADES, ZEUS, KRONOS, APOLLON, ADMETOS, VULKANUS, POSEIDON
+    entries:
+      - third_factor: PLUTO
+        meaning_th: "จุดเริ่มต้นความสัมพันธ์ใหม่ที่นำไปสู่การเปลี่ยนแปลงครั้งใหญ่ มักเกิดจากการย้ายถิ่นหรือเปลี่ยนสถานที่"
 
   - factors: [A, MERCURY]
     keyword_en: "Talks and correspondence. Other people think of the native. To be the theme of conversation with others."
