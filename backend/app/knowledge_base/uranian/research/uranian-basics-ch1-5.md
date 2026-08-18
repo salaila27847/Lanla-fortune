@@ -80,7 +80,14 @@
 ## บทที่ 4: เรือนโหราศาสตร์และ 360°-Dial
 
 ### ระบบเรือนแบบยูเรเนียน
-ระบบยูเรเนียนใช้ **เรือนแบบ equal-house ที่อ้างอิงจาก M** ไม่ใช่ระบบ Placidus หรือ Koch ที่นิยมในโหราศาสตร์ตะวันตกทั่วไป — แต่ละราศีมีความสัมพันธ์เชิง "ต้นแบบ" (archetypal) กับเรือนหนึ่งๆ (เช่น Libra ↔ เรือนที่ 1 ในระบบยูเรเนียน)
+ระบบยูเรเนียนไม่ใช้ระบบ Placidus หรือ Koch ที่นิยมในโหราศาสตร์ตะวันตกทั่วไป แต่ใช้เรือนคู่ขนานกันถึง 5
+ระบบ — **แก้ไข (ยืนยันจากต้นฉบับ Witte/Niggemann โดยตรง ดู `research/uranian-witte-house-systems.md`
+หัวข้อ 1):** เดิมเอกสารนี้เขียนว่า "equal-house อ้างอิงจาก M" ซึ่งคลาดเคลื่อน — ระบบที่อ้างอิงจาก M
+(Meridian house) แท้จริงแล้ว**ไม่ใช่** equal-house บนสุริยวิถี (คำนวณจากการแบ่งเวลาสาธารณะ/sidereal
+time เท่ากันแทน ทำให้เรือนบนสุริยวิถีมีขนาดไม่เท่ากัน คล้ายหลักการ Placidus) ระบบที่เป็น equal-house
+จริงๆ (บวก 30° ต่อเนื่องบนสุริยวิถี) คือระบบที่อ้างอิงจาก **Ascendant** (รวมถึง Sun และ Moon houses ด้วย)
+— แต่ละราศียังมีความสัมพันธ์เชิง "ต้นแบบ" (archetypal) กับเรือนหนึ่งๆ อยู่เหมือนเดิม (เช่น Libra ↔ เรือนที่
+1 ในระบบยูเรเนียน)
 
 ### 360°-Dial (หน้าปัดวงกลม 360°)
 เป็นเครื่องมือทางกายภาพ (แผ่นดิสก์หมุนได้) ที่ใช้:
@@ -115,6 +122,6 @@
 | I | ตารางแปลง whole-circle ↔ zodiacal notation, นิยาม 6 personal points |
 | II | ฐานข้อมูลคำหลัก 4 มิติ (Principle/Function/Expression/Manifestation) ของ 22 ปัจจัย |
 | III | ผูกกับไลบรารี ephemeris (รวม transneptunian ephemeris แยกต่างหาก) |
-| IV | ระบบเรือน equal-house จาก M (ไม่ใช่ Placidus) + ตาราง reflex house pairing |
+| IV | เรือน 5 ระบบคู่ขนาน (Earth/Meridian/Ascendant/Sun/Moon) — Meridian ไม่ใช่ equal-house แต่ Ascendant/Sun/Moon เป็น equal-house จริง (ดูการแก้ไขด้านบน) + ตาราง reflex house pairing |
 | V | Aspect calculator (orb, hard/soft) เป็นฐานให้ planetary picture engine ใน Phase 2 |
 
