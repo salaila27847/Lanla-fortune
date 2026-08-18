@@ -47,7 +47,16 @@ research/                  ← เอกสารวิจัยต้นทา�
                             worked example ที่ตรวจสอบเลขถูกต้องแล้ว (§6), ยืนยัน personal-point filter
                             และ axis-note combination ของ engine จากแหล่งอิสระ (§7), และจุดเชื่อมโยง
                             ประวัติศาสตร์กับ Carl Perch/Niggemann (§1) — เอกสารต้นฉบับมีแค่ 11/46 หน้า
-                            ในไฟล์ที่ได้รับ ยังขาดเนื้อหาส่วนใหญ่
+                            ในไฟล์ที่ได้รับ ยังขาดเนื้อหาส่วนใหญ่ — และ
+                            `uranian-four-antiscia-axes.md` จากบทความสารานุกรม Uranian Astrology
+                            (Madalyn Hillis-Dineen) พบว่า antiscia ของยูเรเนียนมี **4 แกนสะท้อน**
+                            (Cancer/Capricorn, Aries/Libra, Taurus/Scorpio, Leo/Aquarius — ทั้งหมดคือ
+                            แกนตรงข้ามของจุดกางเขนแปดแฉก) แต่ `_antiscion()` ที่ implement แล้วมีแค่แกน
+                            เดียว (Cancer/Capricorn) — ช่องว่างจริง ยังไม่ implement เพิ่ม (ดู "ยังไม่ได้ทำ"
+                            ด้านล่าง) — และ `uranian-schematic-planet-polarity.md` ถอดความจากแผนภาพ
+                            เดี่ยว **ที่มาไม่ยืนยัน** (ไม่มีชื่อหนังสือ/ผู้แต่งกำกับ) แสดงแนวคิดขั้วบวก-ลบ
+                            (Day-side/Night-side) ต่อปัจจัย ซึ่งยังไม่มีใน schema ปัจจุบัน — บันทึกไว้เป็น
+                            สมมติฐานเท่านั้น ยังไม่นำไปใช้จนกว่าจะยืนยันที่มาได้
 ```
 
 `points.yaml` ใช้ id ตัวพิมพ์เล็ก (เช่น `cupido`) ส่วน `factors.yaml`/`planetary_pictures.yaml`/
@@ -165,3 +174,7 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
   (`engine.py`, ดูข้อ 5 ด้านบน) เท่านั้น กติกาการเคลื่อนที่ตอน direction (antiscion เดินสวนทาง solar arc)
   มีอยู่แล้วใน `research/uranian-niggemann-primary-source.md` หัวข้อ 3 พร้อมใช้งานถ้าจะขยายไปที่
   forecast module ในอนาคต (ไม่ blocking สำหรับ MVP ปัจจุบัน)
+- `_antiscion()` ทำแค่ **1 ใน 4 แกนสะท้อน** ที่ระบบยูเรเนียนใช้จริง (Cancer/Capricorn เท่านั้น) — ยังขาด
+  Aries/Libra (contra-antiscia), Taurus/Scorpio, Leo/Aquarius ดูสูตรทั่วไปและแนวทางขยายที่
+  `research/uranian-four-antiscia-axes.md` หัวข้อ 1-2 (ไม่ blocking สำหรับ MVP ปัจจุบัน รอคำสั่ง
+  implement)
