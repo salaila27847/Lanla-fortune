@@ -174,8 +174,33 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+async function getJson<T>(path: string): Promise<T> {
+  const res = await fetch(path);
+  if (!res.ok) {
+    throw new ReadingRequestError(res.status, await extractErrorDetail(res));
+  }
+  return res.json();
+}
+
 export async function getReading(submission: ReadingSubmission): Promise<SynthesisOutput> {
   return postJson("/api/reading", submission);
+}
+
+// The birth data remembered from the user's most recently submitted
+// reading that included it (see backend/app/main.py's
+// _remember_birth_data) — used to prefill BirthDataForm for a returning
+// user instead of making them retype it every time. Best-effort: callers
+// should treat a thrown error the same as "nothing saved" rather than
+// blocking the form.
+export async function getSavedBirthData(): Promise<BirthData | null> {
+  return getJson("/api/profile/birth-data");
+}
+
+export async function clearSavedBirthData(): Promise<void> {
+  const res = await fetch("/api/profile/birth-data", { method: "DELETE" });
+  if (!res.ok) {
+    throw new ReadingRequestError(res.status, await extractErrorDetail(res));
+  }
 }
 
 export async function getFollowUpReading(

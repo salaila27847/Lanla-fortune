@@ -12,7 +12,13 @@ import os
 from collections.abc import AsyncIterator
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import inspect, text
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 # libpq-style query params (Neon includes these by default) that asyncpg's
 # connect() doesn't accept as keyword arguments the way psycopg does —
@@ -63,3 +69,33 @@ async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 async def get_db_session() -> AsyncIterator[AsyncSession]:
     async with async_session_maker() as session:
         yield session
+
+
+# name -> a type name valid in both SQLite (which only uses these for type
+# affinity, so any reasonable name works) and Postgres (which requires an
+# exact type name) — see ensure_user_birth_data_columns().
+_USER_BIRTH_DATA_COLUMNS = {
+    "birth_date": "DATE",
+    "birth_time": "TIME",
+    "birth_place": "VARCHAR",
+    "birth_latitude": "FLOAT",
+    "birth_longitude": "FLOAT",
+    "birth_timezone": "VARCHAR",
+}
+
+
+async def ensure_user_birth_data_columns(conn: AsyncConnection) -> None:
+    """Base.metadata.create_all() only creates *missing* tables, never
+    alters an existing one — so a `users` table that already existed
+    before the User.birth_* columns were added (i.e. any deployed
+    database with real users) needs them backfilled explicitly. Call this
+    right after create_all() in the same transaction. A no-op on a table
+    that already has the columns (freshly created table, or already
+    migrated)."""
+    existing_columns = {
+        col["name"]
+        for col in await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_columns("users"))
+    }
+    for column_name, sql_type in _USER_BIRTH_DATA_COLUMNS.items():
+        if column_name not in existing_columns:
+            await conn.execute(text(f"ALTER TABLE users ADD COLUMN {column_name} {sql_type}"))
