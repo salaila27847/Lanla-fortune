@@ -40,7 +40,7 @@ from app.core.schema import (
     TransitResult,
 )
 from app.db.models import Base, Reading, User
-from app.db.session import engine, get_db_session
+from app.db.session import engine, ensure_user_birth_data_columns, get_db_session
 from app.modules.oracle.engine import DEFAULT_DECK as ORACLE_DEFAULT_DECK
 from app.modules.oracle.engine import build_result_from_picks as oracle_build_result
 from app.modules.oracle.engine import shuffle as oracle_shuffle
@@ -214,6 +214,21 @@ def _compute_forecast(
     return response
 
 
+def _remember_birth_data(user: User, birth_data: BirthData) -> None:
+    """Overwrite the user's remembered birth data with the one just used
+    in a successful reading — "most recently used" semantics, the same
+    unconditional-save convention Phase 9 already established for reading
+    history (no separate opt-in checkbox there either). `user` is a
+    tracked ORM instance from get_current_user(), so this is picked up by
+    the caller's existing db.commit()."""
+    user.birth_date = birth_data.date
+    user.birth_time = birth_data.time
+    user.birth_place = birth_data.place
+    user.birth_latitude = birth_data.latitude
+    user.birth_longitude = birth_data.longitude
+    user.birth_timezone = birth_data.timezone
+
+
 load_dotenv()
 
 
@@ -226,6 +241,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await ensure_user_birth_data_columns(conn)
 
     yield
 
@@ -351,6 +367,9 @@ async def get_reading(
         oracle_question=request.oracle.question if request.oracle else None,
     )
 
+    if birth_data is not None:
+        _remember_birth_data(user, birth_data)
+
     db.add(
         Reading(
             user_id=user.id,
@@ -412,6 +431,41 @@ async def list_readings(
         )
         for row in result.scalars()
     ]
+
+
+@app.get("/api/profile/birth-data", response_model=BirthData | None)
+async def get_saved_birth_data(user: User = Depends(get_current_user)) -> BirthData | None:
+    """The birth data remembered from the user's most recent reading that
+    included it (see _remember_birth_data) — lets the frontend prefill
+    BirthDataForm instead of making a returning user retype it every
+    time. None if the user has never submitted birth data, or asked to
+    forget it (DELETE below)."""
+    if user.birth_date is None:
+        return None
+    return BirthData(
+        date=user.birth_date,
+        time=user.birth_time,
+        place=user.birth_place,
+        latitude=user.birth_latitude,
+        longitude=user.birth_longitude,
+        timezone=user.birth_timezone,
+    )
+
+
+@app.delete("/api/profile/birth-data", status_code=204)
+async def forget_saved_birth_data(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+) -> None:
+    """Clears the remembered birth data without touching past readings in
+    /api/readings history — this only affects what prefills the form."""
+    user.birth_date = None
+    user.birth_time = None
+    user.birth_place = None
+    user.birth_latitude = None
+    user.birth_longitude = None
+    user.birth_timezone = None
+    await db.commit()
 
 
 @app.post("/api/forecast", response_model=ForecastResponse)

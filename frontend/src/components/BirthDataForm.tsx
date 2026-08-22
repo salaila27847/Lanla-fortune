@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import tzlookup from "tz-lookup";
-import type { BirthData, ForecastOptions } from "@/lib/api";
+import { clearSavedBirthData, getSavedBirthData, type BirthData, type ForecastOptions } from "@/lib/api";
 import { usePlaceSearch } from "@/lib/usePlaceSearch";
 import type { GeocodeResult } from "@/lib/geocode";
 
@@ -52,6 +52,42 @@ export default function BirthDataForm({ onSubmit, onSkip }: Props) {
   const [longitude, setLongitude] = useState(CITY_PRESETS[0].longitude);
   const [timezone, setTimezone] = useState(CITY_PRESETS[0].timezone);
   const birthSearch = usePlaceSearch(place);
+  const [hasSavedData, setHasSavedData] = useState(false);
+
+  // Best-effort prefill from what the user last used (see
+  // backend/app/main.py's _remember_birth_data) — a failed fetch just
+  // leaves the form at its normal defaults, same as a user with nothing
+  // saved yet.
+  useEffect(() => {
+    let cancelled = false;
+    getSavedBirthData()
+      .then((saved) => {
+        if (cancelled || !saved) return;
+        birthSearch.skipNextSearch();
+        setDate(saved.date);
+        setKnowsTime(saved.time !== null);
+        setTime(saved.time ? saved.time.slice(0, 5) : "12:00");
+        setPlace(saved.place);
+        setLatitude(saved.latitude);
+        setLongitude(saved.longitude);
+        setTimezone(saved.timezone);
+        setHasSavedData(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function forgetSavedData() {
+    setHasSavedData(false);
+    setDate("");
+    setKnowsTime(true);
+    setTime("12:00");
+    applyPreset(CITY_PRESETS[0]);
+    void clearSavedBirthData().catch(() => {});
+  }
 
   const [solarArcEnabled, setSolarArcEnabled] = useState(false);
   const [solarArcDate, setSolarArcDate] = useState(TODAY);
@@ -119,6 +155,19 @@ export default function BirthDataForm({ onSubmit, onSkip }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto flex w-full max-w-md flex-col gap-6">
+      {hasSavedData && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+          <span>เติมข้อมูลจากที่คุณกรอกไว้ครั้งล่าสุดให้อัตโนมัติ — แก้ไขได้ตามต้องการ</span>
+          <button
+            type="button"
+            onClick={forgetSavedData}
+            className="shrink-0 whitespace-nowrap underline-offset-2 hover:underline"
+          >
+            ลบข้อมูลที่จดจำไว้
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <label htmlFor="date" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
           วันเกิด

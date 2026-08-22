@@ -247,6 +247,13 @@ class User(Base):
     email: str
     name: str | None
     created_at: datetime
+    # แก้ไข 2026-08-22 — ความจำ birth data (ดูหัวข้อ "ความจำ birth data" ด้านล่าง):
+    birth_date: date | None
+    birth_time: time | None
+    birth_place: str | None
+    birth_latitude: float | None
+    birth_longitude: float | None
+    birth_timezone: str | None
 
 class Reading(Base):
     id: int                       # primary key
@@ -267,6 +274,29 @@ class ReadingRecord(BaseModel):
     birth_data: BirthData | None = None  # แก้ไข 2026-08-14 — ดูหมายเหตุที่ Reading ด้านบน
     synthesis: SynthesisOutput
 ```
+
+## ความจำ birth data (`GET`/`DELETE /api/profile/birth-data`) — แก้ไข 2026-08-22
+
+ผู้ใช้ขอให้ระบบจดจำ birth data ของแต่ละคน (วันเกิด/เวลาเกิด/สถานที่เกิด/เขตเวลา) เพราะทุกคนต้อง
+ล็อกอินก่อนใช้งานอยู่แล้ว — ไม่ต้องให้พิมพ์ซ้ำทุกครั้ง **ไม่ขัดกับกฎ "ห้ามใช้ประวัติผู้ใช้" ใน CLAUDE.md
+ข้อ 1**: กฎนั้นห้าม *เนื้อหาคำทำนายเก่า* ย้อนกลับไปปรุงแต่งคำทำนายใหม่ (เช่น ให้ Gemini เห็นว่าเคย
+ทำนายอะไรไว้) ไม่ใช่การจดจำข้อเท็จจริงที่ไม่เปลี่ยนแปลง (วันเกิด) ที่ผู้ใช้พิมพ์เองซ้ำทุกครั้งอยู่แล้ว —
+ข้อมูลนี้แค่ช่วยเติมฟอร์มให้ ผู้ใช้ยังเห็น/แก้ไข/ยืนยันก่อนกดส่งทุกครั้งเหมือนเดิม ไม่มีอะไรถูกส่งเข้า
+Gemini โดยที่ผู้ใช้ไม่เห็น
+
+- `POST /api/reading` ที่มี `birth_data` จะบันทึกทับ `User.birth_*` เดิมเสมอ (semantics "ใช้ล่าสุด" —
+  ไม่มี checkbox แยกให้เลือก "จดจำไหม" ตามธรรมเนียมเดียวกับที่ reading history เองก็บันทึกอัตโนมัติ
+  ไม่มี opt-in ตั้งแต่ Phase 9) — reading ที่ไม่มี birth_data (oracle-only, follow-up) ไม่แตะค่าที่
+  จดจำไว้เลย
+- `GET /api/profile/birth-data` → `BirthData | None` — ให้ frontend ดึงมาเติมฟอร์ม `/reading`
+  ล่วงหน้า (`BirthDataForm.tsx`) คืน `None` ถ้าไม่เคยส่ง birth_data มาก่อน หรือเคยลบไปแล้ว
+- `DELETE /api/profile/birth-data` → 204 — ล้างค่าที่จดจำไว้ (ไม่กระทบ reading history เดิมที่
+  `/history` เลย เพราะเก็บคนละที่ — `Reading.birth_data` เป็น snapshot ต่อครั้ง)
+- **Migration**: `Base.metadata.create_all()` สร้างเฉพาะตารางที่ยังไม่มี ไม่ alter ตารางเดิม — เพราะ
+  `users` มีอยู่แล้วใน production (มี user จริง) ตั้งแต่ก่อนเพิ่มคอลัมน์ `birth_*` จึงต้องมี
+  `ensure_user_birth_data_columns()` (`backend/app/db/session.py`) รันต่อจาก `create_all()` ทุกครั้ง
+  ที่ startup เพื่อ backfill คอลัมน์ที่ขาดด้วย `ALTER TABLE ... ADD COLUMN` (portable ทั้ง
+  SQLite/Postgres, idempotent — ทดสอบแล้วว่าไม่ลบข้อมูลแถวเดิม)
 
 ## หมายเหตุสำคัญ
 

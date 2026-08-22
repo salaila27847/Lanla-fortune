@@ -694,3 +694,49 @@ East Point (Equatorial Ascendant) ไม่ใช่ลัคนาสุริ�
 - [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: เหมือนเดิมทุก forecast feature ก่อนหน้า — ยังไม่ได้ทดสอบผ่าน
       เบราว์เซอร์จริงว่า `HousePlacementTable` แสดงผลถูกต้อง (sandbox นี้ bypass login จริงไม่ได้ตาม
       ข้อจำกัดเดิม) ตรวจสอบด้วยโค้ด/type-check แทน
+
+## Phase 38 — จดจำ birth data ต่อผู้ใช้ (prefill ฟอร์ม `/reading`)
+
+ผู้ใช้ขอ (2026-08-22): ทุกคนต้องล็อกอินก่อนใช้งานอยู่แล้ว จึงอยากให้ระบบจดจำวันเกิด/เวลาเกิด/
+สถานที่เกิด/เขตเวลาของแต่ละคน ไม่ต้องพิมพ์ซ้ำทุกครั้ง — ตรวจสอบแล้วว่าไม่ขัดกับกฎ "ห้ามใช้ประวัติ
+ผู้ใช้" ใน CLAUDE.md ข้อ 1 (กฎนั้นห้ามเนื้อหาคำทำนายเก่าย้อนกลับไปปรุงแต่งคำทำนายใหม่ ไม่ใช่การจดจำ
+ข้อเท็จจริงที่ไม่เปลี่ยนแปลงซึ่งผู้ใช้พิมพ์เองซ้ำอยู่แล้ว — ผู้ใช้ยังเห็น/แก้ไข/ยืนยันข้อมูลในฟอร์มก่อน
+กดส่งทุกครั้งเหมือนเดิม)
+
+- [x] `db/models.py`: เพิ่มคอลัมน์ `birth_date/birth_time/birth_place/birth_latitude/
+      birth_longitude/birth_timezone` (nullable ทั้งหมด) ใน `User` — ตั้งชื่อ/ชนิดตรงกับ
+      `BirthData` schema เดิมทุกฟิลด์
+- [x] **Migration**: `Base.metadata.create_all()` สร้างเฉพาะตารางที่ยังไม่มี ไม่ alter ตารางเดิม —
+      เพราะ `users` มีอยู่แล้วบน production (Neon) ตั้งแต่ก่อนเพิ่มคอลัมน์เหล่านี้ (มี user จริงอยู่แล้ว
+      จาก Phase 9) จึงต้องมีขั้นตอน backfill คอลัมน์แยก ไม่ใช่แค่แก้ model เฉยๆ — เพิ่ม
+      `ensure_user_birth_data_columns()` ใน `db/session.py` (เช็คคอลัมน์ที่มีอยู่จริงด้วย
+      `sqlalchemy.inspect()` แล้ว `ALTER TABLE ... ADD COLUMN` เฉพาะที่ขาด — ชนิดข้อมูล DATE/TIME/
+      VARCHAR/FLOAT ใช้ได้ตรงทั้ง SQLite และ Postgres ไม่ต้องแยก dialect) เรียกต่อจาก
+      `create_all()` ใน `main.py`'s lifespan ทุกครั้งที่ startup — เป็น no-op บนตารางที่มีคอลัมน์ครบ
+      แล้ว (dev DB ใหม่, test suite) ยืนยันด้วย manual script จริงว่า backfill คอลัมน์ได้โดยไม่ลบ
+      แถวเดิม และ idempotent (รันซ้ำได้ไม่ error)
+- [x] `main.py`: `POST /api/reading` ที่มี `birth_data` จะบันทึกทับ `User.birth_*` เดิมเสมอ
+      (`_remember_birth_data()`, semantics "ใช้ล่าสุด" ไม่มี checkbox opt-in แยก ตามธรรมเนียม
+      เดียวกับที่ reading history เองก็บันทึกอัตโนมัติไม่มี opt-in ตั้งแต่ Phase 9) — reading ที่ไม่มี
+      birth_data (oracle-only, follow-up) ไม่แตะค่าที่จดจำไว้เลย — เพิ่ม `GET`/
+      `DELETE /api/profile/birth-data` (auth-gated แบบเดียวกับ endpoint อื่น) คืน `BirthData | None`
+      และล้างค่าตามลำดับ ไม่กระทบ `Reading` history เดิมที่ `/history` (คนละตาราง, snapshot ต่อครั้ง)
+- [x] เพิ่ม unit test: `test_birth_data_profile.py` (9 เคส — auth required ทั้ง GET/DELETE, null
+      ก่อนมี reading, บันทึกถูกต้องหลัง reading, ใช้ค่าล่าสุดเมื่อ reading data ใหม่ทับเก่า, cross-user
+      isolation, reading ที่ไม่มี birth_data ไม่ลบข้อมูลที่จดจำไว้, DELETE ล้างค่าได้จริงและไม่กระทบ
+      reading history เดิม) และ `test_db_migration.py` (2 เคส — backfill คอลัมน์บนตารางจำลองแบบเก่า
+      โดยไม่ลบข้อมูลแถวเดิม, no-op บนตารางที่มีคอลัมน์ครบแล้ว) — รวม **188 tests ผ่านหมด**, ruff clean
+- [x] Frontend: `lib/api.ts` เพิ่ม `getSavedBirthData()`/`clearSavedBirthData()` +
+      `app/api/profile/birth-data/route.ts` (BFF proxy ใหม่ รูปแบบเดียวกับ route อื่น, GET+DELETE) —
+      `BirthDataForm.tsx` fetch ข้อมูลที่จดจำไว้ตอน mount (best-effort, เงียบถ้า fail) เติมฟอร์มให้
+      อัตโนมัติถ้ามี พร้อมแบนเนอร์แจ้งเตือน + ปุ่ม "ลบข้อมูลที่จดจำไว้" (ล้างทั้งค่าที่บันทึกไว้ฝั่ง server
+      และรีเซ็ตฟอร์มกลับเป็นค่าเริ่มต้น เพื่อไม่ให้ดูเหมือนปุ่มไม่ทำงาน)
+- [x] อัปเดต `CLAUDE.md` (เพิ่ม correction note ในหัวข้อระบบสมาชิก ยืนยันว่าไม่ขัดกับกฎ "ห้ามใช้
+      ประวัติผู้ใช้"), `docs/data-schema.md` (เพิ่ม `User.birth_*` fields + หัวข้อ "ความจำ birth data"
+      อธิบาย endpoint และ migration)
+- [x] ทดสอบแล้ว: backend 188 tests ผ่าน, `ruff check`/`ruff format --check` สะอาด, frontend
+      `npm run build`/`npm run lint` ผ่าน (route `/api/profile/birth-data` ขึ้นในผลลัพธ์ build จริง)
+- [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: เหมือนฟีเจอร์ auth อื่นๆ ก่อนหน้า — ยังไม่ได้ทดสอบผ่านเบราว์เซอร์
+      จริงว่าฟอร์มเติมข้อมูลอัตโนมัติถูกต้องหลังล็อกอินจริง (sandbox นี้ bypass Google OAuth จริงไม่ได้)
+      และยังไม่ได้ยืนยันว่า `ensure_user_birth_data_columns()` รันสำเร็จจริงบน Neon Postgres
+      production (ทดสอบแค่ SQLite ในนี้) — ควรเช็ค log หลัง deploy รอบแรกว่าไม่มี error จากขั้นตอนนี้

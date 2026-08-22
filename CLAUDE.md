@@ -97,7 +97,14 @@
   pattern: browser ไม่เรียก FastAPI backend ตรงๆ อีกแล้ว แต่ผ่าน Next.js Route Handler
   (`frontend/src/app/api/reading/route.ts`) ที่ตรวจ session ฝั่ง server ก่อน แล้วส่งต่อไป backend
   พร้อม shared secret (`INTERNAL_API_SECRET`) — **กฎ "ห้ามใช้ประวัติผู้ใช้" ในข้อ 1 ยังคงอยู่**:
-  ประวัติที่เก็บไว้ใช้แสดงผลให้ผู้ใช้ดูเองเท่านั้น ห้ามดึงกลับไปป้อนให้ Master Interpreter ทุกกรณี
+  ประวัติที่เก็บไว้ใช้แสดงผลให้ผู้ใช้ดูเองเท่านั้น ห้ามดึงกลับไปป้อนให้ Master Interpreter ทุกกรณี —
+  **แก้ไข 2026-08-22**: เพิ่มระบบจดจำ birth data ต่อ user (`User.birth_*` ใน `db/models.py`,
+  `GET`/`DELETE /api/profile/birth-data`, prefill ที่ `BirthDataForm.tsx`) ผู้ใช้ตัดสินใจแล้วว่า
+  **ไม่ขัดกับกฎ "ห้ามใช้ประวัติผู้ใช้"** เพราะกฎนั้นพูดถึงเนื้อหาคำทำนายเก่า ไม่ใช่ข้อเท็จจริงที่ไม่
+  เปลี่ยนแปลง (วันเกิด) ที่ผู้ใช้พิมพ์เองซ้ำทุกครั้งอยู่แล้ว — บันทึกอัตโนมัติแบบ "ใช้ล่าสุด" ทุกครั้งที่
+  ส่ง birth_data มาพร้อม `/api/reading` (ไม่มี checkbox opt-in แยก ตามธรรมเนียมเดียวกับ reading
+  history) มีปุ่ม "ลบข้อมูลที่จดจำไว้" ให้ล้างได้ — ดูรายละเอียด schema/migration ที่
+  `docs/data-schema.md` หัวข้อ "ความจำ birth data"
 - **LLM ของ synthesis layer**: **แก้ไข 2026-08-12** — เปลี่ยนจาก Anthropic Claude API เป็น
   Google Gemini API (`google-genai` SDK, ตอนนั้นใช้ `gemini-3.5-flash`) ตามที่ผู้ใช้ตัดสินใจ เพราะ
   Gemini มี free tier จริงที่ไม่ต้องผูกบัตรเครดิต (มี rate limit แต่พอสำหรับ demo/personal project)
