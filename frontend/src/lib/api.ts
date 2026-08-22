@@ -43,10 +43,28 @@ export type FineTimingHit = {
   orb: number;
 };
 
-export type SolarArcResult = { arc_degrees: number; pictures: PictureResult[] };
-export type TransitResult = { pictures: PictureResult[]; fine_timing: FineTimingHit[] };
+export type HousePlacementResult = {
+  factor: string;
+  house_number: number;
+  label: string;
+};
+
+export type SolarArcResult = {
+  arc_degrees: number;
+  pictures: PictureResult[];
+  house_placements: HousePlacementResult[];
+};
+export type TransitResult = {
+  pictures: PictureResult[];
+  fine_timing: FineTimingHit[];
+  house_placements: HousePlacementResult[];
+};
 export type LunarReturnResult = { return_at: string };
-export type RelocationResult = { ascendant: number; midheaven: number };
+export type RelocationResult = {
+  ascendant: number;
+  midheaven: number;
+  house_placements: HousePlacementResult[];
+};
 
 export type ForecastResponse = {
   solar_arc: SolarArcResult | null;

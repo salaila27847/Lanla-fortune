@@ -43,12 +43,19 @@ Four kinds of findings are produced:
    when the birth time is known, since the cusps depend on it the same
    way A/M do. Node/Aries Point/M/A are excluded — the source material
    doesn't give house-placement meanings for them, and M/A define
-   cusps 10/1 rather than falling inside a house themselves.
+   cusps 10/1 rather than falling inside a house themselves. Each
+   finding's meaning combines the factor's own house nature
+   (house_meanings.yaml) with that house number's general topic
+   (house_number_meanings.yaml) — e.g. Mars in house 5 reads
+   differently from Mars in house 8 even though both are "Mars'"
+   nature. _house_cusps/_house_placements are also reused by
+   main.py to place directed/transit/relocated positions into houses
+   for the forecast endpoints (see solar_arc.py/transit.py docstrings).
 
 Meanings are assembled from backend/app/knowledge_base/uranian/
 (points.yaml, signs.yaml, factors.yaml, planetary_pictures.yaml,
-axis_meanings.yaml, witte_pictures.yaml, house_meanings.yaml), never
-hardcoded here.
+axis_meanings.yaml, witte_pictures.yaml, house_meanings.yaml,
+house_number_meanings.yaml), never hardcoded here.
 
 The function signature and return type (EngineResult) must not change —
 the synthesis layer depends on this contract.
@@ -166,6 +173,15 @@ def _load_house_meanings() -> dict[str, str]:
     return {entry["factor"]: entry["meaning_th"] for entry in data["house_meanings"]}
 
 
+@lru_cache
+def _load_house_number_meanings() -> dict[int, str]:
+    """house number (1-12) -> its general topic, independent of which
+    factor occupies it — complements _load_house_meanings() (which is
+    "this factor's house nature" independent of the house number)."""
+    data = yaml.safe_load((KB_DIR / "house_number_meanings.yaml").read_text(encoding="utf-8"))
+    return {entry["house"]: entry["meaning_th"] for entry in data["house_number_meanings"]}
+
+
 def _sign_for_longitude(longitude: float) -> dict[str, Any]:
     return _load_signs()[int(longitude // 30) % 12]
 
@@ -271,12 +287,14 @@ HOUSE_SYSTEM_MERIDIAN = b"X"  # pyswisseph's axial-rotation/Meridian house syste
 # division + great-circle-to-ecliptic projection.
 
 
-def _house_cusps(jd: float, birth_data: BirthData) -> tuple[float, ...] | None:
+def _house_cusps(jd: float, latitude: float, longitude: float) -> tuple[float, ...] | None:
     """The 12 Meridian-system house cusps, in zodiacal order starting at
-    the 1st house. None when the birth time is unknown or the ephemeris
-    call fails (mirrors the A/M guard in _compute_positions)."""
+    the 1st house, for the given moment and location. None when the
+    ephemeris call fails. Takes lat/lon directly (not a BirthData) so
+    solar_arc.py/transit.py can reuse it for a relocated site rather than
+    only the birth location — see main.py's relocation handling."""
     try:
-        cusps, _ = swe.houses(jd, birth_data.latitude, birth_data.longitude, HOUSE_SYSTEM_MERIDIAN)
+        cusps, _ = swe.houses(jd, latitude, longitude, HOUSE_SYSTEM_MERIDIAN)
         return cusps
     except swe.Error:
         return None
@@ -296,6 +314,22 @@ def _house_for_longitude(longitude: float, cusps: tuple[float, ...]) -> int:
         if offset < span:
             return house_index + 1
     return 12
+
+
+def _house_placements(positions: dict[str, float], cusps: tuple[float, ...]) -> dict[str, int]:
+    """Which house each of house_meanings.yaml's 18 factors (10 classical
+    planets + 8 TNPs) falls in, given a set of cusps — generic over
+    *whose* cusps and *whose* positions are passed in, so the natal
+    engine, solar_arc.py (directed positions against radix cusps), and
+    main.py's transit/relocation handling can all share it. Silently
+    skips any factor missing from positions (e.g. a caller that only
+    passes a subset)."""
+    house_meanings = _load_house_meanings()
+    return {
+        factor_id: _house_for_longitude(positions[factor_id], cusps)
+        for factor_id in house_meanings
+        if factor_id in positions
+    }
 
 
 def _compute_positions(jd: float, birth_data: BirthData, known_time: bool) -> dict[str, float]:
@@ -482,9 +516,13 @@ def _picture_finding(picture: dict[str, Any]) -> Finding:
 
 
 def _house_finding(factor_id: str, house_number: int) -> Finding:
+    meaning = _load_house_meanings()[factor_id]
+    topic = _load_house_number_meanings().get(house_number)
+    if topic:
+        meaning += f" (เรือนที่ {house_number} หมายถึง: {topic})"
     return Finding(
         label=f"{_factor_display_name(factor_id)} อยู่เรือนที่ {house_number} (ระบบเรือนเมริเดียน)",
-        meaning=_load_house_meanings()[factor_id],
+        meaning=meaning,
         weight=0.4,
     )
 
@@ -558,10 +596,9 @@ async def calculate(birth_data: BirthData) -> EngineResult:
             themes.append(theme)
 
     if known_time:
-        cusps = _house_cusps(jd, birth_data)
+        cusps = _house_cusps(jd, birth_data.latitude, birth_data.longitude)
         if cusps is not None:
-            for factor_id in _load_house_meanings():
-                house_number = _house_for_longitude(positions[factor_id], cusps)
+            for factor_id, house_number in _house_placements(positions, cusps).items():
                 house_findings.append(_house_finding(factor_id, house_number))
 
     if not known_time:

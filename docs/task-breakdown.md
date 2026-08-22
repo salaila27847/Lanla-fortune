@@ -649,3 +649,48 @@ East Point (Equatorial Ascendant) ไม่ใช่ลัคนาสุริ�
       เพิ่มขั้นตอนที่ 6 ในหัวข้อ "engine.py ทำอะไรบ้าง", ลบรายการ "ไม่มี house_meanings" ออกจาก
       "ยังไม่ได้ทำ") และ module docstring บนสุดของ `engine.py` (เปลี่ยน "Two kinds of findings" เป็น
       "Four kinds" ตามจริง — ของเดิมค้างว่า "two" ทั้งที่มี 3 อยู่แล้วตั้งแต่ Phase 11 เพิ่ม antiscia)
+
+## Phase 37 — house_meanings ต่อยอด: house-number meanings + house placement ใน forecast
+
+ผู้ใช้ขอ 2 อย่างพร้อมกัน (2026-08-22) หลัง Phase 36: (1) เพิ่มความหมายต่อ **หมายเลขเรือน** (1-12)
+เอง ไม่ผูกกับดาว (2) ขยาย house placement ไปที่ forecast (Solar Arc/Transit/Relocation) ซึ่งตอนนั้น
+คำนวณเฉพาะตำแหน่งดาวตอนเกิด (radix) เท่านั้น
+
+- [x] KB ใหม่ `house_number_meanings.yaml`: หัวข้อทั่วไปของเรือนที่ 1-12 (ตัวตน/ทรัพย์สิน/การสื่อสาร/
+      บ้าน/ความคิดสร้างสรรค์/งาน-สุขภาพ/หุ้นส่วน/การเปลี่ยนแปลง/ปรัชญา/อาชีพ/มิตรภาพ/จิตใต้สำนึก) —
+      เป็นความหมายทั่วไปตามหลักโหราศาสตร์สากล ไม่ได้ถอดความจากตำรายูเรเนียนเล่มใดโดยเฉพาะ (เหมือน
+      `signs.yaml`/`factors.yaml`) เพราะ `research/` ที่มีอยู่ไม่มีเนื้อหาหัวข้อนี้เจาะจง
+- [x] `engine.py`: `_house_finding()` ต่อท้าย meaning เดิม (จาก `house_meanings.yaml`) ด้วยหัวข้อ
+      ทั่วไปของเรือนหมายเลขนั้นจาก `house_number_meanings.yaml` ใหม่ (เช่น "Mars ในเรือนที่ 5" อ่าน
+      ต่างจาก "Mars ในเรือนที่ 8" แม้ตัวดาวจะเหมือนกัน) — เพิ่ม `_load_house_number_meanings()`
+- [x] `engine.py`: รีแฟกเตอร์ `_house_cusps(jd, birth_data)` → `_house_cusps(jd, latitude,
+      longitude)` (รับพิกัดตรงๆ ไม่ใช่ `BirthData`) เพื่อให้ใช้กับพิกัดปลายทางของ relocation ได้ด้วย
+      ไม่ใช่แค่พิกัดเกิด — เพิ่ม `_house_placements(positions, cusps) -> dict[factor, house]`
+      (generic, ดึง logic วนลูปหาเรือนที่เดิมอยู่ใน `calculate()` ออกมาเป็น helper ใช้ซ้ำได้)
+- [x] `main.py::_compute_forecast()`: เพิ่ม `house_placements` เข้า `SolarArcResult`/
+      `TransitResult`/`RelocationResult` (schema ใหม่ `HousePlacementResult{factor, house_number,
+      label}`) — **Solar Arc/Transit**: ตำแหน่ง directed/transit ของ 18 ปัจจัย (10 ดาวเคราะห์
+      คลาสสิก + 8 ดาวเสริม) เทียบกับเรือน **เกิด (radix)** เดิม (คำนวณเรือนเกิดครั้งเดียวใช้ร่วมกัน) —
+      ตัดสินใจใช้เรือนเกิดเป็น "เวที" คงที่ตามหลักปฏิบัติมาตรฐานทางโหราศาสตร์ (transit/progression/
+      direction อ่านผ่านเรือนเกิดเสมอ ไม่คำนวณเรือนใหม่ทุกครั้งที่ดาวเคลื่อนที่) ไม่ใช่การเดา — ว่างเปล่า
+      ถ้าไม่ทราบเวลาเกิด **Relocation**: ตรงข้ามกัน คำนวณเรือน**ใหม่**จริงๆ จากพิกัดปลายทาง (ตรงตามที่
+      `research/uranian-solar-arc-transits-advanced.md` บทที่ 12 ระบุไว้แล้วว่า relocation ต้อง
+      "คำนวณ A และเรือนใหม่จากลองจิจูด/ละติจูดปลายทาง") แล้วเอาตำแหน่งดาว radix เดิมมาเทียบ
+- [x] เพิ่ม unit test 6 เคสใน `test_uranian_knowledge_base.py` (KB ครอบคลุมครบ 1-12, `_house_finding`
+      รวม 2 ความหมายถูกต้อง, `_house_placements` กรองเฉพาะ 18 ปัจจัยที่มีใน `house_meanings.yaml`
+      และข้าม factor ที่ไม่มีใน positions, `_house_cusps` signature ใหม่ตรงกับ `swe.houses()` ตรงๆ)
+      และ 5 เคสใน `test_forecast_endpoint.py` (solar_arc/transit มี house_placements ครบ 18 เมื่อ
+      ทราบเวลาเกิด/ว่างเปล่าเมื่อไม่ทราบ, relocation มีครบ 18 พร้อม**เทียบกับค่าที่คำนวณตรงจาก engine
+      module เอง** ว่าใช้เรือนที่พิกัดใหม่จริง ไม่ใช่เรือนเกิดเดิม — กัน bug ที่ส่ง cusps ผิดตัวแบบเงียบๆ)
+      — รวม **177 tests ผ่านหมด**, ruff clean
+- [x] Frontend: `lib/api.ts` เพิ่ม type `HousePlacementResult` และ field `house_placements` ใน
+      `SolarArcResult`/`TransitResult`/`RelocationResult` — `ReadingResult.tsx` เพิ่ม
+      `HousePlacementTable` component (ตารางปัจจัย+เรือน) แสดงใน 3 ส่วนของ forecast tab (Solar Arc,
+      Transit ต่อจาก fine-timing, Relocation ต่อจากลัคนา/มิเดียมใหม่)
+- [x] ทดสอบแล้ว: backend 177 tests ผ่าน, `ruff check`/`ruff format --check` สะอาด, frontend
+      `npm run build`/`npm run lint` ผ่าน — ยืนยัน manual run จริงว่า solar_arc/transit/relocation
+      house_placements คำนวณถูกต้อง (relocation ใช้เรือนต่างจาก radix จริง, ยืนยันด้วย unit test
+      ที่เทียบ 2 ค่าโดยตรง)
+- [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: เหมือนเดิมทุก forecast feature ก่อนหน้า — ยังไม่ได้ทดสอบผ่าน
+      เบราว์เซอร์จริงว่า `HousePlacementTable` แสดงผลถูกต้อง (sandbox นี้ bypass login จริงไม่ได้ตาม
+      ข้อจำกัดเดิม) ตรวจสอบด้วยโค้ด/type-check แทน

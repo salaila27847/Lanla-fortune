@@ -178,14 +178,29 @@ class FineTimingHit(BaseModel):
     orb: float
 
 
+class HousePlacementResult(BaseModel):
+    """Which Meridian-system house a factor falls in, for the forecast
+    endpoints — the same house-placement technique the natal engine uses
+    (see uranian.engine._house_placements), applied to directed/transit/
+    relocated positions instead of the radix chart. factor/house_number
+    are the raw values (for programmatic use); label is the ready-to-show
+    Thai string."""
+
+    factor: str
+    house_number: int
+    label: str
+
+
 class SolarArcResult(BaseModel):
     arc_degrees: float
     pictures: list[PictureResult]
+    house_placements: list[HousePlacementResult] = []
 
 
 class TransitResult(BaseModel):
     pictures: list[PictureResult]
     fine_timing: list[FineTimingHit] = []
+    house_placements: list[HousePlacementResult] = []
 
 
 class LunarReturnResult(BaseModel):
@@ -195,6 +210,7 @@ class LunarReturnResult(BaseModel):
 class RelocationResult(BaseModel):
     ascendant: float
     midheaven: float
+    house_placements: list[HousePlacementResult] = []
 
 
 class ForecastResponse(BaseModel):

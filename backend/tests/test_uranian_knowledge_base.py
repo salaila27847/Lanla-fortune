@@ -29,12 +29,15 @@ from app.modules.uranian.engine import (
     _factor_keywords,
     _find_antiscia_contacts,
     _find_pictures,
+    _house_cusps,
     _house_finding,
     _house_for_longitude,
+    _house_placements,
     _julian_day_ut,
     _load_axis_meanings,
     _load_factors,
     _load_house_meanings,
+    _load_house_number_meanings,
     _load_planetary_pictures,
     _load_points,
     _load_signs,
@@ -551,11 +554,41 @@ def test_house_for_longitude_wraps_across_the_360_seam():
     assert _house_for_longitude(10.0, cusps) == 1
 
 
-def test_house_finding_reports_house_number_and_kb_meaning():
+def test_house_number_meanings_kb_covers_all_twelve_houses():
+    house_number_meanings = _load_house_number_meanings()
+    assert set(house_number_meanings) == set(range(1, 13))
+    for meaning in house_number_meanings.values():
+        assert meaning
+
+
+def test_house_finding_reports_house_number_and_combines_both_kb_meanings():
     finding = _house_finding("MARS", 5)
     assert "เรือนที่ 5" in finding.label
-    assert finding.meaning == _load_house_meanings()["MARS"]
+    assert finding.meaning.startswith(_load_house_meanings()["MARS"])
+    assert _load_house_number_meanings()[5] in finding.meaning
     assert finding.weight == 0.4
+
+
+def test_house_placements_covers_only_the_eighteen_kb_factors_present():
+    cusps = (0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0, 300.0, 330.0)
+    positions = {"SUN": 5.0, "M": 100.0, "ARIES": 200.0, "MARS": 95.0}
+    placements = _house_placements(positions, cusps)
+    # M and ARIES aren't in house_meanings.yaml, so they're excluded even
+    # though they're present in positions.
+    assert placements == {"SUN": 1, "MARS": 4}
+
+
+def test_house_placements_skips_factors_missing_from_positions():
+    cusps = (0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0, 300.0, 330.0)
+    placements = _house_placements({"SUN": 5.0}, cusps)
+    assert placements == {"SUN": 1}
+
+
+def test_house_cusps_takes_latitude_longitude_directly():
+    jd, _ = _julian_day_ut(BIRTH_WITH_TIME)
+    cusps = _house_cusps(jd, BIRTH_WITH_TIME.latitude, BIRTH_WITH_TIME.longitude)
+    expected, _ = swe.houses(jd, BIRTH_WITH_TIME.latitude, BIRTH_WITH_TIME.longitude, b"X")
+    assert cusps == expected
 
 
 @pytest.mark.asyncio
