@@ -7,7 +7,7 @@ Aries Point, and — when the birth time is known — Ascendant/Midheaven —
 via pyswisseph's built-in Moshier ephemeris (no external data files or
 network access needed).
 
-Two kinds of findings are produced:
+Four kinds of findings are produced:
 
 1. Placement findings — each of the 8 TNPs by zodiac sign (unchanged
    from the original stub-replacement implementation).
@@ -33,10 +33,22 @@ Two kinds of findings are produced:
    picture findings, never mixed in ahead of them by orb alone. See
    backend/app/knowledge_base/uranian/research/uranian-niggemann-primary-source.md
    section 3 for the formula and the primary-source citation.
+4. House-placement findings — the 10 classical planets and 8 TNPs each
+   assigned to one of the 12 houses of the Meridian house system (the
+   axial-rotation/equatorial system Uranian astrology uses — 10th cusp
+   equals M exactly, 1st cusp is the Equatorial Ascendant/East Point
+   rather than the ecliptic Ascendant). pyswisseph implements this
+   directly via swe.houses(..., hsys=b"X"); no equal-house-from-M
+   projection needs to be hand-rolled (see _house_cusps). Only computed
+   when the birth time is known, since the cusps depend on it the same
+   way A/M do. Node/Aries Point/M/A are excluded — the source material
+   doesn't give house-placement meanings for them, and M/A define
+   cusps 10/1 rather than falling inside a house themselves.
 
 Meanings are assembled from backend/app/knowledge_base/uranian/
 (points.yaml, signs.yaml, factors.yaml, planetary_pictures.yaml,
-axis_meanings.yaml, witte_pictures.yaml), never hardcoded here.
+axis_meanings.yaml, witte_pictures.yaml, house_meanings.yaml), never
+hardcoded here.
 
 The function signature and return type (EngineResult) must not change —
 the synthesis layer depends on this contract.
@@ -144,6 +156,16 @@ def _load_witte_pictures() -> dict[frozenset[str], dict[str, str]]:
     }
 
 
+@lru_cache
+def _load_house_meanings() -> dict[str, str]:
+    """factor id -> the general nature of the house that factor occupies
+    (independent of which house number). Covers the 10 classical planets
+    + 8 TNPs only — see house_meanings.yaml's header for why Node/Aries
+    Point/M/A are excluded."""
+    data = yaml.safe_load((KB_DIR / "house_meanings.yaml").read_text(encoding="utf-8"))
+    return {entry["factor"]: entry["meaning_th"] for entry in data["house_meanings"]}
+
+
 def _sign_for_longitude(longitude: float) -> dict[str, Any]:
     return _load_signs()[int(longitude // 30) % 12]
 
@@ -239,6 +261,41 @@ def _angular_distance(a: float, b: float) -> float:
     """Shortest separation between two longitudes on the full 360° circle."""
     diff = abs(a - b) % 360
     return min(diff, 360 - diff)
+
+
+HOUSE_SYSTEM_MERIDIAN = b"X"  # pyswisseph's axial-rotation/Meridian house system —
+# verified via swe.house_name(b"X") == "axial rotation system/Meridian houses". Its
+# 10th cusp equals M and its 1st cusp is the Equatorial Ascendant (East Point), matching
+# Uranian astrology's house convention exactly, so no equal-house-from-M projection
+# needs to be computed by hand — this one library call already does the equatorial
+# division + great-circle-to-ecliptic projection.
+
+
+def _house_cusps(jd: float, birth_data: BirthData) -> tuple[float, ...] | None:
+    """The 12 Meridian-system house cusps, in zodiacal order starting at
+    the 1st house. None when the birth time is unknown or the ephemeris
+    call fails (mirrors the A/M guard in _compute_positions)."""
+    try:
+        cusps, _ = swe.houses(jd, birth_data.latitude, birth_data.longitude, HOUSE_SYSTEM_MERIDIAN)
+        return cusps
+    except swe.Error:
+        return None
+
+
+def _house_for_longitude(longitude: float, cusps: tuple[float, ...]) -> int:
+    """Which of the 12 houses a longitude falls in, given that system's
+    cusps in zodiacal order. Meridian houses aren't equal-sized on the
+    ecliptic (only on the equator, before the great-circle projection), so
+    this is the general cusp-to-cusp containment test rather than a fixed
+    30°-per-house lookup."""
+    for house_index in range(12):
+        start = cusps[house_index]
+        end = cusps[(house_index + 1) % 12]
+        span = (end - start) % 360
+        offset = (longitude - start) % 360
+        if offset < span:
+            return house_index + 1
+    return 12
 
 
 def _compute_positions(jd: float, birth_data: BirthData, known_time: bool) -> dict[str, float]:
@@ -424,6 +481,14 @@ def _picture_finding(picture: dict[str, Any]) -> Finding:
     return Finding(label=label, meaning=meaning, weight=weight)
 
 
+def _house_finding(factor_id: str, house_number: int) -> Finding:
+    return Finding(
+        label=f"{_factor_display_name(factor_id)} อยู่เรือนที่ {house_number} (ระบบเรือนเมริเดียน)",
+        meaning=_load_house_meanings()[factor_id],
+        weight=0.4,
+    )
+
+
 def _antiscia_finding(contact: dict[str, Any]) -> Finding:
     a, b = contact["pair"]
     disp = _factor_display_name
@@ -455,6 +520,7 @@ async def calculate(birth_data: BirthData) -> EngineResult:
 
     placement_findings: list[Finding] = []
     picture_findings: list[Finding] = []
+    house_findings: list[Finding] = []
     themes: list[str] = []
 
     for point_id in TNP_SWE_IDS:
@@ -491,6 +557,13 @@ async def calculate(birth_data: BirthData) -> EngineResult:
         if theme:
             themes.append(theme)
 
+    if known_time:
+        cusps = _house_cusps(jd, birth_data)
+        if cusps is not None:
+            for factor_id in _load_house_meanings():
+                house_number = _house_for_longitude(positions[factor_id], cusps)
+                house_findings.append(_house_finding(factor_id, house_number))
+
     if not known_time:
         placement_findings.append(
             Finding(
@@ -503,7 +576,7 @@ async def calculate(birth_data: BirthData) -> EngineResult:
             )
         )
 
-    findings = picture_findings + placement_findings
+    findings = picture_findings + placement_findings + house_findings
     summary = findings[0].meaning if findings else "ไม่สามารถคำนวณตำแหน่งดาวได้"
 
     return EngineResult(

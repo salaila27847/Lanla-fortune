@@ -29,6 +29,11 @@ witte_pictures.yaml        ← glossary ละเอียดกว่า axis_m
                             (A+NODE, A+CUPIDO, A+ADMETOS, CUPIDO+SUN, APOLLON+SUN) ข้ามไปตั้งใจ
                             เพราะ OCR เสียจนระบุตัวบ่งชี้ปัจจัยที่ 3 ไม่ได้เลย ดูรายละเอียดที่หัวข้อ
                             "ยังไม่ได้ทำ" ด้านล่าง
+house_meanings.yaml         ← ความหมายทั่วไปของ "เรือนที่ดาวสถิต" (ไม่ผูกกับแกน) ต่อดาวเคราะห์
+                            คลาสสิก 10 ดวง + ดาวเสริม 8 ดวง (18 รายการ, ถอดความจาก
+                            `research/uranian-delineation-axes.md` หัวข้อ 7) — ไม่รวม Node/จุดอาริส/
+                            M/A เพราะต้นฉบับไม่ได้ระบุความหมายเรือนไว้สำหรับจุดเหล่านี้ และ M/A เอง
+                            เป็นตัวกำหนดเรือนที่ 10/1 พอดี ไม่ได้ "ตกอยู่ในเรือน" แบบดาวเคราะห์
 research/                  ← เอกสารวิจัยต้นทาง (ภาษาไทย, ถอดความจากตำรา ไม่ใช่คำแปลตรงตัว)
                             เก็บไว้เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (เช่น house_meanings,
                             factors principle/function/expression/manifestation) — รวมถึง
@@ -100,7 +105,15 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
    picture ที่ครบสมบูรณ์เสมอ — หาความหมายจาก `planetary_pictures.yaml` ถ้ามีคู่ตรงกัน (weight 0.5)
    ไม่งั้น compose จาก keywords ของทั้งสองปัจจัย (weight 0.35) เก็บสูงสุด 5 รายการ
    (`MAX_ANTISCIA_FINDINGS`)
-6. **Significance marker** — finding ใดก็ตาม (picture หรือ antiscia) ที่ orb ≤
+6. **House-placement findings** — ดาวเคราะห์คลาสสิก 10 ดวง + ดาวเสริม 8 ดวง จับคู่กับเรือนที่แต่ละ
+   ดวงสถิตอยู่ ใช้ **ระบบเรือนเมริเดียน (Meridian house system / axial rotation system)** ที่
+   ยูเรเนียนแอสโตรโลจีใช้จริง — pyswisseph รองรับตรงๆ ผ่าน `swe.houses(..., hsys=b"X")` (ยืนยันด้วย
+   `swe.house_name(b"X")` คืนค่า `"axial rotation system/Meridian houses"`): เรือนที่ 10 ตรงกับ M
+   พอดี, เรือนที่ 1 เริ่มที่ East Point (Equatorial Ascendant) ไม่ใช่ลัคนาสุริยวิถีแบบ Placidus —
+   ไม่ต้องคำนวณ equal-house projection เองตามที่เคยคิดว่าจำเป็น (`_house_cusps()`/
+   `_house_for_longitude()` ใน `engine.py`) คำนวณเฉพาะเมื่อทราบเวลาเกิด (เหมือน A/M) หาความหมายจาก
+   `house_meanings.yaml` — Node/จุดอาริส/M/A ไม่มีรายการเรือน (ดูเหตุผลที่หัวข้อไฟล์ด้านบน)
+7. **Significance marker** — finding ใดก็ตาม (picture หรือ antiscia) ที่ orb ≤
    `SIGNIFICANT_ORB_DEGREES` (0.5°) จะได้เครื่องหมาย "★ ตรงเป๊ะ (เรื่องใหญ่ที่หลีกเลี่ยงยาก)" ต่อท้าย
    label จาก `_significance_suffix()` — หลักการ "orb ยิ่งแคบยิ่งมีนัยสำคัญ" ตามที่ต้นฉบับปฐมภูมิเขียนไว้
    ไม่ใช่การพับจานใหม่ แค่ threshold ที่แคบกว่าเดิมบน orb ที่คำนวณอยู่แล้ว — ใช้ helper ตัวเดียวกันนี้ใน
@@ -134,11 +147,6 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
 
 ## ยังไม่ได้ทำ (สืบทอดจาก handoff package)
 
-- ไม่มี `house_meanings` — engine นี้ยังไม่คำนวณว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่ (เนื้อหาความหมาย
-  "ธรรมชาติของเรือนที่ดาวสถิต" ต่อดาว มีอยู่แล้วใน `research/uranian-delineation-axes.md` หัวข้อ 7
-  — แต่การคำนวณจริงว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่ยังไม่ implement เพราะระบบเรือนยูเรเนียนเป็น
-  equal-house อ้างอิงจาก M ไม่ใช่ Placidus ที่ `swe.houses()` คืนมาตรงๆ — ต้องคำนวณ house cusp
-  เองจาก M ก่อน (ดู `research/` เอกสารบทที่ 4 เรื่อง 360°-dial/reflex house)
 - `planetary_pictures.yaml` เป็นการคัดสรร 50 คู่ ไม่ใช่ชุดสมบูรณ์ตามต้นฉบับ (แต่ `witte_pictures.yaml`
   ครอบคลุมได้ละเอียดกว่ามากแล้วสำหรับเกือบทั้งเล่ม — ดูด้านล่าง)
 - `axis_meanings.yaml` แกน SUN ขาด Sun+Apollon และ Sun+Admetos (ต้นฉบับไม่ได้ระบุไว้), แกน ARIES

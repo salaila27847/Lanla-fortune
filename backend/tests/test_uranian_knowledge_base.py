@@ -8,10 +8,12 @@ from __future__ import annotations
 from datetime import date, time
 
 import pytest
+import swisseph as swe
 import yaml
 
 from app.core.schema import BirthData
 from app.modules.uranian.engine import (
+    CLASSICAL_SWE_IDS,
     KB_DIR,
     PERSONAL_POINT_IDS,
     SIGNIFICANT_ORB_DEGREES,
@@ -27,8 +29,12 @@ from app.modules.uranian.engine import (
     _factor_keywords,
     _find_antiscia_contacts,
     _find_pictures,
+    _house_finding,
+    _house_for_longitude,
+    _julian_day_ut,
     _load_axis_meanings,
     _load_factors,
+    _load_house_meanings,
     _load_planetary_pictures,
     _load_points,
     _load_signs,
@@ -515,3 +521,65 @@ def test_antiscia_finding_falls_back_to_generic_composition_when_unmatched():
     finding = _antiscia_finding(contact)
     assert finding.weight == 0.35
     assert "antiscion" in finding.meaning
+
+
+# ---------- house_meanings.yaml / Meridian house placement ----------
+
+
+def test_house_meanings_kb_covers_ten_classical_planets_and_eight_tnps():
+    house_meanings = _load_house_meanings()
+    expected = set(CLASSICAL_SWE_IDS) | {tnp.upper() for tnp in TNP_SWE_IDS}
+    assert set(house_meanings) == expected
+    for meaning in house_meanings.values():
+        assert meaning
+
+
+def test_house_for_longitude_handles_unequal_meridian_house_sizes():
+    # Cusps deliberately unequal (Meridian houses aren't 30° apart on the
+    # ecliptic) — house 1 spans 200->240 (40 wide), house 2 spans 240->260.
+    cusps = (200.0, 240.0, 260.0, 280.0, 300.0, 320.0, 340.0, 0.0, 20.0, 40.0, 60.0, 80.0)
+    assert _house_for_longitude(210.0, cusps) == 1
+    assert _house_for_longitude(239.9, cusps) == 1
+    assert _house_for_longitude(240.0, cusps) == 2
+    assert _house_for_longitude(250.0, cusps) == 2
+
+
+def test_house_for_longitude_wraps_across_the_360_seam():
+    cusps = (350.0, 20.0, 50.0, 80.0, 110.0, 140.0, 170.0, 200.0, 230.0, 260.0, 290.0, 320.0)
+    assert _house_for_longitude(0.0, cusps) == 1
+    assert _house_for_longitude(349.9, cusps) == 12
+    assert _house_for_longitude(10.0, cusps) == 1
+
+
+def test_house_finding_reports_house_number_and_kb_meaning():
+    finding = _house_finding("MARS", 5)
+    assert "เรือนที่ 5" in finding.label
+    assert finding.meaning == _load_house_meanings()["MARS"]
+    assert finding.weight == 0.4
+
+
+@pytest.mark.asyncio
+async def test_calculate_with_known_time_includes_all_eighteen_house_placements():
+    result = await calculate(BIRTH_WITH_TIME)
+    house_labels = [f for f in result.raw_findings if "อยู่เรือนที่" in f.label]
+    assert len(house_labels) == 18
+    factor_names = {_factor_display_name(f) for f in _load_house_meanings()}
+    assert all(any(name in f.label for name in factor_names) for f in house_labels)
+
+
+@pytest.mark.asyncio
+async def test_calculate_without_known_time_has_no_house_placements():
+    result = await calculate(BIRTH_WITHOUT_TIME)
+    assert not any("อยู่เรือนที่" in f.label for f in result.raw_findings)
+
+
+@pytest.mark.asyncio
+async def test_calculate_house_placement_matches_direct_meridian_house_lookup():
+    jd, _ = _julian_day_ut(BIRTH_WITH_TIME)
+    cusps, _ = swe.houses(jd, BIRTH_WITH_TIME.latitude, BIRTH_WITH_TIME.longitude, b"X")
+    sun_longitude = swe.calc_ut(jd, swe.SUN)[0][0]
+    expected_house = _house_for_longitude(sun_longitude, cusps)
+
+    result = await calculate(BIRTH_WITH_TIME)
+    sun_label = next(f for f in result.raw_findings if "อาทิตย์" in f.label and "อยู่เรือนที่" in f.label)
+    assert f"เรือนที่ {expected_house}" in sun_label.label

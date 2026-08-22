@@ -613,3 +613,39 @@ pair, third factor ถูกต้อง, ไม่มี meaning ว่าง) 
       `CLAUDE.md`)
 - [ ] **ยังไม่ยืนยัน**: ต้องรอผู้ใช้ทดสอบ production จริงหลัง deploy ว่า `gemini-3.1-flash-lite`
       ใช้งานได้จริงและให้คำทำนายจาก AI จริงแทน fallback text หรือไม่
+
+## Phase 36 — house_meanings: house-placement findings ด้วยระบบเรือนเมริเดียน
+
+Phase 11/14 เคยบันทึกไว้ว่า `house_meanings` ยังไม่ implement เพราะไม่แน่ใจว่าระบบเรือนยูเรเนียน
+คำนวณอย่างไร (เข้าใจผิดว่าต้อง project equal-house จาก M เอง) — ผู้ใช้ส่งคำอธิบาย/สูตรของ
+**Meridian house system (Axial rotation system)** มาให้ครบ: เรือนที่ 10 = M พอดี, เรือนที่ 1 =
+East Point (Equatorial Ascendant) ไม่ใช่ลัคนาสุริยวิถี, แบ่งเส้นศูนย์สูตรฟ้าเป็น 12 ส่วนเท่ากัน
+(30°/ส่วน) จาก RAMC แล้ว project ผ่าน great circle ลงสุริยวิถี
+
+- [x] ตรวจสอบพบว่า `pyswisseph` (มีอยู่แล้วใน `requirements.txt`) รองรับระบบนี้ตรงๆ อยู่แล้วผ่าน
+      `swe.houses(jd, lat, lon, hsys=b"X")` — ยืนยันด้วย `swe.house_name(b"X")` คืนค่า `"axial
+      rotation system/Meridian houses"` และตรวจตัวเลขจริง: cusp ที่ 10 (index 9) เท่ากับ MC เป๊ะ,
+      cusp ที่ 1 (index 0) เท่ากับ `ascmc[4]` (Equatorial Ascendant) เป๊ะ ตรงตามที่ผู้ใช้อธิบายทุก
+      ประการ — ไม่ต้อง hand-roll equal-house projection เองเลยตามที่เคยคิดไว้
+- [x] `engine.py`: เพิ่ม `_house_cusps()` (เรียก `swe.houses(..., b"X")` แยกจาก `_compute_positions`
+      เดิมที่ยังใช้ `b"P"` สำหรับ A/M ตามเดิม — ตรวจสอบแล้วว่า ascmc[0]/[1] (Asc/MC) เหมือนกันทุก
+      house system เสมอ เปลี่ยนแค่ cusps array เท่านั้น จึงไม่กระทบ A/M ที่มีอยู่แล้ว), คำนวณเฉพาะ
+      เมื่อทราบเวลาเกิด (เหมือน A/M) และ `_house_for_longitude()` (cusp-to-cusp containment ทั่วไป
+      ไม่ใช่ fixed 30° เพราะเรือนเมริเดียนไม่เท่ากันบนสุริยวิถี เท่ากันแค่บนเส้นศูนย์สูตรก่อน project)
+- [x] KB ใหม่ `house_meanings.yaml`: 18 รายการ (ดาวเคราะห์คลาสสิก 10 + ดาวเสริม 8) ถอดความจาก
+      `research/uranian-delineation-axes.md` หัวข้อ 7 ตรงๆ (เนื้อหาเป็นภาษาไทยอยู่แล้ว) — ไม่รวม
+      Node/จุดอาริส/M/A เพราะต้นฉบับไม่ได้ระบุความหมายเรือนสำหรับจุดเหล่านี้ และ M/A เองเป็นตัวกำหนด
+      เรือนที่ 10/1 พอดี ไม่ได้ "ตกอยู่ในเรือน" แบบดาวเคราะห์
+- [x] `calculate()`: เพิ่ม house-placement finding ต่อปัจจัยทั้ง 18 (label เช่น "อาทิตย์ อยู่เรือนที่ 8
+      (ระบบเรือนเมริเดียน)", weight 0.4) ต่อท้าย picture/placement findings เดิม เฉพาะเมื่อทราบเวลา
+      เกิดและคำนวณ cusps สำเร็จ — ไม่กระทบ `EngineResult`/`Finding` schema เดิม (เป็นแค่ raw_findings
+      เพิ่มขึ้น) จึงไม่ต้องแก้ synthesis layer หรือ frontend
+- [x] เพิ่ม unit test 7 เคสใน `test_uranian_knowledge_base.py` (KB ครอบคลุมครบ 18 ปัจจัย,
+      `_house_for_longitude` กับเรือนขนาดไม่เท่ากัน + wrap ข้าม 360°, `_house_finding` คืนค่าถูกต้อง,
+      `calculate()` มี house finding ครบ 18 เมื่อทราบเวลาเกิด/ไม่มีเลยเมื่อไม่ทราบเวลาเกิด, และเทียบ
+      ผลลัพธ์จริงจาก `calculate()` กับการเรียก `swe.houses()`/`_house_for_longitude()` ตรงๆ แยก
+      ต่างหากว่าตรงกัน) — รวม **170 tests ผ่านหมด**, `ruff check`/`ruff format --check` สะอาด
+- [x] อัปเดต `knowledge_base/uranian/README.md` (เพิ่ม `house_meanings.yaml` ในหัวข้อโครงสร้าง,
+      เพิ่มขั้นตอนที่ 6 ในหัวข้อ "engine.py ทำอะไรบ้าง", ลบรายการ "ไม่มี house_meanings" ออกจาก
+      "ยังไม่ได้ทำ") และ module docstring บนสุดของ `engine.py` (เปลี่ยน "Two kinds of findings" เป็น
+      "Four kinds" ตามจริง — ของเดิมค้างว่า "two" ทั้งที่มี 3 อยู่แล้วตั้งแต่ Phase 11 เพิ่ม antiscia)
