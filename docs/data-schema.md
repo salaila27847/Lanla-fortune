@@ -113,12 +113,22 @@ class PictureResult(BaseModel):
     factors: list[str]
     orb: float
 
+class HousePlacementResult(BaseModel):
+    factor: str            # เช่น "MARS" (ไม่มี prefix r:/d:/t: — บริบทมาจากว่าอยู่ใน field ไหน)
+    house_number: int      # 1-12, ระบบเรือนเมริเดียน (uranian.engine.HOUSE_SYSTEM_MERIDIAN)
+    label: str             # เช่น "อังคาร (directed) อยู่เรือนที่ 5"
+
 class SolarArcResult(BaseModel):
     arc_degrees: float
     pictures: list[PictureResult]
+    house_placements: list[HousePlacementResult]  # ตำแหน่ง directed ของ 18 ปัจจัย (10 ดาวเคราะห์
+        # คลาสสิก + 8 ดาวเสริม) เทียบกับเรือน "เกิด" (radix) เดิม — ว่างถ้าไม่ทราบเวลาเกิด
 
 class TransitResult(BaseModel):
     pictures: list[PictureResult]   # รวม Daily M/A (t:A, t:M) และ Transit Axes ถ้ามีเงื่อนไขครบ
+    house_placements: list[HousePlacementResult]  # ตำแหน่ง transit จริงของ 18 ปัจจัย เทียบกับเรือน
+        # "เกิด" (radix) เดิม (หลักการเดียวกับ solar_arc — เรือนเกิดเป็น "เวที" คงที่ ไม่คำนวณเรือนใหม่
+        # ทุกครั้งที่ดาวเคลื่อนที่) — ว่างถ้าไม่ทราบเวลาเกิด
 
 class LunarReturnResult(BaseModel):
     return_at: datetime
@@ -126,6 +136,9 @@ class LunarReturnResult(BaseModel):
 class RelocationResult(BaseModel):
     ascendant: float
     midheaven: float
+    house_placements: list[HousePlacementResult]  # ตำแหน่งดาว radix เดิม (ไม่เปลี่ยน) เทียบกับเรือน
+        # *ใหม่* ที่คำนวณจากพิกัดปลายทาง — ต่างจาก solar_arc/transit ตรงที่ relocation คำนวณเรือนใหม่
+        # จริงๆ เพราะเป้าหมายคือ "เรือนที่สถานที่ใหม่หมายถึงอะไร" ไม่ใช่ "ดาวที่เคลื่อนที่ตกเรือนเดิมไหน"
 
 class ForecastResponse(BaseModel):
     solar_arc: SolarArcResult | None = None

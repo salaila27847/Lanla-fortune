@@ -613,3 +613,84 @@ pair, third factor ถูกต้อง, ไม่มี meaning ว่าง) 
       `CLAUDE.md`)
 - [ ] **ยังไม่ยืนยัน**: ต้องรอผู้ใช้ทดสอบ production จริงหลัง deploy ว่า `gemini-3.1-flash-lite`
       ใช้งานได้จริงและให้คำทำนายจาก AI จริงแทน fallback text หรือไม่
+
+## Phase 36 — house_meanings: house-placement findings ด้วยระบบเรือนเมริเดียน
+
+Phase 11/14 เคยบันทึกไว้ว่า `house_meanings` ยังไม่ implement เพราะไม่แน่ใจว่าระบบเรือนยูเรเนียน
+คำนวณอย่างไร (เข้าใจผิดว่าต้อง project equal-house จาก M เอง) — ผู้ใช้ส่งคำอธิบาย/สูตรของ
+**Meridian house system (Axial rotation system)** มาให้ครบ: เรือนที่ 10 = M พอดี, เรือนที่ 1 =
+East Point (Equatorial Ascendant) ไม่ใช่ลัคนาสุริยวิถี, แบ่งเส้นศูนย์สูตรฟ้าเป็น 12 ส่วนเท่ากัน
+(30°/ส่วน) จาก RAMC แล้ว project ผ่าน great circle ลงสุริยวิถี
+
+- [x] ตรวจสอบพบว่า `pyswisseph` (มีอยู่แล้วใน `requirements.txt`) รองรับระบบนี้ตรงๆ อยู่แล้วผ่าน
+      `swe.houses(jd, lat, lon, hsys=b"X")` — ยืนยันด้วย `swe.house_name(b"X")` คืนค่า `"axial
+      rotation system/Meridian houses"` และตรวจตัวเลขจริง: cusp ที่ 10 (index 9) เท่ากับ MC เป๊ะ,
+      cusp ที่ 1 (index 0) เท่ากับ `ascmc[4]` (Equatorial Ascendant) เป๊ะ ตรงตามที่ผู้ใช้อธิบายทุก
+      ประการ — ไม่ต้อง hand-roll equal-house projection เองเลยตามที่เคยคิดไว้
+- [x] `engine.py`: เพิ่ม `_house_cusps()` (เรียก `swe.houses(..., b"X")` แยกจาก `_compute_positions`
+      เดิมที่ยังใช้ `b"P"` สำหรับ A/M ตามเดิม — ตรวจสอบแล้วว่า ascmc[0]/[1] (Asc/MC) เหมือนกันทุก
+      house system เสมอ เปลี่ยนแค่ cusps array เท่านั้น จึงไม่กระทบ A/M ที่มีอยู่แล้ว), คำนวณเฉพาะ
+      เมื่อทราบเวลาเกิด (เหมือน A/M) และ `_house_for_longitude()` (cusp-to-cusp containment ทั่วไป
+      ไม่ใช่ fixed 30° เพราะเรือนเมริเดียนไม่เท่ากันบนสุริยวิถี เท่ากันแค่บนเส้นศูนย์สูตรก่อน project)
+- [x] KB ใหม่ `house_meanings.yaml`: 18 รายการ (ดาวเคราะห์คลาสสิก 10 + ดาวเสริม 8) ถอดความจาก
+      `research/uranian-delineation-axes.md` หัวข้อ 7 ตรงๆ (เนื้อหาเป็นภาษาไทยอยู่แล้ว) — ไม่รวม
+      Node/จุดอาริส/M/A เพราะต้นฉบับไม่ได้ระบุความหมายเรือนสำหรับจุดเหล่านี้ และ M/A เองเป็นตัวกำหนด
+      เรือนที่ 10/1 พอดี ไม่ได้ "ตกอยู่ในเรือน" แบบดาวเคราะห์
+- [x] `calculate()`: เพิ่ม house-placement finding ต่อปัจจัยทั้ง 18 (label เช่น "อาทิตย์ อยู่เรือนที่ 8
+      (ระบบเรือนเมริเดียน)", weight 0.4) ต่อท้าย picture/placement findings เดิม เฉพาะเมื่อทราบเวลา
+      เกิดและคำนวณ cusps สำเร็จ — ไม่กระทบ `EngineResult`/`Finding` schema เดิม (เป็นแค่ raw_findings
+      เพิ่มขึ้น) จึงไม่ต้องแก้ synthesis layer หรือ frontend
+- [x] เพิ่ม unit test 7 เคสใน `test_uranian_knowledge_base.py` (KB ครอบคลุมครบ 18 ปัจจัย,
+      `_house_for_longitude` กับเรือนขนาดไม่เท่ากัน + wrap ข้าม 360°, `_house_finding` คืนค่าถูกต้อง,
+      `calculate()` มี house finding ครบ 18 เมื่อทราบเวลาเกิด/ไม่มีเลยเมื่อไม่ทราบเวลาเกิด, และเทียบ
+      ผลลัพธ์จริงจาก `calculate()` กับการเรียก `swe.houses()`/`_house_for_longitude()` ตรงๆ แยก
+      ต่างหากว่าตรงกัน) — รวม **170 tests ผ่านหมด**, `ruff check`/`ruff format --check` สะอาด
+- [x] อัปเดต `knowledge_base/uranian/README.md` (เพิ่ม `house_meanings.yaml` ในหัวข้อโครงสร้าง,
+      เพิ่มขั้นตอนที่ 6 ในหัวข้อ "engine.py ทำอะไรบ้าง", ลบรายการ "ไม่มี house_meanings" ออกจาก
+      "ยังไม่ได้ทำ") และ module docstring บนสุดของ `engine.py` (เปลี่ยน "Two kinds of findings" เป็น
+      "Four kinds" ตามจริง — ของเดิมค้างว่า "two" ทั้งที่มี 3 อยู่แล้วตั้งแต่ Phase 11 เพิ่ม antiscia)
+
+## Phase 37 — house_meanings ต่อยอด: house-number meanings + house placement ใน forecast
+
+ผู้ใช้ขอ 2 อย่างพร้อมกัน (2026-08-22) หลัง Phase 36: (1) เพิ่มความหมายต่อ **หมายเลขเรือน** (1-12)
+เอง ไม่ผูกกับดาว (2) ขยาย house placement ไปที่ forecast (Solar Arc/Transit/Relocation) ซึ่งตอนนั้น
+คำนวณเฉพาะตำแหน่งดาวตอนเกิด (radix) เท่านั้น
+
+- [x] KB ใหม่ `house_number_meanings.yaml`: หัวข้อทั่วไปของเรือนที่ 1-12 (ตัวตน/ทรัพย์สิน/การสื่อสาร/
+      บ้าน/ความคิดสร้างสรรค์/งาน-สุขภาพ/หุ้นส่วน/การเปลี่ยนแปลง/ปรัชญา/อาชีพ/มิตรภาพ/จิตใต้สำนึก) —
+      เป็นความหมายทั่วไปตามหลักโหราศาสตร์สากล ไม่ได้ถอดความจากตำรายูเรเนียนเล่มใดโดยเฉพาะ (เหมือน
+      `signs.yaml`/`factors.yaml`) เพราะ `research/` ที่มีอยู่ไม่มีเนื้อหาหัวข้อนี้เจาะจง
+- [x] `engine.py`: `_house_finding()` ต่อท้าย meaning เดิม (จาก `house_meanings.yaml`) ด้วยหัวข้อ
+      ทั่วไปของเรือนหมายเลขนั้นจาก `house_number_meanings.yaml` ใหม่ (เช่น "Mars ในเรือนที่ 5" อ่าน
+      ต่างจาก "Mars ในเรือนที่ 8" แม้ตัวดาวจะเหมือนกัน) — เพิ่ม `_load_house_number_meanings()`
+- [x] `engine.py`: รีแฟกเตอร์ `_house_cusps(jd, birth_data)` → `_house_cusps(jd, latitude,
+      longitude)` (รับพิกัดตรงๆ ไม่ใช่ `BirthData`) เพื่อให้ใช้กับพิกัดปลายทางของ relocation ได้ด้วย
+      ไม่ใช่แค่พิกัดเกิด — เพิ่ม `_house_placements(positions, cusps) -> dict[factor, house]`
+      (generic, ดึง logic วนลูปหาเรือนที่เดิมอยู่ใน `calculate()` ออกมาเป็น helper ใช้ซ้ำได้)
+- [x] `main.py::_compute_forecast()`: เพิ่ม `house_placements` เข้า `SolarArcResult`/
+      `TransitResult`/`RelocationResult` (schema ใหม่ `HousePlacementResult{factor, house_number,
+      label}`) — **Solar Arc/Transit**: ตำแหน่ง directed/transit ของ 18 ปัจจัย (10 ดาวเคราะห์
+      คลาสสิก + 8 ดาวเสริม) เทียบกับเรือน **เกิด (radix)** เดิม (คำนวณเรือนเกิดครั้งเดียวใช้ร่วมกัน) —
+      ตัดสินใจใช้เรือนเกิดเป็น "เวที" คงที่ตามหลักปฏิบัติมาตรฐานทางโหราศาสตร์ (transit/progression/
+      direction อ่านผ่านเรือนเกิดเสมอ ไม่คำนวณเรือนใหม่ทุกครั้งที่ดาวเคลื่อนที่) ไม่ใช่การเดา — ว่างเปล่า
+      ถ้าไม่ทราบเวลาเกิด **Relocation**: ตรงข้ามกัน คำนวณเรือน**ใหม่**จริงๆ จากพิกัดปลายทาง (ตรงตามที่
+      `research/uranian-solar-arc-transits-advanced.md` บทที่ 12 ระบุไว้แล้วว่า relocation ต้อง
+      "คำนวณ A และเรือนใหม่จากลองจิจูด/ละติจูดปลายทาง") แล้วเอาตำแหน่งดาว radix เดิมมาเทียบ
+- [x] เพิ่ม unit test 6 เคสใน `test_uranian_knowledge_base.py` (KB ครอบคลุมครบ 1-12, `_house_finding`
+      รวม 2 ความหมายถูกต้อง, `_house_placements` กรองเฉพาะ 18 ปัจจัยที่มีใน `house_meanings.yaml`
+      และข้าม factor ที่ไม่มีใน positions, `_house_cusps` signature ใหม่ตรงกับ `swe.houses()` ตรงๆ)
+      และ 5 เคสใน `test_forecast_endpoint.py` (solar_arc/transit มี house_placements ครบ 18 เมื่อ
+      ทราบเวลาเกิด/ว่างเปล่าเมื่อไม่ทราบ, relocation มีครบ 18 พร้อม**เทียบกับค่าที่คำนวณตรงจาก engine
+      module เอง** ว่าใช้เรือนที่พิกัดใหม่จริง ไม่ใช่เรือนเกิดเดิม — กัน bug ที่ส่ง cusps ผิดตัวแบบเงียบๆ)
+      — รวม **177 tests ผ่านหมด**, ruff clean
+- [x] Frontend: `lib/api.ts` เพิ่ม type `HousePlacementResult` และ field `house_placements` ใน
+      `SolarArcResult`/`TransitResult`/`RelocationResult` — `ReadingResult.tsx` เพิ่ม
+      `HousePlacementTable` component (ตารางปัจจัย+เรือน) แสดงใน 3 ส่วนของ forecast tab (Solar Arc,
+      Transit ต่อจาก fine-timing, Relocation ต่อจากลัคนา/มิเดียมใหม่)
+- [x] ทดสอบแล้ว: backend 177 tests ผ่าน, `ruff check`/`ruff format --check` สะอาด, frontend
+      `npm run build`/`npm run lint` ผ่าน — ยืนยัน manual run จริงว่า solar_arc/transit/relocation
+      house_placements คำนวณถูกต้อง (relocation ใช้เรือนต่างจาก radix จริง, ยืนยันด้วย unit test
+      ที่เทียบ 2 ค่าโดยตรง)
+- [ ] **ข้อจำกัดที่ทดสอบในนี้ไม่ได้**: เหมือนเดิมทุก forecast feature ก่อนหน้า — ยังไม่ได้ทดสอบผ่าน
+      เบราว์เซอร์จริงว่า `HousePlacementTable` แสดงผลถูกต้อง (sandbox นี้ bypass login จริงไม่ได้ตาม
+      ข้อจำกัดเดิม) ตรวจสอบด้วยโค้ด/type-check แทน

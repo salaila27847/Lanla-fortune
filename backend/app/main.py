@@ -19,6 +19,7 @@ from app.core.schema import (
     FollowUpRequest,
     ForecastRequest,
     ForecastResponse,
+    HousePlacementResult,
     LunarReturnRequest,
     LunarReturnResult,
     OracleCardPreview,
@@ -49,6 +50,8 @@ from app.modules.tarot.engine import shuffle as tarot_shuffle
 from app.modules.uranian.engine import (
     _compute_positions,
     _factor_display_name,
+    _house_cusps,
+    _house_placements,
     _julian_day_ut,
     _significance_suffix,
 )
@@ -116,6 +119,27 @@ def _to_fine_timing_hit(hit: dict[str, Any]) -> FineTimingHit:
     )
 
 
+_HOUSE_PLACEMENT_LAYER_LABELS_TH = {
+    "directed": "directed",
+    "transit": "ปัจจุบัน",
+    "relocated": "ที่พิกัดใหม่",
+}
+
+
+def _to_house_placement_results(
+    placements: dict[str, int], layer: str
+) -> list[HousePlacementResult]:
+    layer_label = _HOUSE_PLACEMENT_LAYER_LABELS_TH[layer]
+    return [
+        HousePlacementResult(
+            factor=factor_id,
+            house_number=house_number,
+            label=f"{_factor_display_name(factor_id)} ({layer_label}) อยู่เรือนที่ {house_number}",
+        )
+        for factor_id, house_number in placements.items()
+    ]
+
+
 def _compute_forecast(
     birth_data: BirthData,
     solar_arc: SolarArcRequest | None,
@@ -127,9 +151,22 @@ def _compute_forecast(
     can't drift — each sub-request is independent and only computed
     when present. transit_forecast() is given birth_data so Daily M/A
     (and, through it, Transit Axes) are included automatically whenever
-    a transit forecast is requested."""
+    a transit forecast is requested.
+
+    House placements for directed/transit positions are read against the
+    *radix* (natal) house cusps, computed once below — the standard
+    convention across astrological technique (and this project's natal
+    engine): the birth chart's houses are the fixed "stage" that moving
+    points (real transits or artificially advanced directed points) are
+    read against, not recomputed for every moving moment. Relocation is
+    the one technique that genuinely gets its own new cusps, since its
+    whole point is asking "what do my (unmoved) natal planets mean under
+    a *different* location's houses" — see relocated_angles() below."""
     jd, known_time = _julian_day_ut(birth_data)
     natal_positions = _compute_positions(jd, birth_data, known_time)
+    radix_cusps = (
+        _house_cusps(jd, birth_data.latitude, birth_data.longitude) if known_time else None
+    )
 
     response = ForecastResponse()
     directed: dict[str, float] | None = None
@@ -138,18 +175,22 @@ def _compute_forecast(
         arc = solar_arc_degrees(birth_data, solar_arc.target_date)
         directed = directed_positions(natal_positions, arc)
         pictures = find_directed_pictures(natal_positions, directed)
+        house_placements = _house_placements(directed, radix_cusps) if radix_cusps else {}
         response.solar_arc = SolarArcResult(
             arc_degrees=round(arc, 3),
             pictures=[_to_picture_result(p) for p in pictures[:FORECAST_PICTURE_LIMIT]],
+            house_placements=_to_house_placement_results(house_placements, "directed"),
         )
 
     if transit:
         pictures = transit_forecast(natal_positions, transit.target_date, birth_data=birth_data)
         transit_positions_ = transit_positions(transit.target_date, birth_data=birth_data)
         fine_timing = find_fine_timing_hits(natal_positions, transit_positions_, directed)
+        house_placements = _house_placements(transit_positions_, radix_cusps) if radix_cusps else {}
         response.transit = TransitResult(
             pictures=[_to_picture_result(p) for p in pictures[:FORECAST_PICTURE_LIMIT]],
             fine_timing=[_to_fine_timing_hit(h) for h in fine_timing[:FORECAST_PICTURE_LIMIT]],
+            house_placements=_to_house_placement_results(house_placements, "transit"),
         )
 
     if lunar_return:
@@ -160,7 +201,15 @@ def _compute_forecast(
         if not known_time:
             raise HTTPException(422, "ต้องทราบเวลาเกิดจึงจะคำนวณดวงย้ายถิ่นได้")
         angles = relocated_angles(birth_data, relocation.latitude, relocation.longitude)
-        response.relocation = RelocationResult(ascendant=angles["A"], midheaven=angles["M"])
+        relocated_cusps = _house_cusps(jd, relocation.latitude, relocation.longitude)
+        house_placements = (
+            _house_placements(natal_positions, relocated_cusps) if relocated_cusps else {}
+        )
+        response.relocation = RelocationResult(
+            ascendant=angles["A"],
+            midheaven=angles["M"],
+            house_placements=_to_house_placement_results(house_placements, "relocated"),
+        )
 
     return response
 

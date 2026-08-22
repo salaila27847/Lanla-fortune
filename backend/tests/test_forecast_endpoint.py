@@ -7,6 +7,14 @@ a /api/readings round-trip.
 
 from __future__ import annotations
 
+from app.core.schema import BirthData
+from app.modules.uranian.engine import (
+    _compute_positions,
+    _house_cusps,
+    _house_placements,
+    _julian_day_ut,
+)
+
 BIRTH_DATA = {
     "date": "1990-07-22",
     "time": "15:52:00",
@@ -53,6 +61,22 @@ async def test_forecast_solar_arc(client):
         assert picture["orb"] >= 0
         assert picture["label"]
         assert len(picture["factors"]) in {3, 4}
+    # house_placements: the directed positions of the 18 house_meanings.yaml
+    # factors, read against the *radix* house cusps (known birth time here).
+    assert len(body["house_placements"]) == 18
+    for placement in body["house_placements"]:
+        assert 1 <= placement["house_number"] <= 12
+        assert "directed" in placement["label"]
+
+
+async def test_forecast_solar_arc_without_known_birth_time_has_no_house_placements(client):
+    res = await client.post(
+        "/api/forecast",
+        json={"birth_data": BIRTH_DATA_NO_TIME, "solar_arc": {"target_date": "2026-08-13"}},
+        headers=_auth_headers(),
+    )
+    assert res.status_code == 200
+    assert res.json()["solar_arc"]["house_placements"] == []
 
 
 async def test_forecast_transit(client):
@@ -68,6 +92,22 @@ async def test_forecast_transit(client):
     for hit in body["fine_timing"]:
         assert hit["orb"] <= 0.5  # fine-timing's even tighter orb
         assert hit["transit_factor"].startswith("t:")
+    # house_placements: today's real transiting positions of the 18
+    # house_meanings.yaml factors, read against the radix house cusps.
+    assert len(body["house_placements"]) == 18
+    for placement in body["house_placements"]:
+        assert 1 <= placement["house_number"] <= 12
+        assert "ปัจจุบัน" in placement["label"]
+
+
+async def test_forecast_transit_without_known_birth_time_has_no_house_placements(client):
+    res = await client.post(
+        "/api/forecast",
+        json={"birth_data": BIRTH_DATA_NO_TIME, "transit": {"target_date": "2026-08-13"}},
+        headers=_auth_headers(),
+    )
+    assert res.status_code == 200
+    assert res.json()["transit"]["house_placements"] == []
 
 
 async def test_forecast_lunar_return(client):
@@ -94,6 +134,39 @@ async def test_forecast_relocation(client):
     body = res.json()["relocation"]
     assert 0.0 <= body["ascendant"] < 360.0
     assert 0.0 <= body["midheaven"] < 360.0
+    # house_placements: the (unmoved) radix planets, read against *new*
+    # house cusps computed for the relocated site.
+    assert len(body["house_placements"]) == 18
+    for placement in body["house_placements"]:
+        assert 1 <= placement["house_number"] <= 12
+        assert "ที่พิกัดใหม่" in placement["label"]
+
+
+async def test_forecast_relocation_house_placements_use_relocated_not_radix_cusps(client):
+    relocation = {"place": "Bangkok", "latitude": 13.7563, "longitude": 100.5018}
+    res = await client.post(
+        "/api/forecast",
+        json={"birth_data": BIRTH_DATA, "relocation": relocation},
+        headers=_auth_headers(),
+    )
+    assert res.status_code == 200
+    body = res.json()["relocation"]
+
+    birth_data = BirthData(**BIRTH_DATA)
+    jd, known_time = _julian_day_ut(birth_data)
+    natal_positions = _compute_positions(jd, birth_data, known_time)
+    radix_cusps = _house_cusps(jd, birth_data.latitude, birth_data.longitude)
+    relocated_cusps = _house_cusps(jd, relocation["latitude"], relocation["longitude"])
+
+    expected_relocated = _house_placements(natal_positions, relocated_cusps)
+    expected_radix = _house_placements(natal_positions, radix_cusps)
+    actual = {p["factor"]: p["house_number"] for p in body["house_placements"]}
+
+    assert actual == expected_relocated
+    # Sanity check the test itself isn't vacuous: this birth/relocation pair
+    # must actually produce a different house layout, or a bug that silently
+    # reused radix_cusps for relocation would pass undetected.
+    assert actual != expected_radix
 
 
 async def test_forecast_relocation_requires_known_birth_time(client):

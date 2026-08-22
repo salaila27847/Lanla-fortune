@@ -29,6 +29,15 @@ witte_pictures.yaml        ← glossary ละเอียดกว่า axis_m
                             (A+NODE, A+CUPIDO, A+ADMETOS, CUPIDO+SUN, APOLLON+SUN) ข้ามไปตั้งใจ
                             เพราะ OCR เสียจนระบุตัวบ่งชี้ปัจจัยที่ 3 ไม่ได้เลย ดูรายละเอียดที่หัวข้อ
                             "ยังไม่ได้ทำ" ด้านล่าง
+house_meanings.yaml         ← ความหมายทั่วไปของ "เรือนที่ดาวสถิต" (ไม่ผูกกับแกน) ต่อดาวเคราะห์
+                            คลาสสิก 10 ดวง + ดาวเสริม 8 ดวง (18 รายการ, ถอดความจาก
+                            `research/uranian-delineation-axes.md` หัวข้อ 7) — ไม่รวม Node/จุดอาริส/
+                            M/A เพราะต้นฉบับไม่ได้ระบุความหมายเรือนไว้สำหรับจุดเหล่านี้ และ M/A เอง
+                            เป็นตัวกำหนดเรือนที่ 10/1 พอดี ไม่ได้ "ตกอยู่ในเรือน" แบบดาวเคราะห์
+house_number_meanings.yaml  ← ความหมายทั่วไปของ "เรือนแต่ละหมายเลข" (1-12) ไม่ผูกกับดาวดวงใด —
+                            เสริม house_meanings.yaml ให้ได้ทั้งสองมิติ (ดาวอะไร + เรือนไหน) เป็น
+                            ความหมายทั่วไปตามหลักโหราศาสตร์สากล ไม่ได้ถอดความจากตำรายูเรเนียนเล่มใด
+                            โดยเฉพาะ (เหมือน signs.yaml/factors.yaml)
 research/                  ← เอกสารวิจัยต้นทาง (ภาษาไทย, ถอดความจากตำรา ไม่ใช่คำแปลตรงตัว)
                             เก็บไว้เป็นแหล่งอ้างอิงสำหรับขยาย KB ต่อ (เช่น house_meanings,
                             factors principle/function/expression/manifestation) — รวมถึง
@@ -100,7 +109,19 @@ id จาก `points.yaml` เองตอนค้นหา planetary picture (
    picture ที่ครบสมบูรณ์เสมอ — หาความหมายจาก `planetary_pictures.yaml` ถ้ามีคู่ตรงกัน (weight 0.5)
    ไม่งั้น compose จาก keywords ของทั้งสองปัจจัย (weight 0.35) เก็บสูงสุด 5 รายการ
    (`MAX_ANTISCIA_FINDINGS`)
-6. **Significance marker** — finding ใดก็ตาม (picture หรือ antiscia) ที่ orb ≤
+6. **House-placement findings** — ดาวเคราะห์คลาสสิก 10 ดวง + ดาวเสริม 8 ดวง จับคู่กับเรือนที่แต่ละ
+   ดวงสถิตอยู่ ใช้ **ระบบเรือนเมริเดียน (Meridian house system / axial rotation system)** ที่
+   ยูเรเนียนแอสโตรโลจีใช้จริง — pyswisseph รองรับตรงๆ ผ่าน `swe.houses(..., hsys=b"X")` (ยืนยันด้วย
+   `swe.house_name(b"X")` คืนค่า `"axial rotation system/Meridian houses"`): เรือนที่ 10 ตรงกับ M
+   พอดี, เรือนที่ 1 เริ่มที่ East Point (Equatorial Ascendant) ไม่ใช่ลัคนาสุริยวิถีแบบ Placidus —
+   ไม่ต้องคำนวณ equal-house projection เองตามที่เคยคิดว่าจำเป็น (`_house_cusps()`/
+   `_house_for_longitude()`/`_house_placements()` ใน `engine.py`) คำนวณเฉพาะเมื่อทราบเวลาเกิด
+   (เหมือน A/M) ความหมายรวม 2 มิติ: ธรรมชาติของดาวดวงนั้นเมื่ออยู่ในเรือน (`house_meanings.yaml`)
+   ต่อท้ายด้วยหัวข้อทั่วไปของเรือนหมายเลขนั้นเอง (`house_number_meanings.yaml`) — Node/จุดอาริส/M/A
+   ไม่มีรายการเรือน (ดูเหตุผลที่หัวข้อไฟล์ด้านบน) — `_house_cusps()` รับ lat/lon ตรงๆ (ไม่ใช่
+   `BirthData`) และ `_house_placements()` เป็น generic ทั้งคู่ เพื่อให้ `main.py` เรียกใช้ซ้ำได้กับ
+   ตำแหน่ง directed/transit/relocated ในหัวข้อ forecast ด้านล่างด้วย ไม่ต้องเขียนโค้ดหาเรือนซ้ำ
+7. **Significance marker** — finding ใดก็ตาม (picture หรือ antiscia) ที่ orb ≤
    `SIGNIFICANT_ORB_DEGREES` (0.5°) จะได้เครื่องหมาย "★ ตรงเป๊ะ (เรื่องใหญ่ที่หลีกเลี่ยงยาก)" ต่อท้าย
    label จาก `_significance_suffix()` — หลักการ "orb ยิ่งแคบยิ่งมีนัยสำคัญ" ตามที่ต้นฉบับปฐมภูมิเขียนไว้
    ไม่ใช่การพับจานใหม่ แค่ threshold ที่แคบกว่าเดิมบน orb ที่คำนวณอยู่แล้ว — ใช้ helper ตัวเดียวกันนี้ใน
@@ -132,13 +153,24 @@ synthesis ให้ตีความรวมกับ 3 engine หลัก (�
   โดยตั้งใจ เพื่อไม่แตะ `PictureResult.type` Literal เดิมที่ frontend มี branch เฉพาะอยู่แล้ว — ดู
   `research/uranian-dial-hierarchy.md` หัวข้อ 5
 
+**House placements** (ใหม่): `solar_arc.py`/`transit.py` เองไม่ได้แก้ — การคำนวณเรือนอยู่ที่
+`main.py::_compute_forecast()` ซึ่งเรียก `engine._house_cusps()`/`engine._house_placements()`
+ตรงๆ (generic ทั้งคู่ ไม่ผูกกับ natal engine) 3 แบบตามเทคนิค:
+- **Solar Arc/Transit**: ตำแหน่ง directed/transit ของ 18 ปัจจัย เทียบกับเรือน **เกิด (radix)**
+  เดิม — คำนวณเรือนเกิดครั้งเดียวใน `_compute_forecast()` ใช้ร่วมกันทั้งสองเทคนิค ตามหลักปฏิบัติ
+  มาตรฐานที่เรือนเกิดเป็น "เวที" คงที่ ไม่คำนวณเรือนใหม่ทุกครั้งที่ดาวเคลื่อนที่ (เหมือนกับที่ซอฟต์แวร์
+  โหราศาสตร์ทั่วไปทำกับ transit/progression/direction) — ว่างเปล่าถ้าไม่ทราบเวลาเกิด (`_house_cusps`
+  คืน `None`)
+- **Relocation**: ตรงข้ามกัน — คำนวณเรือน**ใหม่**จากพิกัดปลายทางจริงๆ (`_house_cusps(jd,
+  relocation.latitude, relocation.longitude)`) แล้วเอาตำแหน่งดาว radix เดิม (ไม่เปลี่ยน) มาเทียบ
+  เพราะเป้าหมายของ relocation คือ "เรือนที่สถานที่ใหม่หมายถึงอะไร" ตรงตามที่ระบุไว้ใน
+  `research/uranian-solar-arc-transits-advanced.md` บทที่ 12 ("Relocation: คำนวณ A และ**เรือนใหม่**
+  จากลองจิจูด/ละติจูดปลายทาง")
+- ผลลัพธ์อยู่ใน `HousePlacementResult` (schema ใหม่, ดู `docs/data-schema.md`) — field
+  `house_placements` ใน `SolarArcResult`/`TransitResult`/`RelocationResult`
+
 ## ยังไม่ได้ทำ (สืบทอดจาก handoff package)
 
-- ไม่มี `house_meanings` — engine นี้ยังไม่คำนวณว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่ (เนื้อหาความหมาย
-  "ธรรมชาติของเรือนที่ดาวสถิต" ต่อดาว มีอยู่แล้วใน `research/uranian-delineation-axes.md` หัวข้อ 7
-  — แต่การคำนวณจริงว่าดาวแต่ละดวงตกเรือนที่เท่าไหร่ยังไม่ implement เพราะระบบเรือนยูเรเนียนเป็น
-  equal-house อ้างอิงจาก M ไม่ใช่ Placidus ที่ `swe.houses()` คืนมาตรงๆ — ต้องคำนวณ house cusp
-  เองจาก M ก่อน (ดู `research/` เอกสารบทที่ 4 เรื่อง 360°-dial/reflex house)
 - `planetary_pictures.yaml` เป็นการคัดสรร 50 คู่ ไม่ใช่ชุดสมบูรณ์ตามต้นฉบับ (แต่ `witte_pictures.yaml`
   ครอบคลุมได้ละเอียดกว่ามากแล้วสำหรับเกือบทั้งเล่ม — ดูด้านล่าง)
 - `axis_meanings.yaml` แกน SUN ขาด Sun+Apollon และ Sun+Admetos (ต้นฉบับไม่ได้ระบุไว้), แกน ARIES

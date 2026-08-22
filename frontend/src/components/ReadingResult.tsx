@@ -8,6 +8,7 @@ import {
   getFollowUpReading,
   type FineTimingHit,
   type ForecastResponse,
+  type HousePlacementResult,
   type OracleDeck,
   type PictureResult,
   type SynthesisOutput,
@@ -92,6 +93,33 @@ function FineTimingList({ hits }: { hits: FineTimingHit[] }) {
   );
 }
 
+function HousePlacementTable({ placements }: { placements: HousePlacementResult[] }) {
+  if (placements.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">ตำแหน่งเรือน (ระบบเรือนเมริเดียน)</h4>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              <th className="py-2 pr-4 font-medium">ปัจจัย</th>
+              <th className="py-2 font-medium">เรือน</th>
+            </tr>
+          </thead>
+          <tbody>
+            {placements.map((placement, i) => (
+              <tr key={i} className="border-b border-zinc-100 dark:border-zinc-900">
+                <td className="py-2 pr-4 text-zinc-800 dark:text-zinc-200">{placement.label}</td>
+                <td className="py-2 text-zinc-500 dark:text-zinc-400">{placement.house_number}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function ForecastSectionContent({
   section,
   forecast,
@@ -106,6 +134,7 @@ function ForecastSectionContent({
           Solar Arc — ส่วนโค้งสุริยะ {forecast.solar_arc.arc_degrees.toFixed(2)}°
         </h3>
         <PictureTable pictures={forecast.solar_arc.pictures} />
+        <HousePlacementTable placements={forecast.solar_arc.house_placements} />
       </div>
     );
   }
@@ -115,6 +144,7 @@ function ForecastSectionContent({
         <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Transit — ดาวโคจรผ่าน</h3>
         <PictureTable pictures={forecast.transit.pictures} />
         <FineTimingList hits={forecast.transit.fine_timing} />
+        <HousePlacementTable placements={forecast.transit.house_placements} />
       </div>
     );
   }
@@ -141,6 +171,7 @@ function ForecastSectionContent({
           ลัคนาใหม่ {forecast.relocation.ascendant.toFixed(2)}° · มิเดียมใหม่{" "}
           {forecast.relocation.midheaven.toFixed(2)}°
         </p>
+        <HousePlacementTable placements={forecast.relocation.house_placements} />
       </div>
     );
   }
